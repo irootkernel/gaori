@@ -13,7 +13,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/irootkernel/manta/internal/model"
+	"github.com/irootkernel/gaori/internal/model"
 )
 
 const interruptGracePeriod = 2 * time.Second
@@ -56,7 +56,7 @@ func Execute(ctx context.Context, workDir, commandID string, tags []string, pars
 
 func executeWithSignals(ctx context.Context, workDir, commandID string, tags []string, parser string, argv []string, timeoutSec int, raw io.Writer, interrupts <-chan os.Signal, gracePeriod time.Duration) (model.RunOutput, error) {
 	if len(argv) == 0 {
-		return model.RunOutput{}, model.NewMantaError(model.ExitCodeConfigError, "execute command", fmt.Errorf("empty argv"))
+		return model.RunOutput{}, model.NewGaoriError(model.ExitCodeConfigError, "execute command", fmt.Errorf("empty argv"))
 	}
 
 	started := time.Now().UTC()
@@ -72,7 +72,7 @@ func executeWithSignals(ctx context.Context, workDir, commandID string, tags []s
 	cmd.Stderr = capture
 
 	if err := cmd.Start(); err != nil {
-		return model.RunOutput{}, model.NewMantaError(model.ExitCodeParserError, "execute command", err)
+		return model.RunOutput{}, model.NewGaoriError(model.ExitCodeParserError, "execute command", err)
 	}
 	waited := make(chan error, 1)
 	go func() {
@@ -149,7 +149,7 @@ func finishInterrupted(cmd *exec.Cmd, waited <-chan error, interrupts <-chan os.
 func completedOutput(started time.Time, commandID string, tags []string, parser string, argv []string, capture *streamCapture) (model.RunOutput, error) {
 	raw, err := capture.result()
 	if err != nil {
-		return model.RunOutput{}, model.NewMantaError(model.ExitCodeArtifactError, "write raw log", err)
+		return model.RunOutput{}, model.NewGaoriError(model.ExitCodeArtifactError, "write raw log", err)
 	}
 	ended := time.Now().UTC()
 	return model.RunOutput{
@@ -185,5 +185,5 @@ func classifyWait(output model.RunOutput, err error) (model.RunOutput, error) {
 		return output, nil
 	}
 
-	return model.RunOutput{}, model.NewMantaError(model.ExitCodeParserError, "execute command", err)
+	return model.RunOutput{}, model.NewGaoriError(model.ExitCodeParserError, "execute command", err)
 }

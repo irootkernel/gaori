@@ -1,4 +1,4 @@
-module github.com/irootkernel/manta
+module github.com/irootkernel/gaori
 
 go 1.26
 

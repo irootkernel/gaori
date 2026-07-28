@@ -8,8 +8,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/irootkernel/manta/internal/model"
-	"github.com/irootkernel/manta/internal/safety"
+	"github.com/irootkernel/gaori/internal/model"
+	"github.com/irootkernel/gaori/internal/safety"
 )
 
 func TestRulesLifecycleCommands(t *testing.T) {
@@ -78,11 +78,11 @@ func TestRulesLifecycleCommands(t *testing.T) {
 	if exitCode != 0 || !strings.Contains(stdout.String(), "Proposed rule:") {
 		t.Fatalf("expected rules propose to succeed, exit=%d stdout=%q stderr=%q", exitCode, stdout.String(), stderr.String())
 	}
-	proposalEntries, err := os.ReadDir(filepath.Join(repo, ".manta", "rule-proposals"))
+	proposalEntries, err := os.ReadDir(filepath.Join(repo, ".gaori", "rule-proposals"))
 	if err != nil || len(proposalEntries) != 1 {
 		t.Fatalf("expected one proposal file, err=%v entries=%d", err, len(proposalEntries))
 	}
-	proposal, err := readRuleInput(filepath.Join(repo, ".manta", "rule-proposals", proposalEntries[0].Name()))
+	proposal, err := readRuleInput(filepath.Join(repo, ".gaori", "rule-proposals", proposalEntries[0].Name()))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -108,7 +108,7 @@ func TestRuleSourceFilesEnforceInputSizeLimit(t *testing.T) {
 	if exitCode := Main([]string{"--repo", repo, "rules", "create", "--file", exactPath}, &stdout, &stderr); exitCode != 0 {
 		t.Fatalf("exact-limit create failed: exit=%d stderr=%q", exitCode, stderr.String())
 	}
-	storedPath := filepath.Join(repo, ".manta", "tester", "rules", "bounded-v1.yaml")
+	storedPath := filepath.Join(repo, ".gaori", "tester", "rules", "bounded-v1.yaml")
 	before, err := os.ReadFile(storedPath)
 	if err != nil {
 		t.Fatal(err)
@@ -142,7 +142,7 @@ func TestRuleSourceFilesEnforceInputSizeLimit(t *testing.T) {
 	if exitCode != int(model.ExitCodeConfigError) || !strings.Contains(stderr.String(), "input exceeds 262144 bytes") {
 		t.Fatalf("oversized create exit=%d stderr=%q", exitCode, stderr.String())
 	}
-	if _, err := os.Stat(filepath.Join(repo, ".manta", "tester", "rules", "oversized-v1.yaml")); !os.IsNotExist(err) {
+	if _, err := os.Stat(filepath.Join(repo, ".gaori", "tester", "rules", "oversized-v1.yaml")); !os.IsNotExist(err) {
 		t.Fatalf("oversized create wrote a rule: %v", err)
 	}
 }

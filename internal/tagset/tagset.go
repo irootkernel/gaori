@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"slices"
 
-	"github.com/irootkernel/manta/internal/safety"
+	"github.com/irootkernel/gaori/internal/safety"
 )
 
 func Canonicalize(values []string) ([]string, error) {

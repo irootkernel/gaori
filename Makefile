@@ -1,11 +1,11 @@
 GO ?= go
 GOLANGCI_LINT ?= golangci-lint
-BINARY := manta
+BINARY := gaori
 BIN_DIR := bin
-VERSION ?= 0.1.5
+VERSION ?= 0.1.6
 COMMIT ?= $(shell git rev-parse --short HEAD 2>/dev/null || echo unknown)
 BUILD_DATE ?= $(shell date -u +%Y-%m-%dT%H:%M:%SZ)
-TOOLCHAIN_ROOT ?= $(HOME)/.local/manta/toolchains
+TOOLCHAIN_ROOT ?= $(HOME)/.local/gaori/toolchains
 TOOLCHAIN_VERSION ?= $(shell git describe --tags --exact-match 2>/dev/null | sed 's/^v//' || true)
 LDFLAGS := -X main.version=$(VERSION) -X main.commit=$(COMMIT) -X main.buildDate=$(BUILD_DATE)
 

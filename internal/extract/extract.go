@@ -6,8 +6,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/irootkernel/manta/internal/model"
-	"github.com/irootkernel/manta/internal/safety"
+	"github.com/irootkernel/gaori/internal/model"
+	"github.com/irootkernel/gaori/internal/safety"
 )
 
 var (
@@ -169,7 +169,7 @@ func applyRules(lines []lineIndex, text string, rules []model.Rule) ([]model.Fai
 func compileRuleRegex(ruleID, field, expr string) (*regexp.Regexp, error) {
 	re, err := regexp.Compile(expr)
 	if err != nil {
-		return nil, model.NewMantaError(model.ExitCodeParserError, "extract rule", fmt.Errorf("rule %q %s invalid regex: %w", ruleID, field, err))
+		return nil, model.NewGaoriError(model.ExitCodeParserError, "extract rule", fmt.Errorf("rule %q %s invalid regex: %w", ruleID, field, err))
 	}
 	return re, nil
 }

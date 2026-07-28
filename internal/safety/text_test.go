@@ -3,7 +3,7 @@ package safety
 import (
 	"testing"
 
-	"github.com/irootkernel/manta/internal/model"
+	"github.com/irootkernel/gaori/internal/model"
 )
 
 func TestRedactorUsesConfiguredOrder(t *testing.T) {

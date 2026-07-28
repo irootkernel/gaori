@@ -1,4 +1,4 @@
-# Manta Architecture Decision Records
+# Gaori Architecture Decision Records
 
 Status: Complete
 Scope: Accepted baseline decisions
@@ -10,22 +10,22 @@ Scope: Accepted baseline decisions
 - Superseded: replaced by a later ADR.
 - Rejected: recorded but not adopted.
 
-## ADR-0001: Manta remains standalone for v0.1
+## ADR-0001: Gaori remains standalone for v0.1
 
 Status: Accepted
 Date: 2026-06-24
 
 ### Context
 
-Manta must be usable as an independent test-evidence tool in arbitrary repositories. Its first milestone should not require an external orchestration runtime.
+Gaori must be usable as an independent test-evidence tool in arbitrary repositories. Its first milestone should not require an external orchestration runtime.
 
 ### Decision
 
-Manta v0.1 will be implemented as a standalone deterministic CLI. It may optionally write a fixed run-scoped artifact layout when a run ID is supplied, but it must not require an external orchestration runtime.
+Gaori v0.1 will be implemented as a standalone deterministic CLI. It may optionally write a fixed run-scoped artifact layout when a run ID is supplied, but it must not require an external orchestration runtime.
 
 ### Consequences
 
-- Manta can be developed and tested independently.
+- Gaori can be developed and tested independently.
 - Integrations remain optional artifact consumers.
 - Documentation must not assume that an orchestration runtime is available.
 
@@ -36,13 +36,13 @@ Date: 2026-06-24
 
 ### Context
 
-Manta extracts summaries from raw logs. Extraction quality may be precise, partial, degraded, or missing. A parser must not affect the truth of the executed command.
+Gaori extracts summaries from raw logs. Extraction quality may be precise, partial, degraded, or missing. A parser must not affect the truth of the executed command.
 
 ### Decision
 
 The executed command's exit code and timeout/killed state determine pass/fail status. Rules and parsers only locate and summarize evidence. They must never convert a failing command into pass. Extraction quality is tracked separately by `extractor_status`.
 
-`internal_error` is reserved for a Manta evidence-pipeline failure when no authoritative non-pass command result must be retained. If extraction fails after a command exited `0`, summary and status artifacts keep `exit_code: 0`, use `status: internal_error` and `extractor_status: degraded`, and the Manta process exits `4`. If the command already failed, timed out, or was killed, that state and exit code remain authoritative. Standalone summarize has no authoritative execution result, so an extraction internal error uses `status: internal_error` and exit code `4` in its artifacts and exits `4`.
+`internal_error` is reserved for a Gaori evidence-pipeline failure when no authoritative non-pass command result must be retained. If extraction fails after a command exited `0`, summary and status artifacts keep `exit_code: 0`, use `status: internal_error` and `extractor_status: degraded`, and the Gaori process exits `4`. If the command already failed, timed out, or was killed, that state and exit code remain authoritative. Standalone summarize has no authoritative execution result, so an extraction internal error uses `status: internal_error` and exit code `4` in its artifacts and exits `4`.
 
 ### Consequences
 
@@ -63,7 +63,7 @@ Large raw logs are expensive for human and LLM review, but auditability requires
 
 ### Decision
 
-Manta always preserves raw logs and writes compact summary JSON, summary Markdown, status JSON, and bounded excerpts. After noise filtering and redaction, summaries retain deterministic prefixes of at most 50 failures and 50 warnings and report any record or byte-budget truncation explicitly. Noise filters affect summaries, not raw logs. Redaction applies to surfaced command metadata and extracted evidence. Raw logs remain original evidence and are not redacted by default; operators must be warned that raw logs may contain unredacted values. Stable artifact-reference fields remain literal locators so deterministic consumers can resolve them.
+Gaori always preserves raw logs and writes compact summary JSON, summary Markdown, status JSON, and bounded excerpts. After noise filtering and redaction, summaries retain deterministic prefixes of at most 50 failures and 50 warnings and report any record or byte-budget truncation explicitly. Noise filters affect summaries, not raw logs. Redaction applies to surfaced command metadata and extracted evidence. Raw logs remain original evidence and are not redacted by default; operators must be warned that raw logs may contain unredacted values. Stable artifact-reference fields remain literal locators so deterministic consumers can resolve them.
 
 ### Consequences
 
@@ -81,11 +81,11 @@ Date: 2026-06-24
 
 ### Context
 
-Different repositories use different test commands and log formats. Manta needs predictable command definitions without hard-coding project policy.
+Different repositories use different test commands and log formats. Gaori needs predictable command definitions without hard-coding project policy.
 
 ### Decision
 
-Manta reads local-only `.manta/tester.yaml` schema v2 by default. Command entries define argv arrays, canonical tags, parser, and timeout. Rule files may live under `.manta/tester/rules/*.yaml`. The entire `.manta/` directory is ignored local state rather than a portable source contract.
+Gaori reads local-only `.gaori/tester.yaml` schema v2 by default. Command entries define argv arrays, canonical tags, parser, and timeout. Rule files may live under `.gaori/tester/rules/*.yaml`. The entire `.gaori/` directory is ignored local state rather than a portable source contract.
 
 ### Consequences
 
@@ -105,14 +105,14 @@ Long-running test execution should not require an active agent to wait for compl
 
 ### Decision
 
-Manta writes compact status JSON for polling. Configured redaction is applied to surfaced command ID, tags, and failure/warning signatures before their hashes are calculated. Watcher compatibility is defined by hashing exactly these ordered fields: `command_id`, comma-joined canonical `tags`, `status`, `exit_code`, `extractor_status`, `raw_log_sha256`, `failure_signatures`, `warning_signatures`, `summary_path`, and `raw_log_path`. Path fields remain literal references.
+Gaori writes compact status JSON for polling. Configured redaction is applied to surfaced command ID, tags, and failure/warning signatures before their hashes are calculated. Watcher compatibility is defined by hashing exactly these ordered fields: `command_id`, comma-joined canonical `tags`, `status`, `exit_code`, `extractor_status`, `raw_log_sha256`, `failure_signatures`, `warning_signatures`, `summary_path`, and `raw_log_path`. Path fields remain literal references.
 
 ### Consequences
 
-- Manta supports no-agent polling without embedding watcher logic.
+- Gaori supports no-agent polling without embedding watcher logic.
 - Status fields and path references must stay stable.
 - `status_hash` is calculated after redaction from the final surfaced values.
-- Full review remains outside Manta.
+- Full review remains outside Gaori.
 
 ## ADR-0006: Go single-binary implementation baseline
 
@@ -121,11 +121,11 @@ Date: 2026-06-24
 
 ### Context
 
-Manta needs a boring implementation baseline with straightforward process execution, deterministic file IO, YAML support, and simple binary distribution.
+Gaori needs a boring implementation baseline with straightforward process execution, deterministic file IO, YAML support, and simple binary distribution.
 
 ### Decision
 
-Manta v0.1 is implemented in Go and packaged as a standalone single binary named `manta`.
+Gaori v0.1 is implemented in Go and packaged as a standalone single binary named `gaori`.
 
 ### Consequences
 
@@ -144,7 +144,7 @@ Rules, redaction, and extraction all depend on regex, but regex safety must not 
 
 ### Decision
 
-Manta uses Go `regexp` with RE2 semantics only. Unsupported or invalid regex fails closed. Safety is reinforced with explicit bounds on regex input, config/rule input files, extracted blocks, excerpts, and summaries. Config YAML, stored or imported rule YAML, and `rules propose --raw-log` inputs are limited to 256 KiB and rejected before decoding or whole-file processing. For runtime and summarize operations, extraction scans at most the final 256 KiB of complete lines and reports degraded evidence when the raw log is larger; rule fixture testing fails closed instead because it must inspect the complete fixture.
+Gaori uses Go `regexp` with RE2 semantics only. Unsupported or invalid regex fails closed. Safety is reinforced with explicit bounds on regex input, config/rule input files, extracted blocks, excerpts, and summaries. Config YAML, stored or imported rule YAML, and `rules propose --raw-log` inputs are limited to 256 KiB and rejected before decoding or whole-file processing. For runtime and summarize operations, extraction scans at most the final 256 KiB of complete lines and reports degraded evidence when the raw log is larger; rule fixture testing fails closed instead because it must inspect the complete fixture.
 
 ### Consequences
 
@@ -165,7 +165,7 @@ The CLI, runner, and artifact pipeline are useful before fixture-backed speciali
 
 ### Decision
 
-The first runnable Manta implementation requires only the `generic` parser. Specialized parser labels may exist in config and CLI contracts, but unsupported labels fail closed until they are implemented from real fixture evidence.
+The first runnable Gaori implementation requires only the `generic` parser. Specialized parser labels may exist in config and CLI contracts, but unsupported labels fail closed until they are implemented from real fixture evidence.
 
 ### Consequences
 
@@ -184,7 +184,7 @@ A single execution grouping cannot express independent dimensions such as langua
 
 ### Decision
 
-Config schema v2 replaces the single grouping field with non-empty tags. Tags use safe identifier syntax, are sorted and deduplicated, and are surfaced as JSON arrays. A rule applies only when its parser matches exactly and all of its tags are present on the run; multiple active rules may inspect the same raw log. The entire `.manta/` tree is local-only and ignored by Git.
+Config schema v2 replaces the single grouping field with non-empty tags. Tags use safe identifier syntax, are sorted and deduplicated, and are surfaced as JSON arrays. A rule applies only when its parser matches exactly and all of its tags are present on the run; multiple active rules may inspect the same raw log. The entire `.gaori/` tree is local-only and ignored by Git.
 
 ### Consequences
 

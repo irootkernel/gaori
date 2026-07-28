@@ -12,14 +12,14 @@ import (
 
 	"gopkg.in/yaml.v3"
 
-	"github.com/irootkernel/manta/internal/model"
-	"github.com/irootkernel/manta/internal/safety"
+	"github.com/irootkernel/gaori/internal/model"
+	"github.com/irootkernel/gaori/internal/safety"
 )
 
 func TestLoadApplicableFailsOnInvalidDiscoveredFutureParserRule(t *testing.T) {
 	t.Parallel()
 	repo := t.TempDir()
-	rulesDir := filepath.Join(repo, ".manta", "tester", "rules")
+	rulesDir := filepath.Join(repo, ".gaori", "tester", "rules")
 	if err := os.MkdirAll(rulesDir, 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -151,7 +151,7 @@ func TestValidateStoredRuleAcceptsMaximumTotalSpan(t *testing.T) {
 func TestLoadApplicableSkipsValidNonMatchingFutureParserRule(t *testing.T) {
 	t.Parallel()
 	repo := t.TempDir()
-	rulesDir := filepath.Join(repo, ".manta", "tester", "rules")
+	rulesDir := filepath.Join(repo, ".gaori", "tester", "rules")
 	if err := os.MkdirAll(rulesDir, 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -228,7 +228,7 @@ func TestLoadApplicableRequiresAllRuleTags(t *testing.T) {
 func TestLoadApplicableFailsOnInvalidMatchingRule(t *testing.T) {
 	t.Parallel()
 	repo := t.TempDir()
-	rulesDir := filepath.Join(repo, ".manta", "tester", "rules")
+	rulesDir := filepath.Join(repo, ".gaori", "tester", "rules")
 	if err := os.MkdirAll(rulesDir, 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -404,7 +404,7 @@ func TestCreateRuleSymlinkContainment(t *testing.T) {
 	t.Run("external rejected", func(t *testing.T) {
 		t.Parallel()
 		repo := t.TempDir()
-		if err := os.MkdirAll(filepath.Join(repo, ".manta", "tester"), 0o755); err != nil {
+		if err := os.MkdirAll(filepath.Join(repo, ".gaori", "tester"), 0o755); err != nil {
 			t.Fatal(err)
 		}
 		external := t.TempDir()
@@ -427,7 +427,7 @@ func TestCreateRuleSymlinkContainment(t *testing.T) {
 	t.Run("internal allowed", func(t *testing.T) {
 		t.Parallel()
 		repo := t.TempDir()
-		if err := os.MkdirAll(filepath.Join(repo, ".manta", "tester"), 0o755); err != nil {
+		if err := os.MkdirAll(filepath.Join(repo, ".gaori", "tester"), 0o755); err != nil {
 			t.Fatal(err)
 		}
 		internal := filepath.Join(repo, "actual-rules")
@@ -453,7 +453,7 @@ func TestCreateRuleSymlinkContainment(t *testing.T) {
 func TestProposeRejectsSymlinkEscape(t *testing.T) {
 	t.Parallel()
 	repo := t.TempDir()
-	if err := os.MkdirAll(filepath.Join(repo, ".manta"), 0o755); err != nil {
+	if err := os.MkdirAll(filepath.Join(repo, ".gaori"), 0o755); err != nil {
 		t.Fatal(err)
 	}
 	external := t.TempDir()

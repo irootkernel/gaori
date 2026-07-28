@@ -11,13 +11,13 @@ const (
 	ExitCodeTimeout       ErrorCode = 124
 )
 
-type MantaError struct {
+type GaoriError struct {
 	Code ErrorCode
 	Op   string
 	Err  error
 }
 
-func (e *MantaError) Error() string {
+func (e *GaoriError) Error() string {
 	if e == nil {
 		return ""
 	}
@@ -27,27 +27,27 @@ func (e *MantaError) Error() string {
 	return fmt.Sprintf("%s: %v", e.Op, e.Err)
 }
 
-func (e *MantaError) Unwrap() error {
+func (e *GaoriError) Unwrap() error {
 	if e == nil {
 		return nil
 	}
 	return e.Err
 }
 
-func NewMantaError(code ErrorCode, op string, err error) error {
+func NewGaoriError(code ErrorCode, op string, err error) error {
 	if err == nil {
 		return nil
 	}
-	return &MantaError{Code: code, Op: op, Err: err}
+	return &GaoriError{Code: code, Op: op, Err: err}
 }
 
 func ExitCodeFor(err error) int {
 	if err == nil {
 		return 0
 	}
-	var mantaErr *MantaError
-	if ok := As(err, &mantaErr); ok {
-		return int(mantaErr.Code)
+	var gaoriErr *GaoriError
+	if ok := As(err, &gaoriErr); ok {
+		return int(gaoriErr.Code)
 	}
 	return int(ExitCodeParserError)
 }
@@ -56,8 +56,8 @@ func As(err error, target any) bool {
 	type unwrapper interface{ Unwrap() error }
 	for err != nil {
 		switch t := target.(type) {
-		case **MantaError:
-			if v, ok := err.(*MantaError); ok {
+		case **GaoriError:
+			if v, ok := err.(*GaoriError); ok {
 				*t = v
 				return true
 			}

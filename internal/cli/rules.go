@@ -11,14 +11,14 @@ import (
 
 	"gopkg.in/yaml.v3"
 
-	"github.com/irootkernel/manta/internal/model"
-	"github.com/irootkernel/manta/internal/rules"
-	"github.com/irootkernel/manta/internal/safety"
+	"github.com/irootkernel/gaori/internal/model"
+	"github.com/irootkernel/gaori/internal/rules"
+	"github.com/irootkernel/gaori/internal/safety"
 )
 
 func rulesCommand(opts globalOptions, args []string, stdout, stderr io.Writer) int {
 	if len(args) == 0 {
-		writeLine(stderr, "usage: manta rules <list|search|show|create|update|delete|test|propose>")
+		writeLine(stderr, "usage: gaori rules <list|search|show|create|update|delete|test|propose>")
 		return int(model.ExitCodeConfigError)
 	}
 	switch args[0] {
@@ -69,7 +69,7 @@ func rulesListCommand(opts globalOptions, args []string, stdout, stderr io.Write
 
 func rulesSearchCommand(opts globalOptions, args []string, stdout, stderr io.Writer) int {
 	if len(args) != 1 {
-		writeLine(stderr, "usage: manta rules search <query>")
+		writeLine(stderr, "usage: gaori rules search <query>")
 		return int(model.ExitCodeConfigError)
 	}
 	loaded, err := rules.Search(opts.RepoRoot, args[0])
@@ -90,7 +90,7 @@ func rulesSearchCommand(opts globalOptions, args []string, stdout, stderr io.Wri
 
 func rulesShowCommand(opts globalOptions, args []string, stdout, stderr io.Writer) int {
 	if len(args) != 1 {
-		writeLine(stderr, "usage: manta rules show <rule-id>")
+		writeLine(stderr, "usage: gaori rules show <rule-id>")
 		return int(model.ExitCodeConfigError)
 	}
 	rule, err := rules.LoadByID(opts.RepoRoot, args[0])
@@ -122,7 +122,7 @@ func rulesCreateCommand(opts globalOptions, args []string, stdout, stderr io.Wri
 		return int(model.ExitCodeConfigError)
 	}
 	if file == "" {
-		writeLine(stderr, "usage: manta rules create --file <rule.yaml>")
+		writeLine(stderr, "usage: gaori rules create --file <rule.yaml>")
 		return int(model.ExitCodeConfigError)
 	}
 	rule, err := readRuleInput(file)
@@ -140,7 +140,7 @@ func rulesCreateCommand(opts globalOptions, args []string, stdout, stderr io.Wri
 
 func rulesUpdateCommand(opts globalOptions, args []string, stdout, stderr io.Writer) int {
 	if len(args) == 0 {
-		writeLine(stderr, "usage: manta rules update <rule-id> --file <rule.yaml>")
+		writeLine(stderr, "usage: gaori rules update <rule-id> --file <rule.yaml>")
 		return int(model.ExitCodeConfigError)
 	}
 	ruleID := args[0]
@@ -153,7 +153,7 @@ func rulesUpdateCommand(opts globalOptions, args []string, stdout, stderr io.Wri
 		return int(model.ExitCodeConfigError)
 	}
 	if file == "" || len(fs.Args()) != 0 {
-		writeLine(stderr, "usage: manta rules update <rule-id> --file <rule.yaml>")
+		writeLine(stderr, "usage: gaori rules update <rule-id> --file <rule.yaml>")
 		return int(model.ExitCodeConfigError)
 	}
 	rule, err := readRuleInput(file)
@@ -171,7 +171,7 @@ func rulesUpdateCommand(opts globalOptions, args []string, stdout, stderr io.Wri
 
 func rulesDeleteCommand(opts globalOptions, args []string, stdout, stderr io.Writer) int {
 	if len(args) == 0 {
-		writeLine(stderr, "usage: manta rules delete <rule-id> --reason <reason>")
+		writeLine(stderr, "usage: gaori rules delete <rule-id> --reason <reason>")
 		return int(model.ExitCodeConfigError)
 	}
 	ruleID := args[0]
@@ -184,7 +184,7 @@ func rulesDeleteCommand(opts globalOptions, args []string, stdout, stderr io.Wri
 		return int(model.ExitCodeConfigError)
 	}
 	if strings.TrimSpace(reason) == "" || len(fs.Args()) != 0 {
-		writeLine(stderr, "usage: manta rules delete <rule-id> --reason <reason>")
+		writeLine(stderr, "usage: gaori rules delete <rule-id> --reason <reason>")
 		return int(model.ExitCodeConfigError)
 	}
 	disabled, err := rules.Delete(opts.RepoRoot, ruleID, reason)
@@ -208,7 +208,7 @@ func rulesTestCommand(opts globalOptions, args []string, stdout, stderr io.Write
 	}
 	start, end, err := parseSpan(expectSpan)
 	if err != nil || ruleID == "" || rawLogPath == "" {
-		writeLine(stderr, "usage: manta rules test --rule <rule-id> --log <raw-log> --expect-span <start:end>")
+		writeLine(stderr, "usage: gaori rules test --rule <rule-id> --log <raw-log> --expect-span <start:end>")
 		return int(model.ExitCodeConfigError)
 	}
 	result, err := rules.TestRule(opts.RepoRoot, ruleID, rawLogPath, start, end)
@@ -244,7 +244,7 @@ func rulesProposeCommand(opts globalOptions, args []string, stdout, stderr io.Wr
 	}
 	start, end, err := parseSpan(span)
 	if err != nil || len(tags) == 0 || parser == "" || rawLogPath == "" {
-		writeLine(stderr, "usage: manta rules propose --tag <tag> [--tag <tag> ...] --parser <parser> --raw-log <raw-log> --span <start:end>")
+		writeLine(stderr, "usage: gaori rules propose --tag <tag> [--tag <tag> ...] --parser <parser> --raw-log <raw-log> --span <start:end>")
 		return int(model.ExitCodeConfigError)
 	}
 	proposal, err := rules.Propose(opts.RepoRoot, tags, parser, rawLogPath, start, end)
@@ -265,11 +265,11 @@ func rulesProposeCommand(opts globalOptions, args []string, stdout, stderr io.Wr
 func readRuleInput(path string) (model.Rule, error) {
 	data, err := safety.ReadFileLimited(path)
 	if err != nil {
-		return model.Rule{}, model.NewMantaError(model.ExitCodeConfigError, "read rule input", err)
+		return model.Rule{}, model.NewGaoriError(model.ExitCodeConfigError, "read rule input", err)
 	}
 	var rule model.Rule
 	if err := safety.DecodeYAMLStrict(data, &rule); err != nil {
-		return model.Rule{}, model.NewMantaError(model.ExitCodeConfigError, "parse rule input", err)
+		return model.Rule{}, model.NewGaoriError(model.ExitCodeConfigError, "parse rule input", err)
 	}
 	return rule, nil
 }

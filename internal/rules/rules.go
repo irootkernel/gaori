@@ -8,9 +8,9 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/irootkernel/manta/internal/model"
-	"github.com/irootkernel/manta/internal/safety"
-	"github.com/irootkernel/manta/internal/tagset"
+	"github.com/irootkernel/gaori/internal/model"
+	"github.com/irootkernel/gaori/internal/safety"
+	"github.com/irootkernel/gaori/internal/tagset"
 )
 
 var knownRuleParsers = map[string]bool{
@@ -28,7 +28,7 @@ func Discover(repoRoot string) ([]string, error) {
 		if errors.Is(err, os.ErrNotExist) {
 			return nil, nil
 		}
-		return nil, model.NewMantaError(model.ExitCodeConfigError, "discover rule files", err)
+		return nil, model.NewGaoriError(model.ExitCodeConfigError, "discover rule files", err)
 	}
 	matches := make([]string, 0, len(entries))
 	for _, entry := range entries {
@@ -41,7 +41,7 @@ func Discover(repoRoot string) ([]string, error) {
 
 func LoadApplicable(repoRoot string, tags []string, parser string) ([]model.Rule, error) {
 	if err := tagset.Validate(tags); err != nil {
-		return nil, model.NewMantaError(model.ExitCodeConfigError, "select applicable rules", err)
+		return nil, model.NewGaoriError(model.ExitCodeConfigError, "select applicable rules", err)
 	}
 	selectedTags := make(map[string]struct{}, len(tags))
 	for _, tag := range tags {
@@ -78,35 +78,35 @@ func isApplicable(rule model.Rule, selectedTags map[string]struct{}, parser stri
 
 func ValidateApplicable(rule model.Rule) error {
 	if err := safety.ValidateArtifactIdentifier("rule id", rule.ID); err != nil {
-		return model.NewMantaError(model.ExitCodeConfigError, "validate rule file", fmt.Errorf("%w (%s)", err, rule.SourcePath))
+		return model.NewGaoriError(model.ExitCodeConfigError, "validate rule file", fmt.Errorf("%w (%s)", err, rule.SourcePath))
 	}
 	if rule.Status != model.RuleStatusActive && rule.Status != model.RuleStatusDisabled {
-		return model.NewMantaError(model.ExitCodeConfigError, "validate rule file", fmt.Errorf("rule %q has invalid status %q", rule.ID, rule.Status))
+		return model.NewGaoriError(model.ExitCodeConfigError, "validate rule file", fmt.Errorf("rule %q has invalid status %q", rule.ID, rule.Status))
 	}
 	if strings.TrimSpace(rule.Parser) == "" {
-		return model.NewMantaError(model.ExitCodeConfigError, "validate rule file", fmt.Errorf("rule %q must define parser", rule.ID))
+		return model.NewGaoriError(model.ExitCodeConfigError, "validate rule file", fmt.Errorf("rule %q must define parser", rule.ID))
 	}
 	if !knownRuleParsers[rule.Parser] {
-		return model.NewMantaError(model.ExitCodeConfigError, "validate rule file", fmt.Errorf("rule %q has unsupported parser label %q", rule.ID, rule.Parser))
+		return model.NewGaoriError(model.ExitCodeConfigError, "validate rule file", fmt.Errorf("rule %q has unsupported parser label %q", rule.ID, rule.Parser))
 	}
 	if err := tagset.Validate(rule.Tags); err != nil {
-		return model.NewMantaError(model.ExitCodeConfigError, "validate rule file", fmt.Errorf("rule %q tags: %w", rule.ID, err))
+		return model.NewGaoriError(model.ExitCodeConfigError, "validate rule file", fmt.Errorf("rule %q tags: %w", rule.ID, err))
 	}
 	if strings.TrimSpace(rule.Match.Start.Regex) == "" {
-		return model.NewMantaError(model.ExitCodeConfigError, "validate rule file", fmt.Errorf("rule %q must define start regex", rule.ID))
+		return model.NewGaoriError(model.ExitCodeConfigError, "validate rule file", fmt.Errorf("rule %q must define start regex", rule.ID))
 	}
 	if rule.Match.End.MaxBlockLines <= 0 || rule.Match.End.MaxBlockLines > safety.MaxBlockLines {
-		return model.NewMantaError(model.ExitCodeConfigError, "validate rule file", fmt.Errorf("rule %q max_block_lines must be between 1 and %d", rule.ID, safety.MaxBlockLines))
+		return model.NewGaoriError(model.ExitCodeConfigError, "validate rule file", fmt.Errorf("rule %q max_block_lines must be between 1 and %d", rule.ID, safety.MaxBlockLines))
 	}
 	if rule.Match.IncludeContext.Before < 0 || rule.Match.IncludeContext.After < 0 {
-		return model.NewMantaError(model.ExitCodeConfigError, "validate rule file", fmt.Errorf("rule %q include_context before and after must be non-negative", rule.ID))
+		return model.NewGaoriError(model.ExitCodeConfigError, "validate rule file", fmt.Errorf("rule %q include_context before and after must be non-negative", rule.ID))
 	}
 	if rule.Match.IncludeContext.Before > safety.MaxBlockLines || rule.Match.IncludeContext.After > safety.MaxBlockLines {
-		return model.NewMantaError(model.ExitCodeConfigError, "validate rule file", fmt.Errorf("rule %q include_context before and after must not exceed %d", rule.ID, safety.MaxBlockLines))
+		return model.NewGaoriError(model.ExitCodeConfigError, "validate rule file", fmt.Errorf("rule %q include_context before and after must not exceed %d", rule.ID, safety.MaxBlockLines))
 	}
 	spanBudget := rule.Match.IncludeContext.Before + rule.Match.End.MaxBlockLines + rule.Match.IncludeContext.After
 	if spanBudget > safety.MaxBlockLines {
-		return model.NewMantaError(model.ExitCodeConfigError, "validate rule file", fmt.Errorf("rule %q total block and context must not exceed %d lines", rule.ID, safety.MaxBlockLines))
+		return model.NewGaoriError(model.ExitCodeConfigError, "validate rule file", fmt.Errorf("rule %q total block and context must not exceed %d lines", rule.ID, safety.MaxBlockLines))
 	}
 	if _, err := validateRegex(rule.Match.Start.Regex, rule.ID, "start"); err != nil {
 		return err
@@ -122,7 +122,7 @@ func ValidateApplicable(rule model.Rule) error {
 			return err
 		}
 		if !hasNamedGroup(re, "file") || !hasNamedGroup(re, "line") {
-			return model.NewMantaError(model.ExitCodeConfigError, "validate rule file", fmt.Errorf("rule %q extract.file_line must define named capture groups file and line", rule.ID))
+			return model.NewGaoriError(model.ExitCodeConfigError, "validate rule file", fmt.Errorf("rule %q extract.file_line must define named capture groups file and line", rule.ID))
 		}
 	}
 	if rule.Extract.TestName.Regex != "" {
@@ -131,7 +131,7 @@ func ValidateApplicable(rule model.Rule) error {
 			return err
 		}
 		if re.NumSubexp() < 1 {
-			return model.NewMantaError(model.ExitCodeConfigError, "validate rule file", fmt.Errorf("rule %q extract.test_name must define at least one capture group", rule.ID))
+			return model.NewGaoriError(model.ExitCodeConfigError, "validate rule file", fmt.Errorf("rule %q extract.test_name must define at least one capture group", rule.ID))
 		}
 	}
 	return nil
@@ -139,11 +139,11 @@ func ValidateApplicable(rule model.Rule) error {
 
 func validateRegex(expr, ruleID, field string) (*regexp.Regexp, error) {
 	if err := safety.ValidateRegex(expr); err != nil {
-		return nil, model.NewMantaError(model.ExitCodeConfigError, "validate rule file", fmt.Errorf("rule %q %s invalid regex: %w", ruleID, field, err))
+		return nil, model.NewGaoriError(model.ExitCodeConfigError, "validate rule file", fmt.Errorf("rule %q %s invalid regex: %w", ruleID, field, err))
 	}
 	re, err := regexp.Compile(expr)
 	if err != nil {
-		return nil, model.NewMantaError(model.ExitCodeConfigError, "validate rule file", fmt.Errorf("rule %q %s invalid regex: %w", ruleID, field, err))
+		return nil, model.NewGaoriError(model.ExitCodeConfigError, "validate rule file", fmt.Errorf("rule %q %s invalid regex: %w", ruleID, field, err))
 	}
 	return re, nil
 }

@@ -6,9 +6,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/irootkernel/manta/internal/artifacts"
-	"github.com/irootkernel/manta/internal/model"
-	"github.com/irootkernel/manta/internal/safety"
+	"github.com/irootkernel/gaori/internal/artifacts"
+	"github.com/irootkernel/gaori/internal/model"
+	"github.com/irootkernel/gaori/internal/safety"
 )
 
 func TestRedactSummaryCoversSurfacedMetadata(t *testing.T) {
@@ -18,7 +18,7 @@ func TestRedactSummaryCoversSurfacedMetadata(t *testing.T) {
 		Tags:        []string{"unit", "tag-secret_tag"},
 		Parser:      "secret_parser",
 		CommandArgv: []string{"runner", "secret_arg"},
-		RawLog:      ".manta/runs/standalone/secret_path/unit.raw.log",
+		RawLog:      ".gaori/runs/standalone/secret_path/unit.raw.log",
 		Failures: []model.Failure{{
 			Signature: "secret_failure",
 			File:      "src/secret_path/test.go",
@@ -59,7 +59,7 @@ func TestRedactSummaryCoversSurfacedMetadata(t *testing.T) {
 			t.Errorf("unexpected redacted %s: got %q want %q", check.label, check.got, check.want)
 		}
 	}
-	if summary.RawLog != ".manta/runs/standalone/secret_path/unit.raw.log" || summary.Failures[0].Excerpt != "excerpts/secret_ref.log" {
+	if summary.RawLog != ".gaori/runs/standalone/secret_path/unit.raw.log" || summary.Failures[0].Excerpt != "excerpts/secret_ref.log" {
 		t.Fatalf("artifact references must remain literal: raw=%q excerpt=%q", summary.RawLog, summary.Failures[0].Excerpt)
 	}
 }

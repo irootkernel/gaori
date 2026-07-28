@@ -18,8 +18,8 @@ import (
 	"unicode"
 	"unicode/utf8"
 
-	"github.com/irootkernel/manta/internal/model"
-	"github.com/irootkernel/manta/internal/safety"
+	"github.com/irootkernel/gaori/internal/model"
+	"github.com/irootkernel/gaori/internal/safety"
 )
 
 func TestBinaryRejectsUnknownConfigFields(t *testing.T) {
@@ -28,7 +28,7 @@ func TestBinaryRejectsUnknownConfigFields(t *testing.T) {
 	bin := buildBinary(t, root)
 	repo := t.TempDir()
 	writeE2EConfig(t, repo, "#!/bin/sh\ntouch command-ran\n")
-	configPath := filepath.Join(repo, ".manta", "tester.yaml")
+	configPath := filepath.Join(repo, ".gaori", "tester.yaml")
 	file, err := os.OpenFile(configPath, os.O_APPEND|os.O_WRONLY, 0)
 	if err != nil {
 		t.Fatal(err)
@@ -53,7 +53,7 @@ func TestBinaryEnforcesRuleAndConfigInputSizeLimits(t *testing.T) {
 	t.Run("config fails before command execution", func(t *testing.T) {
 		repo := t.TempDir()
 		writeE2EConfig(t, repo, "#!/bin/sh\ntouch command-ran\n")
-		configPath := filepath.Join(repo, ".manta", "tester.yaml")
+		configPath := filepath.Join(repo, ".gaori", "tester.yaml")
 		config, err := os.ReadFile(configPath)
 		if err != nil {
 			t.Fatal(err)
@@ -67,7 +67,7 @@ func TestBinaryEnforcesRuleAndConfigInputSizeLimits(t *testing.T) {
 	t.Run("stored rule fails before command execution", func(t *testing.T) {
 		repo := t.TempDir()
 		writeE2EConfig(t, repo, "#!/bin/sh\ntouch command-ran\n")
-		rulesDir := filepath.Join(repo, ".manta", "tester", "rules")
+		rulesDir := filepath.Join(repo, ".gaori", "tester", "rules")
 		if err := os.MkdirAll(rulesDir, 0o755); err != nil {
 			t.Fatal(err)
 		}
@@ -87,7 +87,7 @@ func TestBinaryEnforcesRuleAndConfigInputSizeLimits(t *testing.T) {
 		}
 		out, err := exec.Command(bin, "--repo", repo, "rules", "create", "--file", inputPath).CombinedOutput()
 		requireExitCode(t, err, int(model.ExitCodeConfigError), out)
-		if _, err := os.Stat(filepath.Join(repo, ".manta", "tester", "rules", "oversized-v1.yaml")); !os.IsNotExist(err) {
+		if _, err := os.Stat(filepath.Join(repo, ".gaori", "tester", "rules", "oversized-v1.yaml")); !os.IsNotExist(err) {
 			t.Fatalf("oversized source created rule: %v", err)
 		}
 	})
@@ -100,14 +100,14 @@ func TestBinaryEnforcesRuleAndConfigInputSizeLimits(t *testing.T) {
 		}
 		out, err := exec.Command(bin, "--repo", repo, "rules", "propose", "--tag", "unit", "--parser", "generic", "--raw-log", rawPath, "--span", "1:1").CombinedOutput()
 		requireExitCode(t, err, int(model.ExitCodeConfigError), out)
-		if _, err := os.Stat(filepath.Join(repo, ".manta", "rule-proposals")); !os.IsNotExist(err) {
+		if _, err := os.Stat(filepath.Join(repo, ".gaori", "rule-proposals")); !os.IsNotExist(err) {
 			t.Fatalf("oversized raw log created proposal directory: %v", err)
 		}
 	})
 
 	t.Run("rule test keeps parser-error contract", func(t *testing.T) {
 		repo := t.TempDir()
-		rulesDir := filepath.Join(repo, ".manta", "tester", "rules")
+		rulesDir := filepath.Join(repo, ".gaori", "tester", "rules")
 		if err := os.MkdirAll(rulesDir, 0o755); err != nil {
 			t.Fatal(err)
 		}
@@ -156,28 +156,28 @@ func TestRequirementTraceabilityAuditRejectsInvalidEvidence(t *testing.T) {
 	}{
 		{
 			name:   "unresolved test citation",
-			spec:   "- [x] `MANTA-REQ-RQCLI-001` Example.\n",
-			matrix: "| `MANTA-REQ-RQCLI-001` | `TestMissing` |\n",
+			spec:   "- [x] `GAORI-REQ-RQCLI-001` Example.\n",
+			matrix: "| `GAORI-REQ-RQCLI-001` | `TestMissing` |\n",
 			want:   "references missing test TestMissing",
 		},
 		{
 			name:   "unapproved non-test evidence",
-			spec:   "- [x] `MANTA-REQ-RQCLI-001` Example.\n",
-			matrix: "| `MANTA-REQ-RQCLI-001` | `make test` |\n",
+			spec:   "- [x] `GAORI-REQ-RQCLI-001` Example.\n",
+			matrix: "| `GAORI-REQ-RQCLI-001` | `make test` |\n",
 			want:   "has no cited test and is not an explicit non-test exception",
 		},
 		{
 			name:       "stale non-test exception",
-			spec:       "- [x] `MANTA-REQ-RQDOC-004` Example.\n",
-			matrix:     "| `MANTA-REQ-RQDOC-004` | `TestPresent` |\n",
-			exceptions: map[string]bool{"MANTA-REQ-RQDOC-004": true},
+			spec:       "- [x] `GAORI-REQ-RQDOC-004` Example.\n",
+			matrix:     "| `GAORI-REQ-RQDOC-004` | `TestPresent` |\n",
+			exceptions: map[string]bool{"GAORI-REQ-RQDOC-004": true},
 			want:       "explicit non-test exception now cites a test",
 		},
 		{
 			name:       "orphaned non-test exception",
-			spec:       "- [x] `MANTA-REQ-RQCLI-001` Example.\n",
-			matrix:     "| `MANTA-REQ-RQCLI-001` | `TestPresent` |\n",
-			exceptions: map[string]bool{"MANTA-REQ-RQDOC-004": true},
+			spec:       "- [x] `GAORI-REQ-RQCLI-001` Example.\n",
+			matrix:     "| `GAORI-REQ-RQCLI-001` | `TestPresent` |\n",
+			exceptions: map[string]bool{"GAORI-REQ-RQDOC-004": true},
 			want:       "explicit non-test exception has no traceability row",
 		},
 	}
@@ -244,7 +244,7 @@ import "testing"
 
 func TestIgnored(t *testing.T) {}
 `
-		for _, directory := range []string{".manta", "vendor"} {
+		for _, directory := range []string{".gaori", "vendor"} {
 			writeAuditGoFixture(t, root, filepath.Join(directory, "hidden_test.go"), ignoredTest)
 		}
 
@@ -266,6 +266,48 @@ func TestIgnored(t *testing.T) {}
 	})
 }
 
+func TestRepositoryUsesGaoriIdentity(t *testing.T) {
+	t.Parallel()
+	root := projectRoot(t)
+	previousIdentity := "man" + "ta"
+	err := filepath.WalkDir(root, func(path string, entry fs.DirEntry, walkErr error) error {
+		if walkErr != nil {
+			return walkErr
+		}
+		if entry.IsDir() {
+			if path != root && skippedTestScanDirectories[entry.Name()] {
+				return filepath.SkipDir
+			}
+			return nil
+		}
+		relative, err := filepath.Rel(root, path)
+		if err != nil {
+			return err
+		}
+		if strings.Contains(strings.ToLower(relative), previousIdentity) {
+			t.Errorf("repository path retains pre-v0.1.6 identity: %s", relative)
+		}
+		info, err := entry.Info()
+		if err != nil {
+			return err
+		}
+		if !info.Mode().IsRegular() {
+			return nil
+		}
+		content, err := os.ReadFile(path)
+		if err != nil {
+			return err
+		}
+		if bytes.Contains(bytes.ToLower(content), []byte(previousIdentity)) {
+			t.Errorf("repository file retains pre-v0.1.6 identity: %s", relative)
+		}
+		return nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
 func writeAuditGoFixture(t *testing.T, root, relativePath, contents string) {
 	t.Helper()
 	path := filepath.Join(root, relativePath)
@@ -278,16 +320,19 @@ func writeAuditGoFixture(t *testing.T, root, relativePath, contents string) {
 }
 
 var (
-	completedRequirementPattern = regexp.MustCompile(`(?m)^- \[x\] \x60(MANTA-REQ-[A-Z0-9-]+)\x60`)
-	traceabilityRowPattern      = regexp.MustCompile(`(?m)^\| \x60(MANTA-REQ-[A-Z0-9-]+)\x60 \| ([^|]+) \|$`)
+	completedRequirementPattern = regexp.MustCompile(`(?m)^- \[x\] \x60(GAORI-REQ-[A-Z0-9-]+)\x60`)
+	traceabilityRowPattern      = regexp.MustCompile(`(?m)^\| \x60(GAORI-REQ-[A-Z0-9-]+)\x60 \| ([^|]+) \|$`)
 	testCitationPattern         = regexp.MustCompile(`\x60(Test[A-Za-z0-9_]*)\x60`)
 	nonTestEvidenceRequirements = map[string]bool{
-		"MANTA-REQ-RQDOC-004": true,
-		"MANTA-REQ-RQHAR-007": true,
+		"GAORI-REQ-RQDOC-004": true,
+		"GAORI-REQ-RQHAR-007": true,
 	}
 	skippedTestScanDirectories = map[string]bool{
 		".git":                     true,
-		".manta":                   true,
+		"." + "man" + "ta":         true,
+		".gaori":                   true,
+		".gjc":                     true,
+		".kat":                     true,
 		".codegraph":               true,
 		".omx":                     true,
 		".omc":                     true,
@@ -441,7 +486,7 @@ func TestBinaryRuleTestDoesNotUseParserFallback(t *testing.T) {
 	root := projectRoot(t)
 	bin := buildBinary(t, root)
 	repo := t.TempDir()
-	rulesDir := filepath.Join(repo, ".manta", "tester", "rules")
+	rulesDir := filepath.Join(repo, ".gaori", "tester", "rules")
 	if err := os.MkdirAll(rulesDir, 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -502,14 +547,14 @@ func TestBinaryRejectsOversizedRuleContext(t *testing.T) {
 
 		createOut, createErr := exec.Command(bin, "--repo", repo, "rules", "create", "--file", invalidPath).CombinedOutput()
 		requireExitCode(t, createErr, int(model.ExitCodeConfigError), createOut)
-		if _, err := os.Stat(filepath.Join(repo, ".manta", "tester", "rules", "bounded-v1.yaml")); !os.IsNotExist(err) {
+		if _, err := os.Stat(filepath.Join(repo, ".gaori", "tester", "rules", "bounded-v1.yaml")); !os.IsNotExist(err) {
 			t.Fatalf("invalid create wrote a rule file: %v", err)
 		}
 
 		runExpectedExit(t, exec.Command(bin, "--repo", repo, "rules", "create", "--file", validPath), 0)
 		updateOut, updateErr := exec.Command(bin, "--repo", repo, "rules", "update", "bounded-v1", "--file", invalidPath).CombinedOutput()
 		requireExitCode(t, updateErr, int(model.ExitCodeConfigError), updateOut)
-		stored, err := os.ReadFile(filepath.Join(repo, ".manta", "tester", "rules", "bounded-v1.yaml"))
+		stored, err := os.ReadFile(filepath.Join(repo, ".gaori", "tester", "rules", "bounded-v1.yaml"))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -520,7 +565,7 @@ func TestBinaryRejectsOversizedRuleContext(t *testing.T) {
 
 	t.Run("test and run reject discovered invalid rule", func(t *testing.T) {
 		repo := t.TempDir()
-		rulesDir := filepath.Join(repo, ".manta", "tester", "rules")
+		rulesDir := filepath.Join(repo, ".gaori", "tester", "rules")
 		if err := os.MkdirAll(rulesDir, 0o755); err != nil {
 			t.Fatal(err)
 		}
@@ -579,7 +624,7 @@ func TestBinaryPreservesConcurrentRuleProposals(t *testing.T) {
 	for err := range errs {
 		t.Errorf("proposal command failed: %v", err)
 	}
-	entries, err := os.ReadDir(filepath.Join(repo, ".manta", "rule-proposals"))
+	entries, err := os.ReadDir(filepath.Join(repo, ".gaori", "rule-proposals"))
 	if err != nil {
 		t.Fatal(err)
 	}

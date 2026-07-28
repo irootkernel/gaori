@@ -14,7 +14,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/irootkernel/manta/internal/model"
+	"github.com/irootkernel/gaori/internal/model"
 )
 
 func TestExecuteForwardsTerminationAndNormalizesResult(t *testing.T) {

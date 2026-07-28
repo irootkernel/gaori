@@ -10,9 +10,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/irootkernel/manta/internal/artifacts"
-	"github.com/irootkernel/manta/internal/model"
-	"github.com/irootkernel/manta/internal/safety"
+	"github.com/irootkernel/gaori/internal/artifacts"
+	"github.com/irootkernel/gaori/internal/model"
+	"github.com/irootkernel/gaori/internal/safety"
 )
 
 func TestMaterializeArtifactsExtractionErrorContract(t *testing.T) {
@@ -89,7 +89,7 @@ func TestMaterializeArtifactsExtractionErrorContract(t *testing.T) {
 func TestOversizedPassingRunUsesBoundedExtraction(t *testing.T) {
 	t.Parallel()
 	repo := t.TempDir()
-	if err := os.MkdirAll(filepath.Join(repo, ".manta"), 0o755); err != nil {
+	if err := os.MkdirAll(filepath.Join(repo, ".gaori"), 0o755); err != nil {
 		t.Fatal(err)
 	}
 	configText := strings.Join([]string{
@@ -101,7 +101,7 @@ func TestOversizedPassingRunUsesBoundedExtraction(t *testing.T) {
 		"    parser: generic",
 		"    timeout_sec: 10",
 	}, "\n") + "\n"
-	if err := os.WriteFile(filepath.Join(repo, ".manta", "tester.yaml"), []byte(configText), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(repo, ".gaori", "tester.yaml"), []byte(configText), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	raw := []byte(strings.Repeat("x", safety.MaxRegexInputBytes+1))
@@ -138,7 +138,7 @@ func TestOversizedPassingRunUsesBoundedExtraction(t *testing.T) {
 		t.Fatalf("expected no extraction diagnostic, got %q", stderr.String())
 	}
 
-	baseDir := filepath.Join(repo, ".manta", "runs", "scoped", "oversized-pass", "artifacts", "test")
+	baseDir := filepath.Join(repo, ".gaori", "runs", "scoped", "oversized-pass", "artifacts", "test")
 	copiedRaw := assertDegradedArtifacts(t, baseDir, "huge-pass", model.RunStatusPassed, 0)
 	if !bytes.Equal(copiedRaw, raw) {
 		t.Fatal("expected run to preserve the original raw bytes")
@@ -179,7 +179,7 @@ func TestNoisyRunsWriteBoundedTerminalArtifacts(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			repo := t.TempDir()
-			if err := os.MkdirAll(filepath.Join(repo, ".manta"), 0o755); err != nil {
+			if err := os.MkdirAll(filepath.Join(repo, ".gaori"), 0o755); err != nil {
 				t.Fatal(err)
 			}
 			configText := strings.Join([]string{
@@ -191,7 +191,7 @@ func TestNoisyRunsWriteBoundedTerminalArtifacts(t *testing.T) {
 				"    parser: generic",
 				"    timeout_sec: 10",
 			}, "\n") + "\n"
-			if err := os.WriteFile(filepath.Join(repo, ".manta", "tester.yaml"), []byte(configText), 0o644); err != nil {
+			if err := os.WriteFile(filepath.Join(repo, ".gaori", "tester.yaml"), []byte(configText), 0o644); err != nil {
 				t.Fatal(err)
 			}
 			script := fmt.Sprintf("#!/bin/sh\ni=1\nwhile [ $i -le 5000 ]; do\n  printf '%%s %%04d\\n' %q \"$i\"\n  i=$((i + 1))\ndone\nexit %d\n", tt.line, tt.commandExit)
@@ -215,7 +215,7 @@ func TestNoisyRunsWriteBoundedTerminalArtifacts(t *testing.T) {
 				t.Fatalf("unexpected result: %+v", result)
 			}
 
-			baseDir := filepath.Join(repo, ".manta", "runs", "scoped", "bounded-"+tt.name, "artifacts", "test")
+			baseDir := filepath.Join(repo, ".gaori", "runs", "scoped", "bounded-"+tt.name, "artifacts", "test")
 			summaryPath := filepath.Join(baseDir, "noisy.summary.json")
 			statusPath := filepath.Join(baseDir, "noisy.status.json")
 			markdownPath := filepath.Join(baseDir, "noisy.summary.md")
@@ -330,7 +330,7 @@ func TestOversizedSummarizeUsesBoundedExtraction(t *testing.T) {
 				t.Fatalf("expected no extraction diagnostic, got %q", stderr.String())
 			}
 
-			baseDir := filepath.Join(repo, ".manta", "runs", "scoped", "oversized-summarize-"+tt.name, "artifacts", "test")
+			baseDir := filepath.Join(repo, ".gaori", "runs", "scoped", "oversized-summarize-"+tt.name, "artifacts", "test")
 			copiedRaw := assertDegradedArtifacts(t, baseDir, "unit", tt.inferredStatus, tt.inferredExitCode)
 			if !bytes.Equal(copiedRaw, tt.raw) {
 				t.Fatal("expected summarize to preserve the original raw bytes")

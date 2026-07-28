@@ -14,14 +14,14 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/irootkernel/manta/internal/artifacts"
-	"github.com/irootkernel/manta/internal/model"
+	"github.com/irootkernel/gaori/internal/artifacts"
+	"github.com/irootkernel/gaori/internal/model"
 )
 
 func TestConfiguredRunAndExcerpt(t *testing.T) {
 	t.Parallel()
 	repo := t.TempDir()
-	if err := os.MkdirAll(filepath.Join(repo, ".manta", "tester"), 0o755); err != nil {
+	if err := os.MkdirAll(filepath.Join(repo, ".gaori", "tester"), 0o755); err != nil {
 		t.Fatal(err)
 	}
 	configText := strings.Join([]string{
@@ -38,7 +38,7 @@ func TestConfiguredRunAndExcerpt(t *testing.T) {
 		"      regex: 'token=[^ ]+'",
 		"      replace: 'token=<redacted>'",
 	}, "\n") + "\n"
-	if err := os.WriteFile(filepath.Join(repo, ".manta", "tester.yaml"), []byte(configText), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(repo, ".gaori", "tester.yaml"), []byte(configText), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	script := "#!/bin/sh\necho 'noise: start'\necho 'TypeError: token=secret failed'\necho 'src/foo.test.ts:42:13'\necho '✗ renders empty state'\nexit 1\n"
@@ -50,12 +50,12 @@ func TestConfiguredRunAndExcerpt(t *testing.T) {
 	if exitCode != 1 {
 		t.Fatalf("expected exit code 1, got %d stderr=%s", exitCode, stderr.String())
 	}
-	mantaDir := filepath.Join(repo, ".manta", "runs", "standalone")
-	entries, err := os.ReadDir(mantaDir)
+	gaoriDir := filepath.Join(repo, ".gaori", "runs", "standalone")
+	entries, err := os.ReadDir(gaoriDir)
 	if err != nil || len(entries) != 1 {
 		t.Fatalf("expected one run directory, err=%v entries=%d", err, len(entries))
 	}
-	runDir := filepath.Join(mantaDir, entries[0].Name())
+	runDir := filepath.Join(gaoriDir, entries[0].Name())
 	summaryJSONPath := filepath.Join(runDir, "unit.summary.json")
 	rawLogPath := filepath.Join(runDir, "unit.raw.log")
 	statusJSONPath := filepath.Join(runDir, "unit.status.json")
@@ -140,7 +140,7 @@ func TestConfiguredRunAndExcerpt(t *testing.T) {
 func TestConfiguredRunRedactsSurfacedMetadata(t *testing.T) {
 	t.Parallel()
 	repo := t.TempDir()
-	if err := os.MkdirAll(filepath.Join(repo, ".manta"), 0o755); err != nil {
+	if err := os.MkdirAll(filepath.Join(repo, ".gaori"), 0o755); err != nil {
 		t.Fatal(err)
 	}
 	configText := strings.Join([]string{
@@ -157,7 +157,7 @@ func TestConfiguredRunRedactsSurfacedMetadata(t *testing.T) {
 		"      regex: 'secret_[a-z_]+'",
 		"      replace: '<redacted>'",
 	}, "\n") + "\n"
-	if err := os.WriteFile(filepath.Join(repo, ".manta", "tester.yaml"), []byte(configText), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(repo, ".gaori", "tester.yaml"), []byte(configText), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	script := strings.Join([]string{
@@ -274,7 +274,7 @@ func TestConfiguredRunRedactsSurfacedMetadata(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(string(markdownData), "# Manta Summary: command_<redacted>") {
+	if !strings.Contains(string(markdownData), "# Gaori Summary: command_<redacted>") {
 		t.Fatalf("expected redacted markdown heading, got %q", markdownData)
 	}
 	if !strings.Contains(string(markdownData), "command_secret_id.raw.log") {
@@ -295,7 +295,7 @@ func TestConfiguredRunRedactsSurfacedMetadata(t *testing.T) {
 func TestAdHocRunRedactsSurfacedMetadata(t *testing.T) {
 	t.Parallel()
 	repo := t.TempDir()
-	if err := os.MkdirAll(filepath.Join(repo, ".manta"), 0o755); err != nil {
+	if err := os.MkdirAll(filepath.Join(repo, ".gaori"), 0o755); err != nil {
 		t.Fatal(err)
 	}
 	configText := strings.Join([]string{
@@ -306,7 +306,7 @@ func TestAdHocRunRedactsSurfacedMetadata(t *testing.T) {
 		"      regex: 'secret_[a-z_]+'",
 		"      replace: '<redacted>'",
 	}, "\n") + "\n"
-	if err := os.WriteFile(filepath.Join(repo, ".manta", "tester.yaml"), []byte(configText), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(repo, ".gaori", "tester.yaml"), []byte(configText), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	if err := os.WriteFile(filepath.Join(repo, "adhoc.sh"), []byte("#!/bin/sh\nprintf '%s\\n' \"$1\"\n"), 0o755); err != nil {
@@ -381,7 +381,7 @@ func TestRawLogOpenFailurePreventsCommandExecution(t *testing.T) {
 	t.Parallel()
 	repo := t.TempDir()
 	writeMarkerCommandConfig(t, repo, "unit")
-	base := filepath.Join(repo, ".manta", "runs", "scoped", "run-001", "artifacts", "test")
+	base := filepath.Join(repo, ".gaori", "runs", "scoped", "run-001", "artifacts", "test")
 	if err := os.MkdirAll(base, 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -419,7 +419,7 @@ func TestRawLogWriteFailureDoesNotPublishDerivedArtifacts(t *testing.T) {
 		if _, err := raw.Write(partialRaw); err != nil {
 			return model.RunOutput{}, err
 		}
-		return model.RunOutput{}, model.NewMantaError(model.ExitCodeArtifactError, "write raw log", injectedErr)
+		return model.RunOutput{}, model.NewGaoriError(model.ExitCodeArtifactError, "write raw log", injectedErr)
 	}
 
 	var stdout, stderr bytes.Buffer
@@ -431,7 +431,7 @@ func TestRawLogWriteFailureDoesNotPublishDerivedArtifacts(t *testing.T) {
 	if stdout.Len() != 0 || !strings.Contains(stderr.String(), "write raw log: "+injectedErr.Error()) {
 		t.Fatalf("unexpected CLI output: stdout=%q stderr=%q", stdout.String(), stderr.String())
 	}
-	base := filepath.Join(repo, ".manta", "runs", "scoped", "write-failure", "artifacts", "test")
+	base := filepath.Join(repo, ".gaori", "runs", "scoped", "write-failure", "artifacts", "test")
 	raw, err := os.ReadFile(filepath.Join(base, "unit.raw.log"))
 	if err != nil {
 		t.Fatal(err)
@@ -449,7 +449,7 @@ func TestRawLogWriteFailureDoesNotPublishDerivedArtifacts(t *testing.T) {
 func TestTimeoutPreservesPartialArtifacts(t *testing.T) {
 	t.Parallel()
 	repo := t.TempDir()
-	if err := os.MkdirAll(filepath.Join(repo, ".manta"), 0o755); err != nil {
+	if err := os.MkdirAll(filepath.Join(repo, ".gaori"), 0o755); err != nil {
 		t.Fatal(err)
 	}
 	configText := strings.Join([]string{
@@ -461,7 +461,7 @@ func TestTimeoutPreservesPartialArtifacts(t *testing.T) {
 		"    parser: generic",
 		"    timeout_sec: 1",
 	}, "\n") + "\n"
-	if err := os.WriteFile(filepath.Join(repo, ".manta", "tester.yaml"), []byte(configText), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(repo, ".gaori", "tester.yaml"), []byte(configText), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	script := "#!/bin/sh\necho started\nsleep 30\necho finished\n"
@@ -478,7 +478,7 @@ func TestTimeoutPreservesPartialArtifacts(t *testing.T) {
 		t.Fatalf("expected timed_out console result, got %q", stdout.String())
 	}
 
-	base := filepath.Join(repo, ".manta", "runs", "scoped", "timeout-run", "artifacts", "test")
+	base := filepath.Join(repo, ".gaori", "runs", "scoped", "timeout-run", "artifacts", "test")
 	raw, err := os.ReadFile(filepath.Join(base, "timeout.raw.log"))
 	if err != nil {
 		t.Fatal(err)
@@ -553,8 +553,8 @@ func TestExcerptSymlinkContainment(t *testing.T) {
 	t.Run("cross-run rejected", func(t *testing.T) {
 		t.Parallel()
 		repo := t.TempDir()
-		runA := filepath.Join(repo, ".manta", "runs", "scoped", "run-a", "artifacts", "test")
-		runB := filepath.Join(repo, ".manta", "runs", "scoped", "run-b", "artifacts", "test")
+		runA := filepath.Join(repo, ".gaori", "runs", "scoped", "run-a", "artifacts", "test")
+		runB := filepath.Join(repo, ".gaori", "runs", "scoped", "run-b", "artifacts", "test")
 		if err := os.MkdirAll(filepath.Join(runA, "excerpts"), 0o755); err != nil {
 			t.Fatal(err)
 		}
@@ -661,7 +661,7 @@ func writeExcerptSummary(t *testing.T, dir, reference string) string {
 
 func writeMarkerCommandConfig(t *testing.T, repo, commandID string) {
 	t.Helper()
-	if err := os.MkdirAll(filepath.Join(repo, ".manta"), 0o755); err != nil {
+	if err := os.MkdirAll(filepath.Join(repo, ".gaori"), 0o755); err != nil {
 		t.Fatal(err)
 	}
 	configText := strings.Join([]string{
@@ -673,7 +673,7 @@ func writeMarkerCommandConfig(t *testing.T, repo, commandID string) {
 		"    parser: generic",
 		"    timeout_sec: 10",
 	}, "\n") + "\n"
-	if err := os.WriteFile(filepath.Join(repo, ".manta", "tester.yaml"), []byte(configText), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(repo, ".gaori", "tester.yaml"), []byte(configText), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	if err := os.WriteFile(filepath.Join(repo, "touch-marker.sh"), []byte("#!/bin/sh\ntouch command-ran\n"), 0o755); err != nil {
@@ -684,7 +684,7 @@ func writeMarkerCommandConfig(t *testing.T, repo, commandID string) {
 func TestSummarizeRawLogUsesConfigRedaction(t *testing.T) {
 	t.Parallel()
 	repo := t.TempDir()
-	if err := os.MkdirAll(filepath.Join(repo, ".manta", "tester"), 0o755); err != nil {
+	if err := os.MkdirAll(filepath.Join(repo, ".gaori", "tester"), 0o755); err != nil {
 		t.Fatal(err)
 	}
 	configText := strings.Join([]string{
@@ -698,7 +698,7 @@ func TestSummarizeRawLogUsesConfigRedaction(t *testing.T) {
 		"      regex: 'secret_[a-z_]+'",
 		"      replace: '<redacted>'",
 	}, "\n") + "\n"
-	if err := os.WriteFile(filepath.Join(repo, ".manta", "tester.yaml"), []byte(configText), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(repo, ".gaori", "tester.yaml"), []byte(configText), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	rawDir := filepath.Join(repo, "fixtures")
@@ -725,7 +725,7 @@ func TestSummarizeRawLogUsesConfigRedaction(t *testing.T) {
 			t.Fatalf("expected literal summarize artifact reference, got %q", path)
 		}
 	}
-	runsDir := filepath.Join(repo, ".manta", "runs", "standalone")
+	runsDir := filepath.Join(repo, ".gaori", "runs", "standalone")
 	entries, err := os.ReadDir(runsDir)
 	if err != nil || len(entries) != 1 {
 		t.Fatalf("expected one standalone summarize directory, err=%v entries=%d", err, len(entries))
@@ -807,7 +807,7 @@ func assertNoSecret(t *testing.T, label, value string) {
 func TestStandaloneOperationsUseDistinctRunDirectories(t *testing.T) {
 	t.Parallel()
 	repo := t.TempDir()
-	if err := os.MkdirAll(filepath.Join(repo, ".manta"), 0o755); err != nil {
+	if err := os.MkdirAll(filepath.Join(repo, ".gaori"), 0o755); err != nil {
 		t.Fatal(err)
 	}
 	configText := strings.Join([]string{
@@ -819,7 +819,7 @@ func TestStandaloneOperationsUseDistinctRunDirectories(t *testing.T) {
 		"    parser: generic",
 		"    timeout_sec: 10",
 	}, "\n") + "\n"
-	if err := os.WriteFile(filepath.Join(repo, ".manta", "tester.yaml"), []byte(configText), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(repo, ".gaori", "tester.yaml"), []byte(configText), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	if err := os.WriteFile(filepath.Join(repo, "configured.sh"), []byte("#!/bin/sh\nprintf 'configured\\n'\n"), 0o755); err != nil {
@@ -912,7 +912,7 @@ func TestAdHocRunWithoutConfig(t *testing.T) {
 func TestOversizedFailedRunPreservesRawLog(t *testing.T) {
 	t.Parallel()
 	repo := t.TempDir()
-	if err := os.MkdirAll(filepath.Join(repo, ".manta", "tester"), 0o755); err != nil {
+	if err := os.MkdirAll(filepath.Join(repo, ".gaori", "tester"), 0o755); err != nil {
 		t.Fatal(err)
 	}
 	configText := strings.Join([]string{
@@ -924,7 +924,7 @@ func TestOversizedFailedRunPreservesRawLog(t *testing.T) {
 		"    parser: generic",
 		"    timeout_sec: 10",
 	}, "\n") + "\n"
-	if err := os.WriteFile(filepath.Join(repo, ".manta", "tester.yaml"), []byte(configText), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(repo, ".gaori", "tester.yaml"), []byte(configText), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	script := "#!/bin/sh\npython3 - <<'PY'\nprint('x' * 300000)\nPY\nexit 1\n"
@@ -942,7 +942,7 @@ func TestOversizedFailedRunPreservesRawLog(t *testing.T) {
 	if stderr.Len() != 0 {
 		t.Fatalf("expected no extraction diagnostic, got %q", stderr.String())
 	}
-	runsDir := filepath.Join(repo, ".manta", "runs", "standalone")
+	runsDir := filepath.Join(repo, ".gaori", "runs", "standalone")
 	entries, err := os.ReadDir(runsDir)
 	if err != nil || len(entries) != 1 {
 		t.Fatalf("expected one run directory, err=%v entries=%d", err, len(entries))
@@ -1012,7 +1012,7 @@ exit 1
 	} {
 		t.Run(test.parser, func(t *testing.T) {
 			repo := t.TempDir()
-			if err := os.MkdirAll(filepath.Join(repo, ".manta"), 0o755); err != nil {
+			if err := os.MkdirAll(filepath.Join(repo, ".gaori"), 0o755); err != nil {
 				t.Fatal(err)
 			}
 			config := strings.Join([]string{
@@ -1024,7 +1024,7 @@ exit 1
 				"    parser: " + test.parser,
 				"    timeout_sec: 10",
 			}, "\n") + "\n"
-			if err := os.WriteFile(filepath.Join(repo, ".manta", "tester.yaml"), []byte(config), 0o644); err != nil {
+			if err := os.WriteFile(filepath.Join(repo, ".gaori", "tester.yaml"), []byte(config), 0o644); err != nil {
 				t.Fatal(err)
 			}
 			if err := os.WriteFile(filepath.Join(repo, "test.sh"), []byte(test.script), 0o755); err != nil {
@@ -1067,11 +1067,11 @@ func TestLegacyLaneInterfacesFailClosed(t *testing.T) {
 	})
 	t.Run("config schema", func(t *testing.T) {
 		repo := t.TempDir()
-		if err := os.MkdirAll(filepath.Join(repo, ".manta"), 0o755); err != nil {
+		if err := os.MkdirAll(filepath.Join(repo, ".gaori"), 0o755); err != nil {
 			t.Fatal(err)
 		}
 		legacy := "version: 1\ncommands:\n  unit:\n    command: [true]\n    lane: unit\n    parser: generic\n    timeout_sec: 10\n"
-		if err := os.WriteFile(filepath.Join(repo, ".manta", "tester.yaml"), []byte(legacy), 0o644); err != nil {
+		if err := os.WriteFile(filepath.Join(repo, ".gaori", "tester.yaml"), []byte(legacy), 0o644); err != nil {
 			t.Fatal(err)
 		}
 		var stdout, stderr bytes.Buffer
@@ -1124,7 +1124,7 @@ func TestRunAndSummarizeSelectRulesByAllTags(t *testing.T) {
 
 func writeTagSelectorFixture(t *testing.T, repo string) string {
 	t.Helper()
-	rulesDir := filepath.Join(repo, ".manta", "tester", "rules")
+	rulesDir := filepath.Join(repo, ".gaori", "tester", "rules")
 	if err := os.MkdirAll(rulesDir, 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -1142,7 +1142,7 @@ func writeTagSelectorFixture(t *testing.T, repo string) string {
 		"    parser: generic",
 		"    timeout_sec: 10",
 	}, "\n") + "\n"
-	if err := os.WriteFile(filepath.Join(repo, ".manta", "tester.yaml"), []byte(configText), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(repo, ".gaori", "tester.yaml"), []byte(configText), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	rawText := "COMMON_ONLY\n\nUNIT_ONLY\n\nINTEGRATION_ONLY\n\n"

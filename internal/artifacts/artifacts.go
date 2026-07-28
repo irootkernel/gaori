@@ -12,8 +12,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/irootkernel/manta/internal/model"
-	"github.com/irootkernel/manta/internal/safety"
+	"github.com/irootkernel/gaori/internal/model"
+	"github.com/irootkernel/gaori/internal/safety"
 )
 
 func PreparePaths(repoRoot, outputDir, runID, commandID string) (model.ArtifactPaths, error) {
@@ -23,14 +23,14 @@ func PreparePaths(repoRoot, outputDir, runID, commandID string) (model.ArtifactP
 func preparePathsAt(repoRoot, outputDir, runID, commandID string, now time.Time) (model.ArtifactPaths, error) {
 	if runID != "" {
 		if err := safety.ValidateArtifactIdentifier("run id", runID); err != nil {
-			return model.ArtifactPaths{}, model.NewMantaError(model.ExitCodeConfigError, "plan artifact paths", err)
+			return model.ArtifactPaths{}, model.NewGaoriError(model.ExitCodeConfigError, "plan artifact paths", err)
 		}
 	}
 	if err := safety.ValidateArtifactIdentifier("command id", commandID); err != nil {
-		return model.ArtifactPaths{}, model.NewMantaError(model.ExitCodeConfigError, "plan artifact paths", err)
+		return model.ArtifactPaths{}, model.NewGaoriError(model.ExitCodeConfigError, "plan artifact paths", err)
 	}
 	if runID != "" {
-		paths := pathsForBase(repoRoot, filepath.Join(repoRoot, ".manta", "runs", "scoped", runID, "artifacts", "test"), commandID)
+		paths := pathsForBase(repoRoot, filepath.Join(repoRoot, ".gaori", "runs", "scoped", runID, "artifacts", "test"), commandID)
 		if err := ensureParents(paths); err != nil {
 			return model.ArtifactPaths{}, err
 		}
@@ -38,7 +38,7 @@ func preparePathsAt(repoRoot, outputDir, runID, commandID string, now time.Time)
 	}
 
 	boundaryDir := repoRoot
-	runsDir := filepath.Join(repoRoot, ".manta", "runs", "standalone")
+	runsDir := filepath.Join(repoRoot, ".gaori", "runs", "standalone")
 	if outputDir != "" {
 		if filepath.IsAbs(outputDir) {
 			boundaryDir = outputDir
@@ -48,7 +48,7 @@ func preparePathsAt(repoRoot, outputDir, runID, commandID string, now time.Time)
 		runsDir = filepath.Join(boundaryDir, "runs")
 	}
 	if err := safety.MkdirAllWithin(boundaryDir, runsDir, 0o755); err != nil {
-		return model.ArtifactPaths{}, model.NewMantaError(model.ExitCodeArtifactError, "create artifact runs directory", err)
+		return model.ArtifactPaths{}, model.NewGaoriError(model.ExitCodeArtifactError, "create artifact runs directory", err)
 	}
 
 	baseStamp := now.UTC().Format("20060102T150405")
@@ -62,7 +62,7 @@ func preparePathsAt(repoRoot, outputDir, runID, commandID string, now time.Time)
 			if errors.Is(err, fs.ErrExist) {
 				continue
 			}
-			return model.ArtifactPaths{}, model.NewMantaError(model.ExitCodeArtifactError, "reserve artifact directory", err)
+			return model.ArtifactPaths{}, model.NewGaoriError(model.ExitCodeArtifactError, "reserve artifact directory", err)
 		}
 
 		paths := pathsForBase(boundaryDir, baseDir, commandID)
@@ -87,7 +87,7 @@ func pathsForBase(boundaryDir, baseDir, commandID string) model.ArtifactPaths {
 
 func ensureParents(paths model.ArtifactPaths) error {
 	if err := safety.MkdirAllWithin(paths.BoundaryDir, paths.ExcerptsDir, 0o755); err != nil {
-		return model.NewMantaError(model.ExitCodeArtifactError, "create artifact directory", err)
+		return model.NewGaoriError(model.ExitCodeArtifactError, "create artifact directory", err)
 	}
 	return nil
 }
@@ -102,7 +102,7 @@ func WriteRawLog(paths model.ArtifactPaths, raw []byte) (string, error) {
 func OpenRawLog(paths model.ArtifactPaths) (*os.File, error) {
 	file, err := safety.OpenFileWithin(paths.BoundaryDir, paths.RawLogPath, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0o644)
 	if err != nil {
-		return nil, model.NewMantaError(model.ExitCodeArtifactError, "open raw log", err)
+		return nil, model.NewGaoriError(model.ExitCodeArtifactError, "open raw log", err)
 	}
 	return file, nil
 }
@@ -110,10 +110,10 @@ func OpenRawLog(paths model.ArtifactPaths) (*os.File, error) {
 func ValidateRawLog(paths model.ArtifactPaths) error {
 	info, err := safety.StatWithin(paths.BoundaryDir, paths.RawLogPath)
 	if err != nil {
-		return model.NewMantaError(model.ExitCodeArtifactError, "validate raw log", err)
+		return model.NewGaoriError(model.ExitCodeArtifactError, "validate raw log", err)
 	}
 	if !info.Mode().IsRegular() {
-		return model.NewMantaError(model.ExitCodeArtifactError, "validate raw log", fmt.Errorf("raw log is not a regular file"))
+		return model.NewGaoriError(model.ExitCodeArtifactError, "validate raw log", fmt.Errorf("raw log is not a regular file"))
 	}
 	return nil
 }
@@ -121,11 +121,11 @@ func ValidateRawLog(paths model.ArtifactPaths) error {
 func WriteSummaryJSON(paths model.ArtifactPaths, summary model.Summary) (string, error) {
 	data, err := marshalSummaryJSON(summary)
 	if err != nil {
-		return "", model.NewMantaError(model.ExitCodeArtifactError, "marshal summary json", err)
+		return "", model.NewGaoriError(model.ExitCodeArtifactError, "marshal summary json", err)
 	}
 	written := append(data, '\n')
 	if len(written) > safety.MaxSummaryBytes {
-		return "", model.NewMantaError(model.ExitCodeArtifactError, "write summary json", fmt.Errorf("summary json exceeds %d bytes", safety.MaxSummaryBytes))
+		return "", model.NewGaoriError(model.ExitCodeArtifactError, "write summary json", fmt.Errorf("summary json exceeds %d bytes", safety.MaxSummaryBytes))
 	}
 	if err := writeArtifact(paths, paths.SummaryJSON, written, "write summary json"); err != nil {
 		return "", err
@@ -136,7 +136,7 @@ func WriteSummaryJSON(paths model.ArtifactPaths, summary model.Summary) (string,
 func WriteStatusJSON(paths model.ArtifactPaths, status model.Status) error {
 	data, err := json.MarshalIndent(status, "", "  ")
 	if err != nil {
-		return model.NewMantaError(model.ExitCodeArtifactError, "marshal status json", err)
+		return model.NewGaoriError(model.ExitCodeArtifactError, "marshal status json", err)
 	}
 	return writeArtifact(paths, paths.StatusJSON, append(data, '\n'), "write status json")
 }
@@ -144,7 +144,7 @@ func WriteStatusJSON(paths model.ArtifactPaths, status model.Status) error {
 func WriteSummaryMarkdown(paths model.ArtifactPaths, summary model.Summary) error {
 	markdown := renderSummaryMarkdown(summary)
 	if len(markdown) > safety.MaxSummaryBytes {
-		return model.NewMantaError(model.ExitCodeArtifactError, "write summary markdown", fmt.Errorf("summary markdown exceeds %d bytes", safety.MaxSummaryBytes))
+		return model.NewGaoriError(model.ExitCodeArtifactError, "write summary markdown", fmt.Errorf("summary markdown exceeds %d bytes", safety.MaxSummaryBytes))
 	}
 	return writeArtifact(paths, paths.SummaryMD, []byte(markdown), "write summary markdown")
 }
@@ -172,7 +172,7 @@ func BoundSummaryEvidence(summary model.Summary) (model.Summary, error) {
 	fits := func(bounded model.Summary) (bool, error) {
 		jsonData, err := marshalSummaryJSON(bounded)
 		if err != nil {
-			return false, model.NewMantaError(model.ExitCodeArtifactError, "marshal summary json", err)
+			return false, model.NewGaoriError(model.ExitCodeArtifactError, "marshal summary json", err)
 		}
 		return len(jsonData)+1 <= safety.MaxSummaryBytes && len(renderSummaryMarkdown(bounded)) <= safety.MaxSummaryBytes, nil
 	}
@@ -190,7 +190,7 @@ func BoundSummaryEvidence(summary model.Summary) (model.Summary, error) {
 		return model.Summary{}, err
 	}
 	if !emptyFits {
-		return model.Summary{}, model.NewMantaError(model.ExitCodeArtifactError, "bound summary evidence", fmt.Errorf("summary metadata exceeds %d bytes", safety.MaxSummaryBytes))
+		return model.Summary{}, model.NewGaoriError(model.ExitCodeArtifactError, "bound summary evidence", fmt.Errorf("summary metadata exceeds %d bytes", safety.MaxSummaryBytes))
 	}
 
 	failureCount := len(failures)
@@ -232,7 +232,7 @@ func marshalSummaryJSON(summary model.Summary) ([]byte, error) {
 
 func renderSummaryMarkdown(summary model.Summary) string {
 	var b strings.Builder
-	fmt.Fprintf(&b, "# Manta Summary: %s\n\n", summary.CommandID)
+	fmt.Fprintf(&b, "# Gaori Summary: %s\n\n", summary.CommandID)
 	fmt.Fprintf(&b, "Status: %s\n", summary.Status)
 	fmt.Fprintf(&b, "Exit code: %d\n", summary.ExitCode)
 	fmt.Fprintf(&b, "Duration: %.1fs\n", float64(summary.DurationMS)/1000)
@@ -275,7 +275,7 @@ func WriteExcerpt(paths model.ArtifactPaths, path string, content string) error 
 
 func writeArtifact(paths model.ArtifactPaths, path string, data []byte, operation string) error {
 	if err := safety.WriteFileWithin(paths.BoundaryDir, path, data, 0o644); err != nil {
-		return model.NewMantaError(model.ExitCodeArtifactError, operation, err)
+		return model.NewGaoriError(model.ExitCodeArtifactError, operation, err)
 	}
 	return nil
 }

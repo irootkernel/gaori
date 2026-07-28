@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/irootkernel/manta/internal/model"
+	"github.com/irootkernel/gaori/internal/model"
 )
 
 var errInjectedRawLogWrite = errors.New("injected raw-log write failure")

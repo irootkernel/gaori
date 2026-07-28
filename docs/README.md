@@ -1,36 +1,36 @@
-# Manta Documentation
+# Gaori Documentation
 
-Status: Current for `manta v0.1.5`
+Status: Current for `gaori v0.1.6`
 
-This directory contains Manta's integration contracts, technical design, delivery history, and maintainer guidance. Start with the document that matches your role instead of reading the directory in filename order.
+This directory contains Gaori's integration contracts, technical design, delivery history, and maintainer guidance. Start with the document that matches your role instead of reading the directory in filename order.
 
 ## Recommended reading paths
 
-For a person running Manta directly:
+For a person running Gaori directly:
 
 1. Read the repository [README](../README.md) and complete its five-minute example.
 2. Use the [CLI reference](user-interface.md) for options, rule management, exit codes, and tested examples.
 
-For a parent project integrating Manta:
+For a parent project integrating Gaori:
 
 1. Read the [integration guide](integration-guide.md) for the supported capability matrix, ownership boundaries, project files, invocation, and rollout checklist.
 2. Read the [architecture](architecture.md) for the summary/status schemas, artifact layout, watcher hash, and degraded-evidence behavior.
-3. Consult the [architecture decisions](architecture-decision-records.md) before proposing a change to Manta's authority or evidence semantics.
+3. Consult the [architecture decisions](architecture-decision-records.md) before proposing a change to Gaori's authority or evidence semantics.
 
-For Manta maintainers:
+For Gaori maintainers:
 
 1. Follow [AGENTS.md](../AGENTS.md) for repository workflow and verification expectations.
 2. Use the [requirements](requirements-specs.md) as the behavioral source of truth.
 3. Use the [requirements-to-test matrix](requirements-test-matrix.md) to find executable evidence.
 4. Read the [implementation note](implementation-note.md) before changing runner, parser, artifact, redaction, or rule behavior.
 5. Use the [roadmap](roadmap.md) and [todo](todo.md) for recorded delivery and open-work state.
-6. Use the [v0.1.5 release notes](releases/v0.1.5.md) when publishing the GitHub Release.
+6. Use the [v0.1.6 release notes](releases/v0.1.6.md) when publishing the GitHub Release.
 
 ## Current delivery state
 
-The standalone v0.1 baseline, the recorded `HARDE-001` through `HARDE-007` hardening requirements, the schema-v2 canonical tag selector contract, and release-readiness follow-up `RELRV-001` through `RELRV-009` are implemented. The current supported surfaces include configured and ad-hoc command execution, raw-log summarization, excerpt lookup, five parsers, rule lifecycle commands, bounded/redacted derived evidence with explicit record truncation, collision-free standalone artifacts, fixed run-scoped artifacts, and deterministic status JSON. All `.manta/` content is local-only state.
+The standalone v0.1 baseline, the recorded `HARDE-001` through `HARDE-007` hardening requirements, the schema-v2 canonical tag selector contract, release-readiness follow-up `RELRV-001` through `RELRV-009`, and v0.1.6 identity migration `BRAND-001` are implemented. The current supported surfaces include configured and ad-hoc command execution, raw-log summarization, excerpt lookup, five parsers, rule lifecycle commands, bounded/redacted derived evidence with explicit record truncation, collision-free standalone artifacts, fixed run-scoped artifacts, and deterministic status JSON. All `.gaori/` content is local-only state.
 
-There are currently no open implementation items in `todo.md`. The delivery statement above is intentionally narrower than “Manta provides every testing or orchestration capability.” Features listed as unsupported or out of scope in the [integration guide](integration-guide.md#not-provided-by-manta-v01) are not implicitly planned or promised.
+There are currently no open implementation items in `todo.md`. The delivery statement above is intentionally narrower than “Gaori provides every testing or orchestration capability.” Features listed as unsupported or out of scope in the [integration guide](integration-guide.md#not-provided-by-gaori-v01) are not implicitly planned or promised.
 
 ## Document catalog
 
@@ -46,7 +46,8 @@ There are currently no open implementation items in `todo.md`. The delivery stat
 | [Implementation note](implementation-note.md) | Contributors | Package boundaries, risk areas, tests, release checklist |
 | [Roadmap](roadmap.md) | Project maintainers | Completed delivery history and integration-contract tasks |
 | [Todo](todo.md) | Project maintainers | Explicitly accepted open work; currently empty |
-| [v0.1.5 release notes](releases/v0.1.5.md) | Users and maintainers | Published changes, compatibility notes, and known limitations |
+| [v0.1.5 release notes](releases/v0.1.5.md) | Users and maintainers | Previous published changes and known limitations |
+| [v0.1.6 release notes](releases/v0.1.6.md) | Users and maintainers | Current identity migration, compatibility notes, and known limitations |
 
 ## Source-of-truth order
 

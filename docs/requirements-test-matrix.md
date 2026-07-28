@@ -1,4 +1,4 @@
-# Manta Requirements Test Matrix
+# Gaori Requirements Test Matrix
 
 Status: Complete for the current checked requirements
 Scope: Primary executable or documentary evidence for each completed requirement in `requirements-specs.md`
@@ -7,64 +7,64 @@ This matrix records the primary evidence for every requirement marked complete. 
 
 | Requirement | Primary evidence |
 |---|---|
-| `MANTA-REQ-RQCLI-001` | `TestDocumentedCLIWorkflowAgainstFreshFixture`; `TestMakeInstallTargetsAndResolver` |
-| `MANTA-REQ-RQCLI-002` | `TestConfiguredRunAndExcerpt`; `TestBinaryConfiguredRunAndExcerpt` |
-| `MANTA-REQ-RQCLI-003` | `TestAdHocRunWithoutConfig`; `TestBinaryTagsSelectRulesByAllTags`; `TestBinaryTagInterfacesFailBeforeExecution`; `TestDocumentedCLIWorkflowAgainstFreshFixture` |
-| `MANTA-REQ-RQCLI-004` | `TestSummarizeRawLogUsesConfigRedaction`; `TestRunAndSummarizeSelectRulesByAllTags`; `TestBinaryTagsSelectRulesByAllTags`; `TestDocumentedCLIWorkflowAgainstFreshFixture` |
-| `MANTA-REQ-RQCLI-005` | `TestConfiguredRunAndExcerpt`; `TestExcerptRejectsUnsafeReferences` |
-| `MANTA-REQ-RQCLI-006` | `TestTimeoutPreservesPartialArtifacts`; `TestBinaryExtractionContracts` |
-| `MANTA-REQ-RQCFG-001` | `TestConfiguredRunAndExcerpt`; `TestAdHocRunWithoutConfig` |
-| `MANTA-REQ-RQCFG-002` | `TestDocumentedCLIWorkflowAgainstFreshFixture` |
-| `MANTA-REQ-RQCFG-003` | `TestValidateAcceptsImplementedParsers`; `TestLoadCanonicalizesTags`; `TestValidateRejectsMissingAndUnsafeTags`; `TestBinaryTagsSelectRulesByAllTags` |
-| `MANTA-REQ-RQCFG-004` | `TestSummarizeRawLogUsesConfigRedaction` |
-| `MANTA-REQ-RQCFG-005` | `TestConfiguredRunRedactsSurfacedMetadata`; `TestBinaryJSONRedactsCommandMetadata` |
-| `MANTA-REQ-RQCFG-006` | `TestLoadRejectsUnknownFieldsAndMultipleDocuments`; `TestBinaryRejectsUnknownConfigFields`; `TestBinaryTagInterfacesFailBeforeExecution` |
-| `MANTA-REQ-RQRUN-001` | `TestConfiguredRunAndExcerpt`; `TestAdHocRunWithoutConfig` |
-| `MANTA-REQ-RQRUN-002` | `TestConfiguredRunAndExcerpt`; `TestBinaryConfiguredRunAndExcerpt` |
-| `MANTA-REQ-RQRUN-003` | `TestConfiguredRunRedactsSurfacedMetadata`; `TestBinaryJSONRedactsCommandMetadata` |
-| `MANTA-REQ-RQRUN-004` | `TestConfiguredRunAndExcerpt`; `TestBinaryConfiguredRunAndExcerpt` |
-| `MANTA-REQ-RQRUN-005` | `TestExecuteTimeout`; `TestExecuteTimeoutReportsRawLogWriteFailure`; `TestTimeoutPreservesPartialArtifacts` |
-| `MANTA-REQ-RQRUN-006` | `TestExecuteForwardsTerminationAndNormalizesResult`; `TestExecuteInterruptedReportsRawLogWriteFailure`; `TestBinaryPreservesInterruptedEvidence` |
-| `MANTA-REQ-RQART-001` | `TestRunIDArtifactLayout`; `TestBinaryArtifactContainment` |
-| `MANTA-REQ-RQART-002` | `TestArtifactOutputDirectories`; `TestBinaryStandaloneCollisionResistance` |
-| `MANTA-REQ-RQART-003` | `TestConfiguredRunAndExcerpt`; `TestOversizedSummarizeUsesBoundedExtraction`; `TestNoisyRunsWriteBoundedTerminalArtifacts`; `TestWriteSummaryJSONIncludesFalseTruncationFields`; `TestArchitectureJSONContractExamplesMatchFreshRunArtifacts` |
-| `MANTA-REQ-RQART-004` | `TestWriteSummaryMarkdownMatchesDocumentedShape`; `TestDocumentedCLIWorkflowAgainstFreshFixture` |
-| `MANTA-REQ-RQART-005` | `TestConfiguredRunAndExcerpt`; `TestBinaryJSONRedactsCommandMetadata`; `TestArchitectureJSONContractExamplesMatchFreshRunArtifacts` |
-| `MANTA-REQ-RQART-006` | `TestConfiguredRunAndExcerpt`; `TestExcerptSymlinkContainment` |
-| `MANTA-REQ-RQART-007` | `TestArtifactOutputDirectories`; `TestRunIDArtifactLayout` |
-| `MANTA-REQ-RQEXT-001` | `TestProcessGenericFailureProducesPreciseSpan` |
-| `MANTA-REQ-RQEXT-002` | `TestValidateAcceptsImplementedParsers`; `TestProcessVitestFixture`; `TestProcessPytestFixture`; `TestProcessGoTestFixture`; `TestProcessPlaywrightFixture`; `TestConfiguredRunsUseSpecializedParsers`; `TestBinaryExtractionContracts` |
-| `MANTA-REQ-RQEXT-003` | `TestProcessGenericFailureProducesPreciseSpan`; `TestProcessRulesBoundsUnvalidatedContext` |
-| `MANTA-REQ-RQEXT-004` | `TestProcessGenericFailureProducesPreciseSpan`; `TestProcessVitestFixture`; `TestProcessPytestFixture`; `TestProcessGoTestFixture`; `TestProcessPlaywrightFixture`; `TestConfiguredRunsUseSpecializedParsers`; `TestBinaryExtractionContracts` |
-| `MANTA-REQ-RQEXT-005` | `TestProcessExtractorStatusContract`; `TestNoisyRunsWriteBoundedTerminalArtifacts` |
-| `MANTA-REQ-RQEXT-006` | `TestProcessExtractorStatusContract`; `TestBinaryExtractionContracts` |
-| `MANTA-REQ-RQEXT-007` | `TestMaterializeArtifactsExtractionErrorContract`; `TestBinaryExtractionContracts` |
-| `MANTA-REQ-RQRUL-001` | `TestRulesLifecycleCommands`; `TestDocumentedCLIWorkflowAgainstFreshFixture` |
-| `MANTA-REQ-RQRUL-002` | `TestCreateSearchAndDeleteRule`; `TestRulesLifecycleCommands` |
-| `MANTA-REQ-RQRUL-003` | `TestValidateStoredRuleRejectsInvalidContextAndStatus`; `TestCreateSearchAndDeleteRule` |
-| `MANTA-REQ-RQRUL-004` | `TestCreateSearchAndDeleteRule`; `TestRulesLifecycleCommands` |
-| `MANTA-REQ-RQRUL-005` | `TestTestRuleMatchesExpectedSpan`; `TestRuleMatchesCRLFLineEndings`; `TestDocumentedCLIWorkflowAgainstFreshFixture` |
-| `MANTA-REQ-RQRUL-006` | `TestRuleDetectsOvermatch`; `TestProcessRulesRejectsInvalidRegex`; `TestBinaryRejectsOversizedRuleContext` |
-| `MANTA-REQ-RQRUL-007` | `TestProposeWritesRunLocalProposal`; `TestProposePreservesMeaningfulLineWhitespace` |
-| `MANTA-REQ-RQRUL-008` | `TestLoadApplicableRequiresAllRuleTags`; `TestRunAndSummarizeSelectRulesByAllTags`; `TestBinaryTagsSelectRulesByAllTags` |
-| `MANTA-REQ-RQSEC-001` | `TestRedactSummaryCoversSurfacedMetadata`; `TestBinaryJSONRedactsCommandMetadata` |
-| `MANTA-REQ-RQSEC-002` | `TestConfiguredRunRedactsSurfacedMetadata`; `TestBinaryJSONRedactsCommandMetadata` |
-| `MANTA-REQ-RQSEC-003` | `TestExecuteReportsRawLogWriteFailure`; `TestExecuteTimeoutReportsRawLogWriteFailure`; `TestExecuteInterruptedReportsRawLogWriteFailure`; `TestRawLogWriteFailureDoesNotPublishDerivedArtifacts`; `TestProcessRulesRejectsInvalidRegex`; `TestBinaryRejectsUnknownConfigFields`; `TestBinaryRejectsOversizedRuleContext` |
-| `MANTA-REQ-RQSEC-004` | `TestWriteSummaryJSONFailsWhenTooLarge`; `TestProcessOversizedLogUsesBoundedTail`; `TestProcessPytestDetailScanIsBounded`; `TestProcessRulesRejectsOversizedInput`; `TestTestRuleBoundsFixtureBeforeExtraction`; `TestBoundSummaryEvidenceCapsRecordsAndKeepsCountsAligned`; `TestBoundSummaryEvidenceUsesRenderedByteBudget`; `TestBoundSummaryEvidenceIncludesJSONTrailingNewlineInByteBudget`; `TestBoundSummaryEvidenceUsesRemainingBudgetForWarnings`; `TestNoisyRunsWriteBoundedTerminalArtifacts`; `TestLoadEnforcesInputSizeLimit`; `TestLoadAllEnforcesRuleFileSizeLimit`; `TestRuleSourceFilesEnforceInputSizeLimit`; `TestProposeEnforcesRawLogInputSizeLimit`; `TestBinaryEnforcesRuleAndConfigInputSizeLimits` |
-| `MANTA-REQ-RQSEC-005` | `TestProcessExtractorStatusContract`; `TestBinaryExtractionContracts` |
-| `MANTA-REQ-RQWAT-001` | `TestConfiguredRunAndExcerpt`; `TestRawLogWriteFailureDoesNotPublishDerivedArtifacts`; status-hash assertions in CLI and binary tests; `TestNoisyRunsWriteBoundedTerminalArtifacts` |
-| `MANTA-REQ-RQWAT-002` | `TestComputeStatusHashIncludesTags`; status-hash assertions in CLI and binary tests |
-| `MANTA-REQ-RQWAT-003` | `TestBinaryJSONRedactsCommandMetadata`; `TestDocumentedCLIWorkflowAgainstFreshFixture` |
-| `MANTA-REQ-RQDOC-001` | authoritative documents listed in `AGENTS.md` and `README.md`; `TestArchitectureJSONContractExamplesMatchFreshRunArtifacts` |
-| `MANTA-REQ-RQDOC-002` | `TestDocumentedCLIWorkflowAgainstFreshFixture` |
-| `MANTA-REQ-RQDOC-003` | parser fixtures under `internal/extract/testdata`; `TestTestRuleMatchesExpectedSpan`; `TestDocumentedCLIWorkflowAgainstFreshFixture` |
-| `MANTA-REQ-RQDOC-004` | release-readiness checklist in `implementation-note.md`; `make test` |
-| `MANTA-REQ-RQHAR-001` | `TestBinaryArtifactContainment`; path, artifact, and rule symlink tests |
-| `MANTA-REQ-RQHAR-002` | `TestBinaryPreservesInterruptedEvidence`; `TestExecuteInterruptedReportsRawLogWriteFailure`; Unix runner signal tests |
-| `MANTA-REQ-RQHAR-003` | `TestBinaryStandaloneCollisionResistance`; concurrent artifact allocation tests |
-| `MANTA-REQ-RQHAR-004` | `TestBinaryJSONRedactsCommandMetadata`; CLI redaction integration tests |
-| `MANTA-REQ-RQHAR-005` | `TestBinaryExtractionContracts`; CLI extraction contract tests |
-| `MANTA-REQ-RQHAR-006` | `TestDocumentedCLIWorkflowAgainstFreshFixture`; toolchain script E2E tests |
-| `MANTA-REQ-RQHAR-007` | `make test`; focused binary containment, signal, collision, extraction, install, and workflow E2E tests |
+| `GAORI-REQ-RQCLI-001` | `TestDocumentedCLIWorkflowAgainstFreshFixture`; `TestMakeInstallTargetsAndResolver` |
+| `GAORI-REQ-RQCLI-002` | `TestConfiguredRunAndExcerpt`; `TestBinaryConfiguredRunAndExcerpt` |
+| `GAORI-REQ-RQCLI-003` | `TestAdHocRunWithoutConfig`; `TestBinaryTagsSelectRulesByAllTags`; `TestBinaryTagInterfacesFailBeforeExecution`; `TestDocumentedCLIWorkflowAgainstFreshFixture` |
+| `GAORI-REQ-RQCLI-004` | `TestSummarizeRawLogUsesConfigRedaction`; `TestRunAndSummarizeSelectRulesByAllTags`; `TestBinaryTagsSelectRulesByAllTags`; `TestDocumentedCLIWorkflowAgainstFreshFixture` |
+| `GAORI-REQ-RQCLI-005` | `TestConfiguredRunAndExcerpt`; `TestExcerptRejectsUnsafeReferences` |
+| `GAORI-REQ-RQCLI-006` | `TestTimeoutPreservesPartialArtifacts`; `TestBinaryExtractionContracts` |
+| `GAORI-REQ-RQCFG-001` | `TestConfiguredRunAndExcerpt`; `TestAdHocRunWithoutConfig` |
+| `GAORI-REQ-RQCFG-002` | `TestDocumentedCLIWorkflowAgainstFreshFixture` |
+| `GAORI-REQ-RQCFG-003` | `TestValidateAcceptsImplementedParsers`; `TestLoadCanonicalizesTags`; `TestValidateRejectsMissingAndUnsafeTags`; `TestBinaryTagsSelectRulesByAllTags` |
+| `GAORI-REQ-RQCFG-004` | `TestSummarizeRawLogUsesConfigRedaction` |
+| `GAORI-REQ-RQCFG-005` | `TestConfiguredRunRedactsSurfacedMetadata`; `TestBinaryJSONRedactsCommandMetadata` |
+| `GAORI-REQ-RQCFG-006` | `TestLoadRejectsUnknownFieldsAndMultipleDocuments`; `TestBinaryRejectsUnknownConfigFields`; `TestBinaryTagInterfacesFailBeforeExecution` |
+| `GAORI-REQ-RQRUN-001` | `TestConfiguredRunAndExcerpt`; `TestAdHocRunWithoutConfig` |
+| `GAORI-REQ-RQRUN-002` | `TestConfiguredRunAndExcerpt`; `TestBinaryConfiguredRunAndExcerpt` |
+| `GAORI-REQ-RQRUN-003` | `TestConfiguredRunRedactsSurfacedMetadata`; `TestBinaryJSONRedactsCommandMetadata` |
+| `GAORI-REQ-RQRUN-004` | `TestConfiguredRunAndExcerpt`; `TestBinaryConfiguredRunAndExcerpt` |
+| `GAORI-REQ-RQRUN-005` | `TestExecuteTimeout`; `TestExecuteTimeoutReportsRawLogWriteFailure`; `TestTimeoutPreservesPartialArtifacts` |
+| `GAORI-REQ-RQRUN-006` | `TestExecuteForwardsTerminationAndNormalizesResult`; `TestExecuteInterruptedReportsRawLogWriteFailure`; `TestBinaryPreservesInterruptedEvidence` |
+| `GAORI-REQ-RQART-001` | `TestRunIDArtifactLayout`; `TestBinaryArtifactContainment` |
+| `GAORI-REQ-RQART-002` | `TestArtifactOutputDirectories`; `TestBinaryStandaloneCollisionResistance` |
+| `GAORI-REQ-RQART-003` | `TestConfiguredRunAndExcerpt`; `TestOversizedSummarizeUsesBoundedExtraction`; `TestNoisyRunsWriteBoundedTerminalArtifacts`; `TestWriteSummaryJSONIncludesFalseTruncationFields`; `TestArchitectureJSONContractExamplesMatchFreshRunArtifacts` |
+| `GAORI-REQ-RQART-004` | `TestWriteSummaryMarkdownMatchesDocumentedShape`; `TestDocumentedCLIWorkflowAgainstFreshFixture` |
+| `GAORI-REQ-RQART-005` | `TestConfiguredRunAndExcerpt`; `TestBinaryJSONRedactsCommandMetadata`; `TestArchitectureJSONContractExamplesMatchFreshRunArtifacts` |
+| `GAORI-REQ-RQART-006` | `TestConfiguredRunAndExcerpt`; `TestExcerptSymlinkContainment` |
+| `GAORI-REQ-RQART-007` | `TestArtifactOutputDirectories`; `TestRunIDArtifactLayout` |
+| `GAORI-REQ-RQEXT-001` | `TestProcessGenericFailureProducesPreciseSpan` |
+| `GAORI-REQ-RQEXT-002` | `TestValidateAcceptsImplementedParsers`; `TestProcessVitestFixture`; `TestProcessPytestFixture`; `TestProcessGoTestFixture`; `TestProcessPlaywrightFixture`; `TestConfiguredRunsUseSpecializedParsers`; `TestBinaryExtractionContracts` |
+| `GAORI-REQ-RQEXT-003` | `TestProcessGenericFailureProducesPreciseSpan`; `TestProcessRulesBoundsUnvalidatedContext` |
+| `GAORI-REQ-RQEXT-004` | `TestProcessGenericFailureProducesPreciseSpan`; `TestProcessVitestFixture`; `TestProcessPytestFixture`; `TestProcessGoTestFixture`; `TestProcessPlaywrightFixture`; `TestConfiguredRunsUseSpecializedParsers`; `TestBinaryExtractionContracts` |
+| `GAORI-REQ-RQEXT-005` | `TestProcessExtractorStatusContract`; `TestNoisyRunsWriteBoundedTerminalArtifacts` |
+| `GAORI-REQ-RQEXT-006` | `TestProcessExtractorStatusContract`; `TestBinaryExtractionContracts` |
+| `GAORI-REQ-RQEXT-007` | `TestMaterializeArtifactsExtractionErrorContract`; `TestBinaryExtractionContracts` |
+| `GAORI-REQ-RQRUL-001` | `TestRulesLifecycleCommands`; `TestDocumentedCLIWorkflowAgainstFreshFixture` |
+| `GAORI-REQ-RQRUL-002` | `TestCreateSearchAndDeleteRule`; `TestRulesLifecycleCommands` |
+| `GAORI-REQ-RQRUL-003` | `TestValidateStoredRuleRejectsInvalidContextAndStatus`; `TestCreateSearchAndDeleteRule` |
+| `GAORI-REQ-RQRUL-004` | `TestCreateSearchAndDeleteRule`; `TestRulesLifecycleCommands` |
+| `GAORI-REQ-RQRUL-005` | `TestTestRuleMatchesExpectedSpan`; `TestRuleMatchesCRLFLineEndings`; `TestDocumentedCLIWorkflowAgainstFreshFixture` |
+| `GAORI-REQ-RQRUL-006` | `TestRuleDetectsOvermatch`; `TestProcessRulesRejectsInvalidRegex`; `TestBinaryRejectsOversizedRuleContext` |
+| `GAORI-REQ-RQRUL-007` | `TestProposeWritesRunLocalProposal`; `TestProposePreservesMeaningfulLineWhitespace` |
+| `GAORI-REQ-RQRUL-008` | `TestLoadApplicableRequiresAllRuleTags`; `TestRunAndSummarizeSelectRulesByAllTags`; `TestBinaryTagsSelectRulesByAllTags` |
+| `GAORI-REQ-RQSEC-001` | `TestRedactSummaryCoversSurfacedMetadata`; `TestBinaryJSONRedactsCommandMetadata` |
+| `GAORI-REQ-RQSEC-002` | `TestConfiguredRunRedactsSurfacedMetadata`; `TestBinaryJSONRedactsCommandMetadata` |
+| `GAORI-REQ-RQSEC-003` | `TestExecuteReportsRawLogWriteFailure`; `TestExecuteTimeoutReportsRawLogWriteFailure`; `TestExecuteInterruptedReportsRawLogWriteFailure`; `TestRawLogWriteFailureDoesNotPublishDerivedArtifacts`; `TestProcessRulesRejectsInvalidRegex`; `TestBinaryRejectsUnknownConfigFields`; `TestBinaryRejectsOversizedRuleContext` |
+| `GAORI-REQ-RQSEC-004` | `TestWriteSummaryJSONFailsWhenTooLarge`; `TestProcessOversizedLogUsesBoundedTail`; `TestProcessPytestDetailScanIsBounded`; `TestProcessRulesRejectsOversizedInput`; `TestTestRuleBoundsFixtureBeforeExtraction`; `TestBoundSummaryEvidenceCapsRecordsAndKeepsCountsAligned`; `TestBoundSummaryEvidenceUsesRenderedByteBudget`; `TestBoundSummaryEvidenceIncludesJSONTrailingNewlineInByteBudget`; `TestBoundSummaryEvidenceUsesRemainingBudgetForWarnings`; `TestNoisyRunsWriteBoundedTerminalArtifacts`; `TestLoadEnforcesInputSizeLimit`; `TestLoadAllEnforcesRuleFileSizeLimit`; `TestRuleSourceFilesEnforceInputSizeLimit`; `TestProposeEnforcesRawLogInputSizeLimit`; `TestBinaryEnforcesRuleAndConfigInputSizeLimits` |
+| `GAORI-REQ-RQSEC-005` | `TestProcessExtractorStatusContract`; `TestBinaryExtractionContracts` |
+| `GAORI-REQ-RQWAT-001` | `TestConfiguredRunAndExcerpt`; `TestRawLogWriteFailureDoesNotPublishDerivedArtifacts`; status-hash assertions in CLI and binary tests; `TestNoisyRunsWriteBoundedTerminalArtifacts` |
+| `GAORI-REQ-RQWAT-002` | `TestComputeStatusHashIncludesTags`; status-hash assertions in CLI and binary tests |
+| `GAORI-REQ-RQWAT-003` | `TestBinaryJSONRedactsCommandMetadata`; `TestDocumentedCLIWorkflowAgainstFreshFixture` |
+| `GAORI-REQ-RQDOC-001` | authoritative documents listed in `AGENTS.md` and `README.md`; `TestArchitectureJSONContractExamplesMatchFreshRunArtifacts` |
+| `GAORI-REQ-RQDOC-002` | `TestDocumentedCLIWorkflowAgainstFreshFixture` |
+| `GAORI-REQ-RQDOC-003` | parser fixtures under `internal/extract/testdata`; `TestTestRuleMatchesExpectedSpan`; `TestDocumentedCLIWorkflowAgainstFreshFixture` |
+| `GAORI-REQ-RQDOC-004` | release-readiness checklist in `implementation-note.md`; `make test` |
+| `GAORI-REQ-RQHAR-001` | `TestBinaryArtifactContainment`; path, artifact, and rule symlink tests |
+| `GAORI-REQ-RQHAR-002` | `TestBinaryPreservesInterruptedEvidence`; `TestExecuteInterruptedReportsRawLogWriteFailure`; Unix runner signal tests |
+| `GAORI-REQ-RQHAR-003` | `TestBinaryStandaloneCollisionResistance`; concurrent artifact allocation tests |
+| `GAORI-REQ-RQHAR-004` | `TestBinaryJSONRedactsCommandMetadata`; CLI redaction integration tests |
+| `GAORI-REQ-RQHAR-005` | `TestBinaryExtractionContracts`; CLI extraction contract tests |
+| `GAORI-REQ-RQHAR-006` | `TestDocumentedCLIWorkflowAgainstFreshFixture`; toolchain script E2E tests |
+| `GAORI-REQ-RQHAR-007` | `make test`; focused binary containment, signal, collision, extraction, install, and workflow E2E tests |
 
 The matrix is traceability evidence, not acceptance authority. Command exit status and the artifact contracts remain authoritative for individual runs.

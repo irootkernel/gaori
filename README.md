@@ -1,23 +1,27 @@
-# manta
+# gaori
 
-Manta runs a test command, keeps its original output, and produces a compact failure summary that is easier for people and automation to consume.
+Gaori runs a test command, keeps its original output, and produces a compact failure summary that is easier for people and automation to consume.
+
+## Why Gaori?
+
+Gaori (가오리) is the Korean word for a ray. Like a ray gliding along the seafloor and searching for food, Gaori scans test logs and surfaces only the failure evidence that matters.
 
 Use it when you want to:
 
 - run the same project test commands locally or from automation;
 - keep a raw log for audit while reviewing a much smaller summary;
 - give another tool stable JSON status and evidence paths;
-- summarize a log that was produced outside Manta.
+- summarize a log that was produced outside Gaori.
 
-Manta never changes a command result: a failing test command remains failed even when no parser recognizes its output.
+Gaori never changes a command result: a failing test command remains failed even when no parser recognizes its output.
 
 ## Install
 
 Install the current release with Go:
 
 ```bash
-go install github.com/irootkernel/manta@v0.1.5
-manta --version
+go install github.com/irootkernel/gaori@v0.1.6
+gaori --version
 ```
 
 From a source checkout, use:
@@ -26,23 +30,23 @@ From a source checkout, use:
 make install
 ```
 
-Projects that pin a local Manta toolchain can install the versioned binary at `~/.local/manta/toolchains/v0.1.5/bin/`:
+Projects that pin a local Gaori toolchain can install the versioned binary at `~/.local/gaori/toolchains/v0.1.6/bin/`:
 
 ```bash
-VERSION=0.1.5 make install-toolchain
+VERSION=0.1.6 make install-toolchain
 ```
 
 ## Try it in five minutes
 
-The following disposable command intentionally fails so you can see the evidence Manta creates. Run it from any temporary directory:
+The following disposable command intentionally fails so you can see the evidence Gaori creates. Run it from any temporary directory:
 
 ```bash
-mkdir -p .manta
-cat > .manta/tester.yaml <<'YAML'
+mkdir -p .gaori
+cat > .gaori/tester.yaml <<'YAML'
 version: 2
 commands:
   demo:
-    command: ["sh", "manta-demo-test.sh"]
+    command: ["sh", "gaori-demo-test.sh"]
     tags: [demo, unit]
     parser: generic
     timeout_sec: 30
@@ -53,26 +57,26 @@ redaction:
       replace: 'token=<redacted>'
 YAML
 
-cat > manta-demo-test.sh <<'SH'
+cat > gaori-demo-test.sh <<'SH'
 #!/bin/sh
 echo 'TypeError: token=secret failed'
 echo 'src/demo.test.ts:12:3'
 echo '✗ renders the demo'
 exit 1
 SH
-chmod +x manta-demo-test.sh
+chmod +x gaori-demo-test.sh
 ```
 
 Run the configured command:
 
 ```bash
-manta run demo
+gaori run demo
 ```
 
-The command exits `1`, and Manta prints the paths of the generated evidence. Open the latest human-readable summary:
+The command exits `1`, and Gaori prints the paths of the generated evidence. Open the latest human-readable summary:
 
 ```bash
-latest_run="$(ls -dt .manta/runs/standalone/* | head -1)"
+latest_run="$(ls -dt .gaori/runs/standalone/* | head -1)"
 sed -n '1,120p' "$latest_run/demo.summary.md"
 ```
 
@@ -80,7 +84,7 @@ The summary contains `token=<redacted>`. The corresponding `demo.raw.log` intent
 
 ## Configure your local project
 
-Create `.manta/tester.yaml` with the commands you want to expose locally. The entire `.manta/` directory is local state and should be ignored by Git. Commands are argv arrays, so no shell quoting is added implicitly.
+Create `.gaori/tester.yaml` with the commands you want to expose locally. The entire `.gaori/` directory is local state and should be ignored by Git. Commands are argv arrays, so no shell quoting is added implicitly.
 
 ```yaml
 version: 2
@@ -110,13 +114,13 @@ Choose the parser that matches the command output:
 Run a configured command by ID:
 
 ```bash
-manta run unit
+gaori run unit
 ```
 
 Use an ad-hoc command when you do not want to add it to the config:
 
 ```bash
-manta run --tag go --tag unit -- go test ./internal/...
+gaori run --tag go --tag unit -- go test ./internal/...
 ```
 
 Tags select which local extraction rules may inspect a raw log; they do not select the command or change pass/fail. A rule applies only when its parser matches and all of its tags are present on the run. This lets a `tags: [go]` rule apply to both Go unit and integration runs while a `tags: [go, unit]` rule remains unit-specific. Multiple applicable rules may run against the same log.
@@ -126,28 +130,28 @@ Tags select which local extraction rules may inspect a raw log; they do not sele
 Summarize an existing raw log without rerunning its command:
 
 ```bash
-manta summarize path/to/unit.raw.log
+gaori summarize path/to/unit.raw.log
 ```
 
 Add repeatable tags when the filename alone does not describe the applicable rule scope:
 
 ```bash
-manta summarize --tag go --tag unit path/to/unit.raw.log
+gaori summarize --tag go --tag unit path/to/unit.raw.log
 ```
 
 Use `--run-id` when a parent workflow needs a stable run-scoped location:
 
 ```bash
-manta --run-id local-check run unit
+gaori --run-id local-check run unit
 ```
 
 This writes under:
 
 ```text
-.manta/runs/scoped/local-check/artifacts/test/
+.gaori/runs/scoped/local-check/artifacts/test/
 ```
 
-For standalone runs, Manta creates a collision-free directory under `.manta/runs/standalone/`. Each run contains:
+For standalone runs, Gaori creates a collision-free directory under `.gaori/runs/standalone/`. Each run contains:
 
 | Artifact | Use |
 |---|---|
@@ -160,8 +164,8 @@ For standalone runs, Manta creates a collision-free directory under `.manta/runs
 Retrieve one failure excerpt without opening the full raw log:
 
 ```bash
-manta excerpt \
-  --summary .manta/runs/scoped/local-check/artifacts/test/unit.summary.json \
+gaori excerpt \
+  --summary .gaori/runs/scoped/local-check/artifacts/test/unit.summary.json \
   F001
 ```
 
@@ -174,7 +178,7 @@ Add `--json` when a script needs compact command output. Use `--repo`, `--config
 - Config YAML, stored and imported rule YAML, and `rules propose --raw-log` inputs are limited to 256 KiB and fail with config exit code `2` when oversized.
 - Redaction applies to surfaced summaries, excerpts, status, and console metadata, not to raw logs or literal artifact paths.
 - Do not put secrets in run IDs, command IDs, output directories, or filenames.
-- Ignore the entire `.manta/` directory. Config, rules, toolchain metadata, proposals, and evidence are local-only state.
+- Ignore the entire `.gaori/` directory. Config, rules, toolchain metadata, proposals, and evidence are local-only state.
 
 ## Learn more
 

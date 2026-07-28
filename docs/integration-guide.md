@@ -1,9 +1,9 @@
-# Manta Parent-Project Integration Guide
+# Gaori Parent-Project Integration Guide
 
-Status: Current for `manta v0.1.5`
-Audience: Projects that invoke Manta or consume Manta evidence
+Status: Current for `gaori v0.1.6`
+Audience: Projects that invoke Gaori or consume Gaori evidence
 
-Manta is a standalone deterministic test runner and evidence producer. A parent project owns when and why tests run; Manta owns command execution, raw-log preservation, bounded extraction, and factual artifacts for that one invocation.
+Gaori is a standalone deterministic test runner and evidence producer. A parent project owns when and why tests run; Gaori owns command execution, raw-log preservation, bounded extraction, and factual artifacts for that one invocation.
 
 ## Integration boundary
 
@@ -11,7 +11,7 @@ Manta is a standalone deterministic test runner and evidence producer. A parent 
 Parent project / CI / operator
   | chooses command, version, repository, run ID, and retention policy
   v
-manta
+gaori
   | executes command and records factual evidence
   v
 status.json + summary.json + summary.md + excerpts + raw.log
@@ -20,20 +20,20 @@ status.json + summary.json + summary.md + excerpts + raw.log
 Watcher / evidence consumer / human reviewer
 ```
 
-The command exit code is authoritative. Parsers and rules describe evidence quality; they cannot convert failure to pass. Manta artifacts do not grant review acceptance, waiver, final acceptance, release, or runtime-activation authority.
+The command exit code is authoritative. Parsers and rules describe evidence quality; they cannot convert failure to pass. Gaori artifacts do not grant review acceptance, waiver, final acceptance, release, or runtime-activation authority.
 
 ## Supported capability matrix
 
-| Area | Supported in v0.1.5 | Integration note |
+| Area | Supported in v0.1.6 | Integration note |
 |---|---|---|
-| Configured execution | Yes | `run <command-id>` reads `.manta/tester.yaml`. |
+| Configured execution | Yes | `run <command-id>` reads `.gaori/tester.yaml`. |
 | Ad-hoc execution | Yes | `run --tag <tag> [--tag <tag> ...] -- <argv...>` can run without configured commands. |
 | Existing-log processing | Yes | `summarize <raw-log>` copies and summarizes a log without rerunning the command. Its inferred result is not authoritative execution metadata. |
 | Failure excerpt lookup | Yes | `excerpt --summary <path> <failure-id>` validates contained references before reading. |
 | Parsers | Yes | `generic`, `vitest`, `pytest`, `go-test`, and `playwright`. |
 | Project extraction rules | Yes | Strict YAML CRUD, provenance, fixture testing, bounded spans, and run-local proposals. |
-| Standalone artifacts | Yes | Collision-free `.manta/runs/standalone/<UTC-timestamp>[-NNN]/` or `<output-dir>/runs/...`. |
-| Parent run artifacts | Yes | `--run-id <id>` writes only under `.manta/runs/scoped/<id>/artifacts/test/`. |
+| Standalone artifacts | Yes | Collision-free `.gaori/runs/standalone/<UTC-timestamp>[-NNN]/` or `<output-dir>/runs/...`. |
+| Parent run artifacts | Yes | `--run-id <id>` writes only under `.gaori/runs/scoped/<id>/artifacts/test/`. |
 | Human output | Yes | Compact console output, Markdown summary, and bounded excerpts. |
 | Machine output | Yes | `--json`, summary JSON, and deterministic status JSON. |
 | Redacted derived evidence | Yes | Configured redaction covers surfaced metadata, summaries, status, warnings, failures, and excerpts. |
@@ -42,68 +42,68 @@ The command exit code is authoritative. Parsers and rules describe evidence qual
 | Operator interruption | Yes | Unix SIGINT/SIGTERM process-group behavior is covered by built-binary tests; non-Unix builds signal the direct child and have a narrower guarantee. |
 | Deterministic binary selection | Yes | The bundled Python 3 resolver selects an explicit environment, metadata, or versioned toolchain binary and never falls back to `PATH`. |
 
-## Not provided by Manta v0.1
+## Not provided by Gaori v0.1
 
 These are current boundaries, not hidden partial features:
 
 - Test planning, test generation, code review, or acceptance decisions.
 - External orchestration, workflow/session management, or acceptance-state management.
-- A resident watcher daemon, running-state heartbeat, or progress events. Manta writes final `status.json`; the parent project owns in-flight state, polling, and notification.
+- A resident watcher daemon, running-state heartbeat, or progress events. Gaori writes final `status.json`; the parent project owns in-flight state, polling, and notification.
 - Automatic issue creation, release, push, install, update, or runtime activation.
 - Automatic generic-parser fallback after a specialized parser misses.
 - Redaction of the original raw log or of literal artifact-reference paths.
-- Automatic promotion of `.manta/rule-proposals/` into active project rules.
+- Automatic promotion of `.gaori/rule-proposals/` into active project rules.
 - Consumer-specific evidence snapshots. Consumers should use or normalize the existing status, summary, and raw-log references.
 - A bundled CI-provider workflow or a cross-platform release matrix. The repository tests platform-neutral behavior plus additional Unix-only install, process-group, and signal behavior.
 - A successful built-in `--help` surface. The current CLI returns config exit code `2` for `--help`; use the [CLI reference](user-interface.md) for command syntax.
 
 No open implementation items are currently recorded in `todo.md`. The boundaries above are not future commitments; a new requirement and roadmap item should be approved before broadening them.
 
-## Local-only Manta state
+## Local-only Gaori state
 
-Ignore the entire `.manta/` directory. Manta config, reviewed local rules, toolchain metadata, proposals, and evidence are machine-local development state rather than portable source inputs:
+Ignore the entire `.gaori/` directory. Gaori config, reviewed local rules, toolchain metadata, proposals, and evidence are machine-local development state rather than portable source inputs:
 
 ```gitignore
-.manta/
+.gaori/
 ```
 
-Projects that need shared automation must generate or provision their local Manta state through their own bootstrap process. Manta does not distribute `.manta/` content. Never commit an absolute `manta.binary_path` that is meaningful only on one machine.
+Projects that need shared automation must generate or provision their local Gaori state through their own bootstrap process. Gaori does not distribute `.gaori/` content. Never commit an absolute `gaori.binary_path` that is meaningful only on one machine.
 
 ## 1. Select and verify the binary
 
 For ordinary local use, install and verify the pinned release:
 
 ```bash
-go install github.com/irootkernel/manta@v0.1.5
-manta --version
+go install github.com/irootkernel/gaori@v0.1.6
+gaori --version
 ```
 
 For deterministic automation, prefer the bundled resolver and one explicit source:
 
-1. `MANTA_BIN=/absolute/path/to/manta`
-2. `.manta/toolchain.yaml` `manta.binary_path`
-3. `.manta/toolchain.yaml` `manta.cli_version`, resolved under `${MANTA_TOOLCHAIN_ROOT:-$HOME/.local/manta/toolchains}`
+1. `GAORI_BIN=/absolute/path/to/gaori`
+2. `.gaori/toolchain.yaml` `gaori.binary_path`
+3. `.gaori/toolchain.yaml` `gaori.cli_version`, resolved under `${GAORI_TOOLCHAIN_ROOT:-$HOME/.local/gaori/toolchains}`
 
 Example portable version selection:
 
 ```yaml
-schema_version: "manta.toolchain.v1"
-manta:
-  cli_version: "0.1.5"
+schema_version: "gaori.toolchain.v1"
+gaori:
+  cli_version: "0.1.6"
 ```
 
-Validate selection before invoking Manta:
+Validate selection before invoking Gaori:
 
 ```bash
-scripts/manta-toolchain --toolchain-status
-scripts/manta-toolchain --version
+scripts/gaori-toolchain --toolchain-status
+scripts/gaori-toolchain --version
 ```
 
 The resolver requires Python 3, absolute executable overrides, and an exact semantic-version match for metadata-selected binaries. It deliberately does not search `PATH`.
 
 ## 2. Define project commands
 
-Create `.manta/tester.yaml`:
+Create `.gaori/tester.yaml`:
 
 ```yaml
 version: 2
@@ -142,37 +142,37 @@ Integration rules:
 Use standalone mode for local or independent automation:
 
 ```bash
-manta run unit
+gaori run unit
 ```
 
 Use a parent-owned run ID when evidence must attach to an existing parent run:
 
 ```bash
 run_id=parent-run-001
-manta --run-id "$run_id" run unit
+gaori --run-id "$run_id" run unit
 ```
 
-The parent must create a safe identifier before invocation; Manta validates it and creates the artifact directory. Do not derive run IDs from secrets or untrusted path fragments. Standalone mode allocates a new directory for every operation, but `--run-id` uses fixed filenames: invoking the same command ID again under the same run ID replaces that command's prior artifacts. The parent owns run/command uniqueness and retry retention.
+The parent must create a safe identifier before invocation; Gaori validates it and creates the artifact directory. Do not derive run IDs from secrets or untrusted path fragments. Standalone mode allocates a new directory for every operation, but `--run-id` uses fixed filenames: invoking the same command ID again under the same run ID replaces that command's prior artifacts. The parent owns run/command uniqueness and retry retention.
 
 Use compact JSON on stdout when the caller needs returned artifact paths:
 
 ```bash
 run_id=parent-run-001
-manta --json --run-id "$run_id" run unit
+gaori --json --run-id "$run_id" run unit
 ```
 
-The Manta process exits with the test command's non-zero code when available. Callers must capture output and artifact paths without treating every non-zero Manta process as an infrastructure failure.
+The Gaori process exits with the test command's non-zero code when available. Callers must capture output and artifact paths without treating every non-zero Gaori process as an infrastructure failure.
 
 ## 4. Consume artifacts by purpose
 
 With `--run-id`, artifacts are written under:
 
 ```text
-.manta/runs/scoped/<run_id>/artifacts/test/<command-id>.status.json
-.manta/runs/scoped/<run_id>/artifacts/test/<command-id>.summary.json
-.manta/runs/scoped/<run_id>/artifacts/test/<command-id>.summary.md
-.manta/runs/scoped/<run_id>/artifacts/test/<command-id>.raw.log
-.manta/runs/scoped/<run_id>/artifacts/test/excerpts/<failure-id>.log
+.gaori/runs/scoped/<run_id>/artifacts/test/<command-id>.status.json
+.gaori/runs/scoped/<run_id>/artifacts/test/<command-id>.summary.json
+.gaori/runs/scoped/<run_id>/artifacts/test/<command-id>.summary.md
+.gaori/runs/scoped/<run_id>/artifacts/test/<command-id>.raw.log
+.gaori/runs/scoped/<run_id>/artifacts/test/excerpts/<failure-id>.log
 ```
 
 Consume them in this order:
@@ -201,14 +201,14 @@ Important cases:
 - A specialized-parser miss after a passing command is `passed` plus `no_match`.
 - A raw log larger than 256 KiB is extracted from a bounded complete-line tail and reports `degraded`; a passing command still remains `passed` with exit code `0`.
 - Summary JSON retains at most 50 failures and 50 warnings. `failure_count` and `warning_count` equal the retained array lengths; a true truncation field means additional records were omitted by the record or byte budget and the evidence quality is `degraded`.
-- An extraction internal error after a passing command leaves artifact `exit_code: 0`, sets artifact `status: internal_error`, and makes Manta exit `4`.
+- An extraction internal error after a passing command leaves artifact `exit_code: 0`, sets artifact `status: internal_error`, and makes Gaori exit `4`.
 - `summarize` has no authoritative process result; inferred status is evidence interpretation only.
 
 See the [architecture extraction policy](architecture.md#failure-and-degraded-extraction-policy) for the full state table.
 
 ## 6. Poll without an agent
 
-`status.json` is the stable watcher boundary. Manta materializes it after command execution and extraction finish; it does not write a `running` state or heartbeat. Until the file appears, the parent must distinguish “still running” from “invocation failed before artifact materialization” using its own process state.
+`status.json` is the stable watcher boundary. Gaori materializes it after command execution and extraction finish; it does not write a `running` state or heartbeat. Until the file appears, the parent must distinguish “still running” from “invocation failed before artifact materialization” using its own process state.
 
 A raw-log open, streaming, close, or validation failure exits with artifact code `3` and does not materialize a new status or summary. A streaming or close failure may leave a partial raw log, and a reused fixed `--run-id` path may still contain artifacts from an earlier invocation; neither is a completion signal. Use the process result as authoritative, and keep the parent-owned run/command uniqueness and retry-retention policy described above.
 
@@ -225,26 +225,26 @@ A watcher that suppresses duplicate notifications must hash exactly this ordered
 9. `summary_path`
 10. `raw_log_path`
 
-Manta also writes `status_hash` from these final, redacted surfaced values. A parent watcher owns polling frequency, notification policy, retries, retention, and any transition into an external state store.
+Gaori also writes `status_hash` from these final, redacted surfaced values. A parent watcher owns polling frequency, notification policy, retries, retention, and any transition into an external state store.
 
 ## 7. Integrate another evidence consumer
 
-Treat Manta output as factual test evidence only. A consumer should:
+Treat Gaori output as factual test evidence only. A consumer should:
 
 - preserve the command result and `extractor_status` independently;
 - inspect truncation fields before treating the retained failure/warning arrays as complete;
 - preserve resolvable status, summary, and raw-log references;
 - normalize references on the consumer side when its schema differs;
-- not infer review, waiver, final, or acceptance state from Manta artifacts.
+- not infer review, waiver, final, or acceptance state from Gaori artifacts.
 
-Manta remains standalone and imposes no evidence-consumer runtime dependency.
+Gaori remains standalone and imposes no evidence-consumer runtime dependency.
 
 ## Rollout checklist
 
-- [ ] Pin and verify one Manta version.
-- [ ] Ignore the entire `.manta/` directory.
-- [ ] Provision local `.manta/tester.yaml` and any reviewed active rules on each development machine that needs them.
-- [ ] Exercise one passing and one failing command through Manta.
+- [ ] Pin and verify one Gaori version.
+- [ ] Ignore the entire `.gaori/` directory.
+- [ ] Provision local `.gaori/tester.yaml` and any reviewed active rules on each development machine that needs them.
+- [ ] Exercise one passing and one failing command through Gaori.
 - [ ] Exercise timeout handling for at least one long-running command.
 - [ ] Confirm the selected parser recognizes the parent project's real logs; treat `degraded` as a rule/parser improvement signal.
 - [ ] Confirm redaction in summary, status, excerpts, and console output using representative secrets.
@@ -256,7 +256,7 @@ Manta remains standalone and imposes no evidence-consumer runtime dependency.
 
 ## Compatibility and upgrades
 
-Pin Manta by semantic version and run the parent project's passing/failing integration fixtures before upgrading. Changes to config, status/summary fields, exit semantics, parser behavior, redaction boundaries, or artifact layouts require synchronized updates to requirements, architecture, user documentation, and executable contract tests in this repository.
+Pin Gaori by semantic version and run the parent project's passing/failing integration fixtures before upgrading. Changes to config, status/summary fields, exit semantics, parser behavior, redaction boundaries, or artifact layouts require synchronized updates to requirements, architecture, user documentation, and executable contract tests in this repository.
 
 ### Schema v2 tag migration
 

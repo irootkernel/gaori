@@ -10,16 +10,16 @@ import (
 	"testing"
 	"time"
 
-	"github.com/irootkernel/manta/internal/model"
-	"github.com/irootkernel/manta/internal/safety"
+	"github.com/irootkernel/gaori/internal/model"
+	"github.com/irootkernel/gaori/internal/safety"
 )
 
-const preparePathsProcessHelper = "MANTA_TEST_PREPARE_PATHS_PROCESS_HELPER"
+const preparePathsProcessHelper = "GAORI_TEST_PREPARE_PATHS_PROCESS_HELPER"
 
 func TestPreparePathsReservesDistinctStandaloneDirectoriesAcrossProcesses(t *testing.T) {
 	if os.Getenv(preparePathsProcessHelper) == "1" {
-		repo := os.Getenv("MANTA_TEST_PREPARE_PATHS_REPO")
-		resultPath := os.Getenv("MANTA_TEST_PREPARE_PATHS_RESULT")
+		repo := os.Getenv("GAORI_TEST_PREPARE_PATHS_REPO")
+		resultPath := os.Getenv("GAORI_TEST_PREPARE_PATHS_RESULT")
 		now := time.Date(2026, time.July, 20, 1, 2, 3, 0, time.UTC)
 		paths, err := preparePathsAt(repo, "", "", "unit", now)
 		if err != nil {
@@ -41,8 +41,8 @@ func TestPreparePathsReservesDistinctStandaloneDirectoriesAcrossProcesses(t *tes
 		cmd := exec.Command(os.Args[0], "-test.run=^TestPreparePathsReservesDistinctStandaloneDirectoriesAcrossProcesses$")
 		cmd.Env = append(os.Environ(),
 			preparePathsProcessHelper+"=1",
-			"MANTA_TEST_PREPARE_PATHS_REPO="+repo,
-			"MANTA_TEST_PREPARE_PATHS_RESULT="+resultPath,
+			"GAORI_TEST_PREPARE_PATHS_REPO="+repo,
+			"GAORI_TEST_PREPARE_PATHS_RESULT="+resultPath,
 		)
 		if err := cmd.Start(); err != nil {
 			t.Fatalf("start allocator process %d: %v", i, err)
@@ -144,7 +144,7 @@ func TestPreparePathsKeepsExplicitRunIDLayout(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := filepath.Join(repo, ".manta", "runs", "scoped", "run-001", "artifacts", "test")
+	want := filepath.Join(repo, ".gaori", "runs", "scoped", "run-001", "artifacts", "test")
 	if paths.BaseDir != want {
 		t.Fatalf("expected fixed run-scoped path %q, got %q", want, paths.BaseDir)
 	}
@@ -163,7 +163,7 @@ func TestWriteSummaryJSONFailsWhenTooLarge(t *testing.T) {
 		Parser:          "generic",
 		CommandArgv:     []string{"sh", "test.sh"},
 		ExitCode:        1,
-		RawLog:          ".manta/runs/standalone/x/unit.raw.log",
+		RawLog:          ".gaori/runs/standalone/x/unit.raw.log",
 		RawLogSHA256:    "sha256:abc",
 		ExtractorStatus: model.ExtractorStatusPrecise,
 		Failures: []model.Failure{{
@@ -257,7 +257,7 @@ func TestBoundSummaryEvidenceUsesRenderedByteBudget(t *testing.T) {
 		Status:          model.RunStatusFailed,
 		CommandID:       "unit",
 		ExtractorStatus: model.ExtractorStatusPrecise,
-		RawLog:          ".manta/unit.raw.log",
+		RawLog:          ".gaori/unit.raw.log",
 		Failures: []model.Failure{
 			{ID: "F001", Signature: "short"},
 			{ID: "F002", Signature: strings.Repeat("\x01", safety.MaxSummaryBytes)},
@@ -293,7 +293,7 @@ func TestBoundSummaryEvidenceIncludesJSONTrailingNewlineInByteBudget(t *testing.
 		Status:          model.RunStatusFailed,
 		CommandID:       "unit",
 		ExtractorStatus: model.ExtractorStatusPrecise,
-		RawLog:          ".manta/unit.raw.log",
+		RawLog:          ".gaori/unit.raw.log",
 		Failures: []model.Failure{
 			{ID: "F001", Signature: "short"},
 			{ID: "F002"},
@@ -381,7 +381,7 @@ func TestWriteSummaryMarkdownMatchesDocumentedShape(t *testing.T) {
 		Status:          model.RunStatusFailed,
 		CommandID:       "unit",
 		ExitCode:        1,
-		RawLog:          ".manta/runs/scoped/summarize-example/artifacts/test/unit.raw.log",
+		RawLog:          ".gaori/runs/scoped/summarize-example/artifacts/test/unit.raw.log",
 		RawLogSHA256:    "sha256:abc",
 		ExtractorStatus: model.ExtractorStatusPrecise,
 		FailureCount:    1,
@@ -403,7 +403,7 @@ func TestWriteSummaryMarkdownMatchesDocumentedShape(t *testing.T) {
 		t.Fatal(err)
 	}
 	want := strings.Join([]string{
-		"# Manta Summary: unit",
+		"# Gaori Summary: unit",
 		"",
 		"Status: failed",
 		"Exit code: 1",
@@ -411,7 +411,7 @@ func TestWriteSummaryMarkdownMatchesDocumentedShape(t *testing.T) {
 		"Extractor: precise",
 		"Failures: 1 (truncated: false)",
 		"Warnings: 0 (truncated: false)",
-		"Raw log: .manta/runs/scoped/summarize-example/artifacts/test/unit.raw.log",
+		"Raw log: .gaori/runs/scoped/summarize-example/artifacts/test/unit.raw.log",
 		"Raw log SHA-256: sha256:abc",
 		"",
 		"## Failures",
@@ -493,11 +493,11 @@ func TestArtifactWritesRejectSymlinkEscape(t *testing.T) {
 	t.Parallel()
 	repo := t.TempDir()
 	external := t.TempDir()
-	if err := os.Symlink(external, filepath.Join(repo, ".manta")); err != nil {
+	if err := os.Symlink(external, filepath.Join(repo, ".gaori")); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := PreparePaths(repo, "", "", "unit"); err == nil {
-		t.Fatal("expected external .manta symlink to fail closed")
+		t.Fatal("expected external .gaori symlink to fail closed")
 	}
 	entries, err := os.ReadDir(external)
 	if err != nil {
@@ -515,12 +515,12 @@ func TestArtifactWritesAllowInternalSymlink(t *testing.T) {
 	if err := os.MkdirAll(internal, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.Symlink(internal, filepath.Join(repo, ".manta")); err != nil {
+	if err := os.Symlink(internal, filepath.Join(repo, ".gaori")); err != nil {
 		t.Fatal(err)
 	}
 	paths, err := PreparePaths(repo, "", "", "unit")
 	if err != nil {
-		t.Fatalf("expected internal .manta symlink to be allowed: %v", err)
+		t.Fatalf("expected internal .gaori symlink to be allowed: %v", err)
 	}
 	if _, err := WriteRawLog(paths, []byte("ok\n")); err != nil {
 		t.Fatalf("expected raw log write through internal symlink: %v", err)
@@ -541,7 +541,7 @@ func TestRunIDArtifactLayout(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	expectedBase := filepath.Join(repo, ".manta", "runs", "scoped", "run-001", "artifacts", "test")
+	expectedBase := filepath.Join(repo, ".gaori", "runs", "scoped", "run-001", "artifacts", "test")
 	if paths.BoundaryDir != repo || paths.BaseDir != expectedBase {
 		t.Fatalf("unexpected run-scoped paths %+v", paths)
 	}
@@ -557,12 +557,12 @@ func TestRunIDArtifactWritesRejectSymlinkEscape(t *testing.T) {
 	t.Parallel()
 	repo := t.TempDir()
 	external := t.TempDir()
-	if err := os.Symlink(external, filepath.Join(repo, ".manta")); err != nil {
+	if err := os.Symlink(external, filepath.Join(repo, ".gaori")); err != nil {
 		t.Fatal(err)
 	}
 	_, err := PreparePaths(repo, "", "run-001", "unit")
 	if model.ExitCodeFor(err) != int(model.ExitCodeArtifactError) {
-		t.Fatalf("expected artifact error for external .manta symlink, got %v", err)
+		t.Fatalf("expected artifact error for external .gaori symlink, got %v", err)
 	}
 	entries, err := os.ReadDir(external)
 	if err != nil {

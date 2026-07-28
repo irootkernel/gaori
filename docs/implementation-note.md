@@ -1,13 +1,13 @@
-# Manta Implementation Note
+# Gaori Implementation Note
 
-Status: v0.1 baseline, `HARDE-001` through `HARDE-007`, `TAGS-001`, and `RELRV-001` through `RELRV-009` complete
-Scope: Maintainer guidance for the standalone Manta v0.1 implementation, schema-v2 tags, release-readiness follow-up, and future changes
+Status: v0.1 baseline, `HARDE-001` through `HARDE-007`, `TAGS-001`, `RELRV-001` through `RELRV-009`, and `BRAND-001` complete
+Scope: Maintainer guidance for the standalone Gaori v0.1 implementation, schema-v2 tags, release-readiness follow-up, and future changes
 
 This document explains implementation constraints and verification expectations for contributors. It is not the parent-project adoption contract; integrators should start with the [integration guide](integration-guide.md).
 
 ## Implementation posture
 
-Build Manta as a small deterministic Go CLI first. Do not add orchestration, session, or acceptance-authority concepts to the core package. Treat the optional run-scoped artifact layout as output path compatibility only.
+Build Gaori as a small deterministic Go CLI first. Do not add orchestration, session, or acceptance-authority concepts to the core package. Treat the optional run-scoped artifact layout as output path compatibility only.
 
 The post-baseline HARDE sequence is complete. Preserve the contracts in `roadmap.md#harde-post-baseline-hardening-and-contract-closure` and `requirements-specs.md#rqhar-post-baseline-hardening-and-contract-closure`, and rerun affected roadmap verification for future changes.
 
@@ -16,7 +16,7 @@ The post-baseline HARDE sequence is complete. Preserve the contracts in `roadmap
 Names are illustrative; adapt them to the selected language and layout.
 
 ```text
-cmd/manta/
+cmd/gaori/
   entrypoint and argument parsing
 internal/config/
   config discovery, schema validation, redaction/noise config
@@ -90,7 +90,7 @@ Extractor status guidance:
 - `degraded`: a failed, timed-out, or killed command has no accepted failure span, extraction failed internally, extraction inspected only a bounded tail of an oversized raw log, or surfaced failure/warning records were truncated.
 - `no_match`: a passing command has no accepted failure span and extraction completed without an internal error; warnings may still be present.
 
-Extraction internal errors follow the artifact/CLI matrix in `architecture.md`. When artifact writes remain safe, Manta preserves raw evidence and materializes empty degraded evidence; bounded, redacted diagnostics go to stderr rather than the JSON schemas.
+Extraction internal errors follow the artifact/CLI matrix in `architecture.md`. When artifact writes remain safe, Gaori preserves raw evidence and materializes empty degraded evidence; bounded, redacted diagnostics go to stderr rather than the JSON schemas.
 
 For execution and summarize logs larger than 256 KiB, extraction uses the final 256 KiB beginning at the first complete line. It preserves absolute line and byte offsets into the full raw log and always reports `degraded`, including when the retained tail contains a precise match. An oversized unbroken line has no complete tail line to inspect. Rule-only `rules test` extraction remains fail closed above 256 KiB so overmatch validation is never based on a partial fixture.
 
@@ -186,7 +186,7 @@ Tests should cover:
 - Rule overmatch rejection.
 - Extreme rule context values failing closed before command execution, plus defensive extraction bounds and regex compilation errors that prevent overflow or panic for unvalidated in-memory rules.
 - Exact-limit and oversized config, stored rule, imported rule, and `rules propose` raw-log inputs, including config exit `2` and absence of command or output side effects.
-- Artifact path generation for `.manta/`, caller-selected `--output-dir`, and `.manta/runs/scoped/<run_id>/...` layouts, plus built-binary rejection of external `.manta/runs/standalone` and `.manta/runs/scoped` symlinks before command execution.
+- Artifact path generation for `.gaori/`, caller-selected `--output-dir`, and `.gaori/runs/scoped/<run_id>/...` layouts, plus built-binary rejection of external `.gaori/runs/standalone` and `.gaori/runs/scoped` symlinks before command execution.
 - Sequential, goroutine-concurrent, and cross-process standalone directory allocation within one UTC-second interval, including configured, ad-hoc, and summarize evidence preservation.
 - Invalid run, command, rule, and failure IDs failing before command execution or artifact writes.
 - Traversal, cross-run excerpt access, dangling links, and external symlink escape failing closed across artifact and rule operations.
@@ -199,13 +199,13 @@ Tests should cover:
 - Exact generated Markdown shape for a fixed summary, plus a built-binary fresh-fixture workflow covering version, configured/ad-hoc run, summarize, excerpt, JSON output, and the complete rule lifecycle.
 - Unsupported historical `--verbose` and `--no-color` placeholders failing closed with config exit code `2`.
 - Actual `make install` and `make install-toolchain` execution in isolated temporary roots, including installed-version and resolver checks.
-- Toolchain resolver selection from `MANTA_BIN`, absolute `manta.binary_path`, and versioned `manta.cli_version`, including argument forwarding and fail-closed missing, unsafe, or mismatched selections.
+- Toolchain resolver selection from `GAORI_BIN`, absolute `gaori.binary_path`, and versioned `gaori.cli_version`, including argument forwarding and fail-closed missing, unsafe, or mismatched selections.
 
 ## Release-readiness checklist
 
 Before the next release tag, verify all of the following:
 
-- `go build ./cmd/manta`
+- `go build ./cmd/gaori`
 - `make test`
 - `make install` and `make install-toolchain` in isolated temporary roots, including installed-version and resolver checks
 - configured run smoke test
@@ -214,9 +214,9 @@ Before the next release tag, verify all of the following:
 - summarize smoke test from an existing raw log
 - parser fixture coverage for `generic`, `vitest`, `pytest`, `go-test`, and `playwright`
 - rule lifecycle coverage for `list/search/show/create/update/delete/test/propose`
-- fresh-fixture execution of every documented Manta CLI command with generated Markdown compared to the documented shape
+- fresh-fixture execution of every documented Gaori CLI command with generated Markdown compared to the documented shape
 - toolchain resolver status and forwarding checks for environment, absolute-path metadata, and versioned metadata selection
-- artifact path and containment verification for `.manta/`, `--output-dir`, and `.manta/runs/scoped/<run_id>/...`, including external `.manta/runs/standalone` and `.manta/runs/scoped` symlink rejection
+- artifact path and containment verification for `.gaori/`, `--output-dir`, and `.gaori/runs/scoped/<run_id>/...`, including external `.gaori/runs/standalone` and `.gaori/runs/scoped` symlink rejection
 - collision checks confirming repeated standalone operations retain distinct raw, summary, Markdown, status, and excerpt artifacts with unchanged raw-log checksums
 - watcher status JSON compatibility, including status-hash inputs
 - release notes mention known limitations, especially raw-log redaction policy, rule proposals remaining run-local until promoted, and the current platform-verification boundary

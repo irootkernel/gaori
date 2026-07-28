@@ -7,8 +7,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/irootkernel/manta/internal/model"
-	"github.com/irootkernel/manta/internal/safety"
+	"github.com/irootkernel/gaori/internal/model"
+	"github.com/irootkernel/gaori/internal/safety"
 )
 
 func TestValidateAcceptsImplementedParsers(t *testing.T) {

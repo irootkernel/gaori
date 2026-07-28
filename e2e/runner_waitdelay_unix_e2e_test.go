@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/irootkernel/manta/internal/model"
+	"github.com/irootkernel/gaori/internal/model"
 )
 
 func TestBinaryRecoversSuccessfulLeaderAfterWaitDelay(t *testing.T) {

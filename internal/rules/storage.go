@@ -15,18 +15,18 @@ import (
 
 	"gopkg.in/yaml.v3"
 
-	"github.com/irootkernel/manta/internal/extract"
-	"github.com/irootkernel/manta/internal/model"
-	"github.com/irootkernel/manta/internal/safety"
-	"github.com/irootkernel/manta/internal/tagset"
+	"github.com/irootkernel/gaori/internal/extract"
+	"github.com/irootkernel/gaori/internal/model"
+	"github.com/irootkernel/gaori/internal/safety"
+	"github.com/irootkernel/gaori/internal/tagset"
 )
 
 func RulesDir(repoRoot string) string {
-	return filepath.Join(repoRoot, ".manta", "tester", "rules")
+	return filepath.Join(repoRoot, ".gaori", "tester", "rules")
 }
 
 func ProposedRulesDir(repoRoot string) string {
-	return filepath.Join(repoRoot, ".manta", "rule-proposals")
+	return filepath.Join(repoRoot, ".gaori", "rule-proposals")
 }
 
 func LoadAll(repoRoot string) ([]model.Rule, error) {
@@ -42,7 +42,7 @@ func LoadAll(repoRoot string) ([]model.Rule, error) {
 			return nil, err
 		}
 		if existing, ok := ids[rule.ID]; ok && rule.ID != "" {
-			return nil, model.NewMantaError(model.ExitCodeConfigError, "validate rule file", fmt.Errorf("duplicate rule id %q in %s and %s", rule.ID, existing, path))
+			return nil, model.NewGaoriError(model.ExitCodeConfigError, "validate rule file", fmt.Errorf("duplicate rule id %q in %s and %s", rule.ID, existing, path))
 		}
 		ids[rule.ID] = path
 		if err := ValidateStoredRule(rule); err != nil {
@@ -57,7 +57,7 @@ func LoadAll(repoRoot string) ([]model.Rule, error) {
 
 func LoadByID(repoRoot, id string) (model.Rule, error) {
 	if err := safety.ValidateArtifactIdentifier("rule id", id); err != nil {
-		return model.Rule{}, model.NewMantaError(model.ExitCodeConfigError, "load rule", err)
+		return model.Rule{}, model.NewGaoriError(model.ExitCodeConfigError, "load rule", err)
 	}
 	rules, err := LoadAll(repoRoot)
 	if err != nil {
@@ -68,7 +68,7 @@ func LoadByID(repoRoot, id string) (model.Rule, error) {
 			return rule, nil
 		}
 	}
-	return model.Rule{}, model.NewMantaError(model.ExitCodeConfigError, "load rule", fmt.Errorf("unknown rule id %q", id))
+	return model.Rule{}, model.NewGaoriError(model.ExitCodeConfigError, "load rule", fmt.Errorf("unknown rule id %q", id))
 }
 
 func Search(repoRoot, query string) ([]model.Rule, error) {
@@ -111,7 +111,7 @@ func Create(repoRoot string, rule model.Rule) (model.Rule, error) {
 
 func Update(repoRoot, id string, rule model.Rule) (model.Rule, error) {
 	if rule.ID != id {
-		return model.Rule{}, model.NewMantaError(model.ExitCodeConfigError, "update rule", fmt.Errorf("rule file id %q does not match target id %q", rule.ID, id))
+		return model.Rule{}, model.NewGaoriError(model.ExitCodeConfigError, "update rule", fmt.Errorf("rule file id %q does not match target id %q", rule.ID, id))
 	}
 	existing, err := LoadByID(repoRoot, id)
 	if err != nil {
@@ -131,7 +131,7 @@ func Delete(repoRoot, id, reason string) (model.Rule, error) {
 	}
 	reason = strings.TrimSpace(reason)
 	if reason == "" {
-		return model.Rule{}, model.NewMantaError(model.ExitCodeConfigError, "delete rule", fmt.Errorf("--reason is required"))
+		return model.Rule{}, model.NewGaoriError(model.ExitCodeConfigError, "delete rule", fmt.Errorf("--reason is required"))
 	}
 	rule.Status = model.RuleStatusDisabled
 	rule.DeletionReason = reason
@@ -153,7 +153,7 @@ func TestRule(repoRoot, id, rawLogPath string, expectStart, expectEnd int) (mode
 		if safety.IsInputTooLarge(err) {
 			code = model.ExitCodeParserError
 		}
-		return model.RuleTestResult{}, model.NewMantaError(code, "read raw log", err)
+		return model.RuleTestResult{}, model.NewGaoriError(code, "read raw log", err)
 	}
 	run := model.RunOutput{Status: model.RunStatusFailed}
 	processed, err := extract.ProcessRules(raw, run, []model.Rule{rule})
@@ -162,10 +162,10 @@ func TestRule(repoRoot, id, rawLogPath string, expectStart, expectEnd int) (mode
 	}
 	result := model.RuleTestResult{RuleID: rule.ID, RawLogPath: resolved, ExpectedStartLine: expectStart, ExpectedEndLine: expectEnd, FailureCount: len(processed.Failures)}
 	if len(processed.Failures) == 0 {
-		return result, model.NewMantaError(model.ExitCodeParserError, "test rule", fmt.Errorf("rule %q produced no failures", id))
+		return result, model.NewGaoriError(model.ExitCodeParserError, "test rule", fmt.Errorf("rule %q produced no failures", id))
 	}
 	if len(processed.Failures) > 1 {
-		return result, model.NewMantaError(model.ExitCodeParserError, "test rule", fmt.Errorf("rule %q overmatched %d failure spans", id, len(processed.Failures)))
+		return result, model.NewGaoriError(model.ExitCodeParserError, "test rule", fmt.Errorf("rule %q overmatched %d failure spans", id, len(processed.Failures)))
 	}
 	first := processed.Failures[0]
 	result.ActualStartLine = first.RawSpan.StartLine
@@ -173,7 +173,7 @@ func TestRule(repoRoot, id, rawLogPath string, expectStart, expectEnd int) (mode
 	result.Signature = first.Signature
 	result.Passed = first.RawSpan.StartLine == expectStart && first.RawSpan.EndLine == expectEnd
 	if !result.Passed {
-		return result, model.NewMantaError(model.ExitCodeParserError, "test rule", fmt.Errorf("expected span %d:%d, got %d:%d", expectStart, expectEnd, first.RawSpan.StartLine, first.RawSpan.EndLine))
+		return result, model.NewGaoriError(model.ExitCodeParserError, "test rule", fmt.Errorf("expected span %d:%d, got %d:%d", expectStart, expectEnd, first.RawSpan.StartLine, first.RawSpan.EndLine))
 	}
 	return result, nil
 }
@@ -185,16 +185,16 @@ func Propose(repoRoot string, tags []string, parser, rawLogPath string, startLin
 func proposeAt(repoRoot string, tags []string, parser, rawLogPath string, startLine, endLine int, now time.Time) (model.RuleProposal, error) {
 	canonical, err := tagset.Canonicalize(tags)
 	if err != nil {
-		return model.RuleProposal{}, model.NewMantaError(model.ExitCodeConfigError, "propose rule", err)
+		return model.RuleProposal{}, model.NewGaoriError(model.ExitCodeConfigError, "propose rule", err)
 	}
 	if strings.TrimSpace(parser) == "" {
-		return model.RuleProposal{}, model.NewMantaError(model.ExitCodeConfigError, "propose rule", fmt.Errorf("--parser is required"))
+		return model.RuleProposal{}, model.NewGaoriError(model.ExitCodeConfigError, "propose rule", fmt.Errorf("--parser is required"))
 	}
 	if !knownRuleParsers[parser] {
-		return model.RuleProposal{}, model.NewMantaError(model.ExitCodeConfigError, "propose rule", fmt.Errorf("unsupported parser label %q", parser))
+		return model.RuleProposal{}, model.NewGaoriError(model.ExitCodeConfigError, "propose rule", fmt.Errorf("unsupported parser label %q", parser))
 	}
 	if startLine <= 0 || endLine < startLine {
-		return model.RuleProposal{}, model.NewMantaError(model.ExitCodeConfigError, "propose rule", fmt.Errorf("invalid span %d:%d", startLine, endLine))
+		return model.RuleProposal{}, model.NewGaoriError(model.ExitCodeConfigError, "propose rule", fmt.Errorf("invalid span %d:%d", startLine, endLine))
 	}
 	resolved := rawLogPath
 	if !filepath.IsAbs(resolved) {
@@ -202,16 +202,16 @@ func proposeAt(repoRoot string, tags []string, parser, rawLogPath string, startL
 	}
 	raw, err := safety.ReadFileLimited(resolved)
 	if err != nil {
-		return model.RuleProposal{}, model.NewMantaError(model.ExitCodeConfigError, "read raw log", err)
+		return model.RuleProposal{}, model.NewGaoriError(model.ExitCodeConfigError, "read raw log", err)
 	}
 	lines := strings.Split(strings.ReplaceAll(string(raw), "\r\n", "\n"), "\n")
 	if endLine > len(lines) {
-		return model.RuleProposal{}, model.NewMantaError(model.ExitCodeConfigError, "propose rule", fmt.Errorf("span end line %d exceeds %d", endLine, len(lines)))
+		return model.RuleProposal{}, model.NewGaoriError(model.ExitCodeConfigError, "propose rule", fmt.Errorf("span end line %d exceeds %d", endLine, len(lines)))
 	}
 	segment := lines[startLine-1 : endLine]
 	startPattern := quoteFirstMeaningfulLine(segment)
 	if startPattern == "" {
-		return model.RuleProposal{}, model.NewMantaError(model.ExitCodeConfigError, "propose rule", fmt.Errorf("span %d:%d does not contain a usable start line", startLine, endLine))
+		return model.RuleProposal{}, model.NewGaoriError(model.ExitCodeConfigError, "propose rule", fmt.Errorf("span %d:%d does not contain a usable start line", startLine, endLine))
 	}
 	base := sanitizeRuleID(strings.TrimSuffix(filepath.Base(resolved), filepath.Ext(resolved)))
 	if base == "" {
@@ -227,7 +227,7 @@ func proposeAt(repoRoot string, tags []string, parser, rawLogPath string, startL
 		Parser: parser,
 		Status: model.RuleStatusActive,
 		Provenance: model.RuleProvenance{
-			CreatedBy:       "manta-rules-propose",
+			CreatedBy:       "gaori-rules-propose",
 			SourceRun:       inferSourceRun(resolved),
 			SourceCommand:   inferSourceCommand(resolved),
 			SourceLogSHA256: sha256String(raw),
@@ -255,11 +255,11 @@ func proposeAt(repoRoot string, tags []string, parser, rawLogPath string, startL
 		return model.RuleProposal{}, err
 	}
 	if err := safety.MkdirAllWithin(repoRoot, ProposedRulesDir(repoRoot), 0o755); err != nil {
-		return model.RuleProposal{}, model.NewMantaError(model.ExitCodeArtifactError, "create proposal directory", err)
+		return model.RuleProposal{}, model.NewGaoriError(model.ExitCodeArtifactError, "create proposal directory", err)
 	}
 	data, err := yaml.Marshal(&rule)
 	if err != nil {
-		return model.RuleProposal{}, model.NewMantaError(model.ExitCodeArtifactError, "marshal proposal rule", err)
+		return model.RuleProposal{}, model.NewGaoriError(model.ExitCodeArtifactError, "marshal proposal rule", err)
 	}
 	path, err := writeUniqueProposal(repoRoot, proposalID, now, data)
 	if err != nil {
@@ -281,12 +281,12 @@ func writeUniqueProposal(repoRoot, proposalID string, now time.Time, data []byte
 			continue
 		}
 		if err != nil {
-			return "", model.NewMantaError(model.ExitCodeArtifactError, "write proposal rule", err)
+			return "", model.NewGaoriError(model.ExitCodeArtifactError, "write proposal rule", err)
 		}
 		_, writeErr := file.Write(data)
 		closeErr := file.Close()
 		if err := errors.Join(writeErr, closeErr); err != nil {
-			return "", model.NewMantaError(model.ExitCodeArtifactError, "write proposal rule", err)
+			return "", model.NewGaoriError(model.ExitCodeArtifactError, "write proposal rule", err)
 		}
 		return path, nil
 	}
@@ -297,16 +297,16 @@ func ValidateStoredRule(rule model.Rule) error {
 		return err
 	}
 	if strings.TrimSpace(rule.Provenance.CreatedBy) == "" || strings.TrimSpace(rule.Provenance.SourceRun) == "" || strings.TrimSpace(rule.Provenance.SourceCommand) == "" || strings.TrimSpace(rule.Provenance.SourceLogSHA256) == "" || strings.TrimSpace(rule.Provenance.Reason) == "" {
-		return model.NewMantaError(model.ExitCodeConfigError, "validate rule file", fmt.Errorf("rule %q must define provenance created_by, source_run, source_command, source_log_sha256, and reason", rule.ID))
+		return model.NewGaoriError(model.ExitCodeConfigError, "validate rule file", fmt.Errorf("rule %q must define provenance created_by, source_run, source_command, source_log_sha256, and reason", rule.ID))
 	}
 	if rule.Provenance.SourceSpan.StartLine <= 0 || rule.Provenance.SourceSpan.EndLine < rule.Provenance.SourceSpan.StartLine {
-		return model.NewMantaError(model.ExitCodeConfigError, "validate rule file", fmt.Errorf("rule %q must define valid provenance source_span", rule.ID))
+		return model.NewGaoriError(model.ExitCodeConfigError, "validate rule file", fmt.Errorf("rule %q must define valid provenance source_span", rule.ID))
 	}
 	if rule.Status == model.RuleStatusDisabled && strings.TrimSpace(rule.DeletionReason) == "" {
-		return model.NewMantaError(model.ExitCodeConfigError, "validate rule file", fmt.Errorf("disabled rule %q must define deletion_reason", rule.ID))
+		return model.NewGaoriError(model.ExitCodeConfigError, "validate rule file", fmt.Errorf("disabled rule %q must define deletion_reason", rule.ID))
 	}
 	if rule.Status == model.RuleStatusActive && strings.TrimSpace(rule.DeletionReason) != "" {
-		return model.NewMantaError(model.ExitCodeConfigError, "validate rule file", fmt.Errorf("active rule %q must not define deletion_reason", rule.ID))
+		return model.NewGaoriError(model.ExitCodeConfigError, "validate rule file", fmt.Errorf("active rule %q must not define deletion_reason", rule.ID))
 	}
 	return nil
 }
@@ -314,11 +314,11 @@ func ValidateStoredRule(rule model.Rule) error {
 func readRuleFile(repoRoot, path string) (model.Rule, error) {
 	data, err := safety.ReadFileWithinLimit(repoRoot, path)
 	if err != nil {
-		return model.Rule{}, model.NewMantaError(model.ExitCodeConfigError, "read rule file", err)
+		return model.Rule{}, model.NewGaoriError(model.ExitCodeConfigError, "read rule file", err)
 	}
 	var rule model.Rule
 	if err := safety.DecodeYAMLStrict(data, &rule); err != nil {
-		return model.Rule{}, model.NewMantaError(model.ExitCodeConfigError, "parse rule file", fmt.Errorf("%s: %w", path, err))
+		return model.Rule{}, model.NewGaoriError(model.ExitCodeConfigError, "parse rule file", fmt.Errorf("%s: %w", path, err))
 	}
 	rule.SourcePath = path
 	return rule, nil
@@ -330,14 +330,14 @@ func writeRuleFile(repoRoot, path string, rule model.Rule) (model.Rule, error) {
 	}
 	rule.Tags = tagset.Normalize(rule.Tags)
 	if err := safety.MkdirAllWithin(repoRoot, filepath.Dir(path), 0o755); err != nil {
-		return model.Rule{}, model.NewMantaError(model.ExitCodeArtifactError, "create rule directory", err)
+		return model.Rule{}, model.NewGaoriError(model.ExitCodeArtifactError, "create rule directory", err)
 	}
 	data, err := yaml.Marshal(&rule)
 	if err != nil {
-		return model.Rule{}, model.NewMantaError(model.ExitCodeArtifactError, "marshal rule file", err)
+		return model.Rule{}, model.NewGaoriError(model.ExitCodeArtifactError, "marshal rule file", err)
 	}
 	if err := safety.WriteFileWithin(repoRoot, path, data, 0o644); err != nil {
-		return model.Rule{}, model.NewMantaError(model.ExitCodeArtifactError, "write rule file", err)
+		return model.Rule{}, model.NewGaoriError(model.ExitCodeArtifactError, "write rule file", err)
 	}
 	rule.SourcePath = path
 	return rule, nil
@@ -345,13 +345,13 @@ func writeRuleFile(repoRoot, path string, rule model.Rule) (model.Rule, error) {
 
 func ensureRuleIDAvailable(repoRoot, id string) error {
 	if err := safety.ValidateArtifactIdentifier("rule id", id); err != nil {
-		return model.NewMantaError(model.ExitCodeConfigError, "create rule", err)
+		return model.NewGaoriError(model.ExitCodeConfigError, "create rule", err)
 	}
 	path := filepath.Join(RulesDir(repoRoot), id+".yaml")
 	if _, err := safety.StatWithin(repoRoot, path); err == nil {
-		return model.NewMantaError(model.ExitCodeConfigError, "create rule", fmt.Errorf("rule id %q already exists", id))
+		return model.NewGaoriError(model.ExitCodeConfigError, "create rule", fmt.Errorf("rule id %q already exists", id))
 	} else if err != nil && !os.IsNotExist(err) {
-		return model.NewMantaError(model.ExitCodeConfigError, "create rule", err)
+		return model.NewGaoriError(model.ExitCodeConfigError, "create rule", err)
 	}
 	return nil
 }
