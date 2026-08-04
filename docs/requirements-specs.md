@@ -1,6 +1,6 @@
 # Gaori Requirement Specs
 
-Status: v0.1 baseline, `HARDE-001` through `HARDE-007`, `TAGS-001`, `RELRV-001` through `RELRV-009`, and `BRAND-001` complete
+Status: v0.1 baseline, `HARDE-001` through `HARDE-007`, `TAGS-001`, `ADHOC-001`, `RELRV-001` through `RELRV-009`, and `BRAND-001` complete
 Scope: Gaori v0.1 standalone baseline, post-baseline hardening, schema-v2 tag selectors, explicit ad-hoc parser selection, and release-readiness follow-up
 Source context: standalone deterministic Gaori v0.1 CLI behavior and evidence contracts.
 

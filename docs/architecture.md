@@ -72,6 +72,20 @@ Steps 7 through 9 run only after raw-log open, streaming, close, and validation 
 
 On Unix, the runner starts the command in its own process group. SIGINT and SIGTERM are forwarded to the group, with a two-second grace period before remaining members are force-killed. Interrupted runs retain partial raw evidence, produce `status: killed`, and use the process-compatible exit codes `130` and `143` respectively.
 
+## Data flow: ad-hoc command
+
+```text
+1. User runs `gaori run --parser go-test --tag go --tag unit -- go test ...`.
+2. CLI validates the single parser value, required tags, explicit `--` boundary, and non-empty child argv before execution or artifact creation.
+3. Config loader reads optional project redaction/noise settings and rules; a missing default config is allowed for ad-hoc execution.
+4. Tags are canonicalized, the selected parser remains exact, and applicable rules require the same parser plus all rule tags.
+5. Artifact writer opens the contained raw log, and the runner executes the child argv unchanged with the standard ad-hoc timeout.
+6. After safe raw-log close and validation, matching project rules run first; the selected built-in parser runs only when no rule produces a failure.
+7. Redaction, noise filtering, evidence bounding, artifact writes, and command-result handling follow the configured-command pipeline.
+```
+
+When `--parser` is omitted, step 2 selects `generic`. A specialized parser does not fall back to `generic` after a miss. Configured commands never accept a run-local parser override. The parser label is recorded in summary JSON through the existing metadata field; console, summary Markdown, status JSON, and watcher hash contracts remain unchanged.
+
 ## Data flow: summarize existing raw log
 
 ```text
@@ -263,6 +277,7 @@ Command execution status is authoritative. Parser quality only affects evidence 
 - Config YAML, project rule YAML, `rules create/update --file` YAML, and `rules propose --raw-log` inputs are read through a 256 KiB preflight bound. Oversized inputs fail with config exit code `2` before YAML decoding, command execution, or rule/proposal writes.
 - Parser or rule matches and misses never convert an authoritative non-pass result into pass.
 - Project rules run before the selected parser. When no rule matches, a specialized parser uses only its own patterns and never retries generic extraction.
+- Tagged ad-hoc runs may select that parser explicitly; configured runs continue to use only their configured parser.
 
 | Extraction outcome | Artifact status / exit code | Extractor status | Gaori CLI exit code |
 |---|---|---|---:|

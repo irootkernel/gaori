@@ -1,6 +1,6 @@
 # Gaori Documentation
 
-Status: Current for `gaori v0.1.7`
+Status: Current development baseline after `gaori v0.1.7`; `ADHOC-001` is intended for v0.1.8
 
 This directory contains Gaori's integration contracts, technical design, delivery history, and maintainer guidance. Start with the document that matches your role instead of reading the directory in filename order.
 
@@ -28,7 +28,7 @@ For Gaori maintainers:
 
 ## Current delivery state
 
-The standalone v0.1 baseline, the recorded `HARDE-001` through `HARDE-007` hardening requirements, the schema-v2 canonical tag selector contract, release-readiness follow-up `RELRV-001` through `RELRV-009`, v0.1.6 identity migration `BRAND-001`, and v0.1.7 coding-agent adoption guidance are implemented. The current supported surfaces include configured and ad-hoc command execution, raw-log summarization, excerpt lookup, five parsers, rule lifecycle commands, bounded/redacted derived evidence with explicit record truncation, collision-free standalone artifacts, fixed run-scoped artifacts, and deterministic status JSON. All `.gaori/` content is local-only state.
+The standalone v0.1 baseline, the recorded `HARDE-001` through `HARDE-007` hardening requirements, the schema-v2 canonical tag selector contract, explicit ad-hoc parser selection `ADHOC-001`, release-readiness follow-up `RELRV-001` through `RELRV-009`, v0.1.6 identity migration `BRAND-001`, and v0.1.7 coding-agent adoption guidance are implemented. The current supported surfaces include configured and tagged ad-hoc command execution with explicit parser choice, raw-log summarization, excerpt lookup, five parsers, rule lifecycle commands, bounded/redacted derived evidence with explicit record truncation, collision-free standalone artifacts, fixed run-scoped artifacts, and deterministic status JSON. All `.gaori/` content is local-only state.
 
 There are currently no open implementation items in `todo.md`. The delivery statement above is intentionally narrower than “Gaori provides every testing or orchestration capability.” Features listed as unsupported or out of scope in the [integration guide](integration-guide.md#not-provided-by-gaori-v01) are not implicitly planned or promised.
 

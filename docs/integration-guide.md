@@ -1,6 +1,6 @@
 # Gaori Parent-Project Integration Guide
 
-Status: Current for `gaori v0.1.7`
+Status: Current development baseline after `gaori v0.1.7`; `ADHOC-001` is intended for v0.1.8
 Audience: Projects that invoke Gaori or consume Gaori evidence
 
 Gaori is an optional standalone execution and evidence-compression adapter for long or noisy test commands. It lets coding agents and other consumers inspect bounded evidence without pulling complete raw output into their working context. A parent project owns which tests are required and when and why they run; Gaori owns command execution, raw-log preservation, bounded extraction, and factual artifacts for an invocation routed through it.
@@ -26,10 +26,10 @@ The default adoption model is selective: route commands through Gaori when their
 
 ## Supported capability matrix
 
-| Area | Supported in v0.1.7 | Integration note |
+| Area | Supported on current `main` | Integration note |
 |---|---|---|
 | Configured execution | Yes | `run <command-id>` reads `.gaori/tester.yaml`. |
-| Ad-hoc execution | Yes | `run --tag <tag> [--tag <tag> ...] -- <argv...>` can run without configured commands. |
+| Ad-hoc execution | Yes | `run [--parser <label>] --tag <tag> [--tag <tag> ...] -- <argv...>` can run without configured commands. |
 | Existing-log processing | Yes | `summarize <raw-log>` copies and summarizes a log without rerunning the command. Its inferred result is not authoritative execution metadata. |
 | Failure excerpt lookup | Yes | `excerpt --summary <path> <failure-id>` validates contained references before reading. |
 | Parsers | Yes | `generic`, `vitest`, `pytest`, `go-test`, and `playwright`. |
@@ -140,6 +140,21 @@ Integration rules:
 - Config YAML, stored/imported rule YAML, and `rules propose --raw-log` inputs are limited to 256 KiB; oversized inputs fail with config exit code `2` before commands or rule/proposal writes.
 - Tags are sorted and deduplicated. A rule applies when its parser matches and all of its tags are present on the run; multiple active rules may apply to one raw log.
 
+### Run dynamically selected commands
+
+Use a tagged ad-hoc run when a coding agent or operator selects a narrow command that is not practical to predeclare:
+
+```bash
+gaori run --parser go-test --tag go --tag unit -- \
+  go test ./internal/usecase/hook -run TestReconcileRewrite -count=1
+```
+
+The caller chooses both the command and parser. Omitting `--parser` preserves the `generic` default. Tags select project rules and do not select a parser; applicable rules still require an exact parser match and all of their tags. A specialized-parser miss never retries generic extraction and never changes the child command's authoritative result.
+
+Explicit parser selection is valid only before the `--` boundary of a tagged ad-hoc run. It cannot override a configured command. Missing, empty, repeated, or unsupported parser values and configured-command misuse fail with exit code `2` before child execution or completed evidence creation. A child argument named `--parser` after the boundary is passed through unchanged.
+
+Ad-hoc execution can operate without `.gaori/tester.yaml`. In that case Gaori still preserves raw output and applies the selected built-in parser, but no project-specific redaction, noise filters, or extraction rules are available. Parent guidance should distinguish this from configured command execution, which requires the local config.
+
 ## 3. Choose an invocation layout
 
 Use standalone mode for local or independent automation:
@@ -249,8 +264,10 @@ Gaori remains standalone and imposes no evidence-consumer runtime dependency.
 - [ ] Ignore the entire `.gaori/` directory.
 - [ ] Provision local `.gaori/tester.yaml` and any reviewed active rules on each development machine that needs them.
 - [ ] Exercise one passing and one failing command through Gaori.
+- [ ] Exercise one dynamically selected tagged command with its explicit parser, including a child `--parser` passthrough probe when the parent tool uses that argument.
 - [ ] Exercise timeout handling for at least one long-running command.
 - [ ] Confirm the selected parser recognizes the parent project's real logs; treat `degraded` as a rule/parser improvement signal.
+- [ ] Confirm tags are not being used as implicit parser selectors and that specialized parser misses do not fall back to `generic`.
 - [ ] Confirm redaction in summary, status, excerpts, and console output using representative secrets.
 - [ ] Confirm raw-log storage and sharing follow the parent project's sensitive-data policy.
 - [ ] Verify the caller preserves underlying exit codes and does not treat parser quality as pass/fail.

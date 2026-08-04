@@ -25,6 +25,8 @@ go install github.com/irootkernel/gaori@v0.1.7
 gaori --version
 ```
 
+`v0.1.7` is the latest published release. The current `main` documentation also covers `ADHOC-001` explicit parser selection, which is intended for v0.1.8; build from the source checkout to use that interface before v0.1.8 is released.
+
 From a source checkout, use:
 
 ```bash
@@ -124,7 +126,23 @@ Use an ad-hoc command when you do not want to add it to the config:
 gaori run --tag go --tag unit -- go test ./internal/...
 ```
 
-Tags select which local extraction rules may inspect a raw log; they do not select the command or change pass/fail. A rule applies only when its parser matches and all of its tags are present on the run. This lets a `tags: [go]` rule apply to both Go unit and integration runs while a `tags: [go, unit]` rule remains unit-specific. Multiple applicable rules may run against the same log.
+Ad-hoc runs use `generic` by default. Select an existing specialized parser explicitly when a dynamically chosen command emits a supported test format:
+
+```bash
+gaori run --parser go-test --tag go --tag unit -- \
+  go test ./internal/usecase/hook -run TestReconcileRewrite -count=1
+
+gaori run --parser pytest --tag python --tag unit -- \
+  pytest tests/test_registration.py -k same_version_retry
+
+gaori run --parser vitest --tag web --tag unit -- \
+  pnpm vitest run src/session/reducer.test.ts
+
+gaori run --parser playwright --tag web --tag e2e -- \
+  pnpm playwright test tests/login.spec.ts
+```
+
+`--parser` applies only to the tagged ad-hoc `-- <command...>` form. It does not override a configured command. Tags select which local extraction rules may inspect a raw log; they do not select the parser or change pass/fail. A rule applies only when its parser matches and all of its tags are present on the run. This lets a `tags: [go]` rule apply to both Go unit and integration runs while a `tags: [go, unit]` rule remains unit-specific. Multiple applicable rules may run against the same log. Specialized parsers use only their own patterns and do not retry generic extraction after a miss.
 
 ## Guide coding agents
 
@@ -138,12 +156,13 @@ The project's own documentation is authoritative for which tests are required. G
 When a required test command is expected to produce long or noisy output, prefer running it through Gaori from the repository root so the conversation can use bounded evidence instead of the complete raw log:
 
 - `<check-name>`: `gaori run <command-id>`
+- Dynamically selected Go test: `gaori run --parser go-test --tag go --tag unit -- go test <package> <test arguments>`
 
-Before the first Gaori run, verify the selected binary with `gaori --version`; it must report `<expected-version>`. If the binary, expected version, or `.gaori/tester.yaml` is unavailable, follow the project's normal documented test command instead and report that Gaori evidence compression was unavailable. Do not install Gaori or change local Gaori state unless the user explicitly asks.
+Before the first Gaori run, verify the selected binary with `gaori --version`; it must report `<expected-version>`. A configured command requires `.gaori/tester.yaml`. A tagged ad-hoc command can run without that file, but project-specific rules, redaction, and noise filtering are unavailable when no config exists. If the binary or expected version is unavailable, follow the project's normal documented test command instead and report that Gaori evidence compression was unavailable. Do not install Gaori or change local Gaori state unless the user explicitly asks.
 
-For `gaori run`, the executed command's exit code is authoritative for pass/fail. `extractor_status` describes evidence quality only and never changes the command result.
+For `gaori run`, the executed command's exit code is authoritative for pass/fail. `extractor_status` describes evidence quality only and never changes the command result. Tags do not select a parser, and specialized parsers do not automatically fall back to `generic`.
 
-When a command does not pass, inspect the generated `*.summary.md` first, followed by `*.summary.json` or a bounded excerpt when more detail is needed. Open or share `*.raw.log` only when necessary because raw logs are preserved without redaction and may contain secrets.
+When a command passes, do not open its generated logs by default. When it does not pass, inspect the generated `*.summary.md` first, followed by `*.summary.json` or a bounded excerpt when more detail is needed. Read only a bounded raw-log section when the compact evidence is insufficient or degraded. Open or share `*.raw.log` only when necessary because raw logs are preserved without redaction and may contain secrets.
 
 Keep the entire `.gaori/` directory out of Git. Do not add or commit its config, rules, toolchain metadata, proposals, or evidence.
 

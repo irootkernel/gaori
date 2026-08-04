@@ -1,7 +1,7 @@
 # Gaori Implementation Note
 
-Status: v0.1 baseline, `HARDE-001` through `HARDE-007`, `TAGS-001`, `RELRV-001` through `RELRV-009`, and `BRAND-001` complete
-Scope: Maintainer guidance for the standalone Gaori v0.1 implementation, schema-v2 tags, release-readiness follow-up, and future changes
+Status: v0.1 baseline, `HARDE-001` through `HARDE-007`, `TAGS-001`, `ADHOC-001`, `RELRV-001` through `RELRV-009`, and `BRAND-001` complete
+Scope: Maintainer guidance for the standalone Gaori v0.1 implementation, schema-v2 tags, explicit ad-hoc parser selection, release-readiness follow-up, and future changes
 
 This document explains implementation constraints and verification expectations for contributors. It is not the parent-project adoption contract; integrators should start with the [integration guide](integration-guide.md).
 
@@ -44,6 +44,8 @@ internal/safety/
 - On Unix, run the command in its own process group, forward SIGINT/SIGTERM to that group, allow a two-second grace period, then force-kill remaining group members.
 - Record operator interruption as `killed` with the process-compatible `128 + signal` exit code (`130` for SIGINT and `143` for SIGTERM).
 - Prefer explicit internal errors for config/artifact failures instead of silently falling back to a different output path.
+- Keep configured parser selection immutable. A tagged ad-hoc run may carry one explicit parser, but it must be validated with the `--` boundary before config/rule loading, artifact preparation, or child execution.
+- Preserve legacy tagged ad-hoc argv parsing and child-side `--` arguments. Only a delimiter reached before the first positional child command is a Gaori option boundary.
 
 ## Artifact writer guidance
 
@@ -192,6 +194,9 @@ Tests should cover:
 - Traversal, cross-run excerpt access, dangling links, and external symlink escape failing closed across artifact and rule operations.
 - Internal symlinks whose canonical targets remain inside the applicable boundary continuing to work.
 - Specialized parser fixtures for `vitest`, `pytest`, `go-test`, and `playwright`.
+- Tagged ad-hoc selection of every specialized parser, including exact summary metadata and representative fixture extraction.
+- Missing, empty, duplicate, or unknown ad-hoc parser values and configured-command overrides failing before executor invocation or run artifact creation, with built-binary sentinel coverage.
+- Child-side `--parser` and `--` arguments remaining unchanged across the Gaori option boundary.
 - Specialized parser misses with generic-looking markers, covering `no_match` for pass and `degraded` for failed, timed-out, and killed states without generic fallback, including a built-binary E2E probe.
 - Extraction internal errors after pass, failure, timeout, kill, and standalone summarize at the artifact-materialization boundary.
 - Oversized passing, failing, and summarize logs using bounded-tail extraction, including built-binary probes for preserved raw evidence, summary/status hashes, Markdown output, absolute spans, and CLI exit behavior.
@@ -210,6 +215,7 @@ Before the next release tag, verify all of the following:
 - `make install` and `make install-toolchain` in isolated temporary roots, including installed-version and resolver checks
 - configured run smoke test
 - ad-hoc run smoke test
+- explicit ad-hoc parser smoke covering parser-and-tag rule selection, specialized misses, invalid-input sentinel behavior, and child argv passthrough
 - built-binary SIGINT/SIGTERM interruption smoke across standalone and `--run-id` layouts, including partial raw evidence, `killed` status, and exit codes `130` and `143`
 - summarize smoke test from an existing raw log
 - parser fixture coverage for `generic`, `vitest`, `pytest`, `go-test`, and `playwright`
