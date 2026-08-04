@@ -125,6 +125,28 @@ gaori run --tag go --tag unit -- go test ./internal/...
 
 Tags select which local extraction rules may inspect a raw log; they do not select the command or change pass/fail. A rule applies only when its parser matches and all of its tags are present on the run. This lets a `tags: [go]` rule apply to both Go unit and integration runs while a `tags: [go, unit]` rule remains unit-specific. Multiple applicable rules may run against the same log.
 
+## Guide coding agents
+
+After adopting Gaori in a project, add the following shared guidance to that project's `AGENTS.md` or `CLAUDE.md`. Before pasting it, replace `<expected-version>`, `<gate-name>`, and `<command-id>` with the project's actual values, add or remove gate entries as needed, and replace `gaori` with the project's pinned wrapper command when it uses one.
+
+````markdown
+## Gaori test evidence
+
+Run the project's documented test gates through Gaori from the repository root. Do not bypass Gaori by invoking an underlying gate directly.
+
+- `<gate-name>`: `gaori run <command-id>`
+
+Before the first run, verify the selected binary with `gaori --version`; it must report `<expected-version>`. If the binary, expected version, or `.gaori/tester.yaml` is unavailable, stop and report the missing prerequisite. Do not install Gaori or change local Gaori state unless the user explicitly asks.
+
+For `gaori run`, the executed command's exit code is authoritative for pass/fail. `extractor_status` describes evidence quality only and never changes the command result.
+
+When a command does not pass, inspect the generated `*.summary.md` first, followed by `*.summary.json` or a bounded excerpt when more detail is needed. Open or share `*.raw.log` only when necessary because raw logs are preserved without redaction and may contain secrets.
+
+Keep the entire `.gaori/` directory out of Git. Do not add or commit its config, rules, toolchain metadata, proposals, or evidence.
+
+In the final report, include the Gaori command, process exit code, artifact `status`, `extractor_status`, relevant summary and raw-log paths when emitted, and any skipped checks. Gaori evidence alone does not establish review acceptance, final acceptance, release, or runtime activation.
+````
+
 ## Work with existing evidence
 
 Summarize an existing raw log without rerunning its command:
