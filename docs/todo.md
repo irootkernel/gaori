@@ -11,7 +11,7 @@ Scope: Documentation and implementation follow-up notes
 
 ## Release gate
 
-Tag and publish `v0.1.6` only from a clean commit after the release-readiness checklist passes.
+Tag and publish `v0.1.7` only from a clean commit after the release-readiness checklist passes.
 
 ## Active items
 

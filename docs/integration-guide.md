@@ -1,6 +1,6 @@
 # Gaori Parent-Project Integration Guide
 
-Status: Current for `gaori v0.1.6`
+Status: Current for `gaori v0.1.7`
 Audience: Projects that invoke Gaori or consume Gaori evidence
 
 Gaori is a standalone deterministic test runner and evidence producer. A parent project owns when and why tests run; Gaori owns command execution, raw-log preservation, bounded extraction, and factual artifacts for that one invocation.
@@ -24,7 +24,7 @@ The command exit code is authoritative. Parsers and rules describe evidence qual
 
 ## Supported capability matrix
 
-| Area | Supported in v0.1.6 | Integration note |
+| Area | Supported in v0.1.7 | Integration note |
 |---|---|---|
 | Configured execution | Yes | `run <command-id>` reads `.gaori/tester.yaml`. |
 | Ad-hoc execution | Yes | `run --tag <tag> [--tag <tag> ...] -- <argv...>` can run without configured commands. |
@@ -74,7 +74,7 @@ Projects that need shared automation must generate or provision their local Gaor
 For ordinary local use, install and verify the pinned release:
 
 ```bash
-go install github.com/irootkernel/gaori@v0.1.6
+go install github.com/irootkernel/gaori@v0.1.7
 gaori --version
 ```
 
@@ -89,7 +89,7 @@ Example portable version selection:
 ```yaml
 schema_version: "gaori.toolchain.v1"
 gaori:
-  cli_version: "0.1.6"
+  cli_version: "0.1.7"
 ```
 
 Validate selection before invoking Gaori:

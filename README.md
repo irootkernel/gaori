@@ -20,7 +20,7 @@ Gaori never changes a command result: a failing test command remains failed even
 Install the current release with Go:
 
 ```bash
-go install github.com/irootkernel/gaori@v0.1.6
+go install github.com/irootkernel/gaori@v0.1.7
 gaori --version
 ```
 
@@ -30,10 +30,10 @@ From a source checkout, use:
 make install
 ```
 
-Projects that pin a local Gaori toolchain can install the versioned binary at `~/.local/gaori/toolchains/v0.1.6/bin/`:
+Projects that pin a local Gaori toolchain can install the versioned binary at `~/.local/gaori/toolchains/v0.1.7/bin/`:
 
 ```bash
-VERSION=0.1.6 make install-toolchain
+VERSION=0.1.7 make install-toolchain
 ```
 
 ## Try it in five minutes
