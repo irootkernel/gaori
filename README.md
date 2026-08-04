@@ -1,6 +1,6 @@
 # gaori
 
-Gaori runs a test command, keeps its original output, and produces a compact failure summary that is easier for people and automation to consume.
+Gaori is an optional local execution and evidence-compression adapter for long or noisy test commands. It preserves the original output and produces compact failure evidence that is easier for people, coding agents, and automation to consume.
 
 ## Why Gaori?
 
@@ -8,12 +8,13 @@ Gaori (가오리) is the Korean word for a ray. Like a ray gliding along the sea
 
 Use it when you want to:
 
-- run the same project test commands locally or from automation;
+- run a long or noisy project test command without loading its complete output into an LLM conversation context;
 - keep a raw log for audit while reviewing a much smaller summary;
+- let a coding agent inspect bounded summaries and excerpts before opening sensitive raw output;
 - give another tool stable JSON status and evidence paths;
 - summarize a log that was produced outside Gaori.
 
-Gaori never changes a command result: a failing test command remains failed even when no parser recognizes its output.
+Gaori is not a test gate or verification authority. The parent project decides which checks are required and when they run; reviewers or parent workflows decide acceptance. Gaori may wrap a required command, but it does not make that command required. It also never changes a command result: a failing test command remains failed even when no parser recognizes its output.
 
 ## Install
 
@@ -127,16 +128,18 @@ Tags select which local extraction rules may inspect a raw log; they do not sele
 
 ## Guide coding agents
 
-After adopting Gaori in a project, add the following shared guidance to that project's `AGENTS.md` or `CLAUDE.md`. Before pasting it, replace `<expected-version>`, `<gate-name>`, and `<command-id>` with the project's actual values, add or remove gate entries as needed, and replace `gaori` with the project's pinned wrapper command when it uses one.
+After making Gaori available in a project, add the following shared guidance to that project's `AGENTS.md` or `CLAUDE.md`. Before pasting it, replace `<expected-version>`, `<check-name>`, and `<command-id>` with the project's actual values, add or remove command entries as needed, and replace `gaori` with the project's pinned wrapper command when it uses one.
 
 ````markdown
 ## Gaori test evidence
 
-Run the project's documented test gates through Gaori from the repository root. Do not bypass Gaori by invoking an underlying gate directly.
+The project's own documentation is authoritative for which tests are required. Gaori is an optional local execution and evidence-compression adapter, not an additional test gate or acceptance authority.
 
-- `<gate-name>`: `gaori run <command-id>`
+When a required test command is expected to produce long or noisy output, prefer running it through Gaori from the repository root so the conversation can use bounded evidence instead of the complete raw log:
 
-Before the first run, verify the selected binary with `gaori --version`; it must report `<expected-version>`. If the binary, expected version, or `.gaori/tester.yaml` is unavailable, stop and report the missing prerequisite. Do not install Gaori or change local Gaori state unless the user explicitly asks.
+- `<check-name>`: `gaori run <command-id>`
+
+Before the first Gaori run, verify the selected binary with `gaori --version`; it must report `<expected-version>`. If the binary, expected version, or `.gaori/tester.yaml` is unavailable, follow the project's normal documented test command instead and report that Gaori evidence compression was unavailable. Do not install Gaori or change local Gaori state unless the user explicitly asks.
 
 For `gaori run`, the executed command's exit code is authoritative for pass/fail. `extractor_status` describes evidence quality only and never changes the command result.
 
@@ -146,6 +149,8 @@ Keep the entire `.gaori/` directory out of Git. Do not add or commit its config,
 
 In the final report, include the Gaori command, process exit code, artifact `status`, `extractor_status`, relevant summary and raw-log paths when emitted, and any skipped checks. Gaori evidence alone does not establish review acceptance, final acceptance, release, or runtime activation.
 ````
+
+A parent project may explicitly require Gaori as its evidence wrapper. That requirement belongs to the parent project's policy; it does not make Gaori itself a test gate or acceptance authority. Customize the fallback sentence above when such a project-owned requirement exists.
 
 ## Work with existing evidence
 

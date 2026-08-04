@@ -107,6 +107,7 @@ Implementation note: the original v0.1 roadmap and the recorded `RQHAR` hardenin
 These are intentional current boundaries, not incomplete checked requirements or implicit roadmap commitments. Integration owners should also review [Not provided by Gaori v0.1](integration-guide.md#not-provided-by-gaori-v01).
 
 - External workflow orchestration, session management, or acceptance-state management.
+- Selection or enforcement of the parent project's required test gates.
 - Automatic issue tracker creation.
 - Any rule that changes command pass/fail status.
 - Live runtime state changes, credentials, secrets, or provider configuration.

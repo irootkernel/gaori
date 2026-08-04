@@ -3,13 +3,13 @@
 Status: Current for `gaori v0.1.7`
 Audience: Projects that invoke Gaori or consume Gaori evidence
 
-Gaori is a standalone deterministic test runner and evidence producer. A parent project owns when and why tests run; Gaori owns command execution, raw-log preservation, bounded extraction, and factual artifacts for that one invocation.
+Gaori is an optional standalone execution and evidence-compression adapter for long or noisy test commands. It lets coding agents and other consumers inspect bounded evidence without pulling complete raw output into their working context. A parent project owns which tests are required and when and why they run; Gaori owns command execution, raw-log preservation, bounded extraction, and factual artifacts for an invocation routed through it.
 
 ## Integration boundary
 
 ```text
 Parent project / CI / operator
-  | chooses command, version, repository, run ID, and retention policy
+  | chooses required checks, command, version, repository, run ID, and retention policy
   v
 gaori
   | executes command and records factual evidence
@@ -20,7 +20,9 @@ status.json + summary.json + summary.md + excerpts + raw.log
 Watcher / evidence consumer / human reviewer
 ```
 
-The command exit code is authoritative. Parsers and rules describe evidence quality; they cannot convert failure to pass. Gaori artifacts do not grant review acceptance, waiver, final acceptance, release, or runtime-activation authority.
+Gaori is not a test gate. Its availability does not decide whether a required test runs, and using it does not create an additional required check. The wrapped command's exit code is authoritative for that execution. Parsers and rules describe evidence quality; they cannot convert failure to pass. Gaori artifacts do not grant review acceptance, waiver, final acceptance, release, or runtime-activation authority.
+
+The default adoption model is selective: route commands through Gaori when their output is large enough that compact summaries and excerpts reduce review or conversation-context cost. A project does not need to route every test through Gaori. A parent project may require Gaori as an evidence wrapper for particular commands, but that requirement is owned by the parent project's policy rather than by Gaori.
 
 ## Supported capability matrix
 
@@ -46,6 +48,7 @@ The command exit code is authoritative. Parsers and rules describe evidence qual
 
 These are current boundaries, not hidden partial features:
 
+- Selection or enforcement of the parent project's required test gates.
 - Test planning, test generation, code review, or acceptance decisions.
 - External orchestration, workflow/session management, or acceptance-state management.
 - A resident watcher daemon, running-state heartbeat, or progress events. Gaori writes final `status.json`; the parent project owns in-flight state, polling, and notification.
@@ -241,6 +244,7 @@ Gaori remains standalone and imposes no evidence-consumer runtime dependency.
 
 ## Rollout checklist
 
+- [ ] Identify the long or noisy commands that benefit from Gaori; do not turn this list into an additional test gate.
 - [ ] Pin and verify one Gaori version.
 - [ ] Ignore the entire `.gaori/` directory.
 - [ ] Provision local `.gaori/tester.yaml` and any reviewed active rules on each development machine that needs them.

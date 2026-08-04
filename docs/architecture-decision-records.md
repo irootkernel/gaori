@@ -68,6 +68,7 @@ Gaori always preserves raw logs and writes compact summary JSON, summary Markdow
 ### Consequences
 
 - Operators can review compact summaries first.
+- Coding agents can keep complete long-form test output out of conversation context unless deeper raw evidence is necessary.
 - Raw evidence remains available for audit and rule improvement.
 - Summary artifacts can be consumed by automation, no-agent watchers, or humans.
 - Truncated summary evidence is marked degraded without changing the authoritative command result.

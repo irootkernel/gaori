@@ -20,6 +20,7 @@ Gaori is a deterministic test and log-evidence tool. It should run test commands
 ## Non-goals
 
 - Gaori is not an autonomous test-writing agent.
+- Gaori is not a test gate and does not decide which parent-project commands must run.
 - Gaori is not a workflow authority or state ledger.
 - Gaori does not emit consumer-specific evidence snapshots; downstream consumers may normalize the factual status, summary, and raw-log references.
 - Gaori does not decide that a failed command passed.
