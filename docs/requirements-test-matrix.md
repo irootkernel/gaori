@@ -13,6 +13,7 @@ This matrix records the primary evidence for every requirement marked complete. 
 | `GAORI-REQ-RQCLI-004` | `TestSummarizeRawLogUsesConfigRedaction`; `TestRunAndSummarizeSelectRulesByAllTags`; `TestBinaryTagsSelectRulesByAllTags`; `TestDocumentedCLIWorkflowAgainstFreshFixture` |
 | `GAORI-REQ-RQCLI-005` | `TestConfiguredRunAndExcerpt`; `TestExcerptRejectsUnsafeReferences` |
 | `GAORI-REQ-RQCLI-006` | `TestTimeoutPreservesPartialArtifacts`; `TestBinaryExtractionContracts` |
+| `GAORI-REQ-RQCLI-007` | `TestAdHocRunsUseExplicitParsers`; `TestAdHocParserMissPreservesCommandResult`; `TestAdHocParserAndTagsSelectRules`; `TestAdHocParserOptionValidationPreventsExecution`; `TestAdHocChildParserArgumentIsPreserved`; `TestBinaryAdHocParserContract`; `TestBinaryAdHocParserValidationFailsBeforeExecution` |
 | `GAORI-REQ-RQCFG-001` | `TestConfiguredRunAndExcerpt`; `TestAdHocRunWithoutConfig` |
 | `GAORI-REQ-RQCFG-002` | `TestDocumentedCLIWorkflowAgainstFreshFixture` |
 | `GAORI-REQ-RQCFG-003` | `TestValidateAcceptsImplementedParsers`; `TestLoadCanonicalizesTags`; `TestValidateRejectsMissingAndUnsafeTags`; `TestBinaryTagsSelectRulesByAllTags` |

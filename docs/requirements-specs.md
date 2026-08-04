@@ -1,7 +1,7 @@
 # Gaori Requirement Specs
 
 Status: v0.1 baseline, `HARDE-001` through `HARDE-007`, `TAGS-001`, `RELRV-001` through `RELRV-009`, and `BRAND-001` complete
-Scope: Gaori v0.1 standalone baseline, post-baseline hardening, schema-v2 tag selectors, and release-readiness follow-up
+Scope: Gaori v0.1 standalone baseline, post-baseline hardening, schema-v2 tag selectors, explicit ad-hoc parser selection, and release-readiness follow-up
 Source context: standalone deterministic Gaori v0.1 CLI behavior and evidence contracts.
 
 ## Requirement status legend
@@ -21,6 +21,7 @@ Implementation note: the original v0.1 roadmap and the recorded `RQHAR` hardenin
 - [x] `GAORI-REQ-RQCLI-004` Support raw-log summarization with optional repeatable tags using `gaori summarize [--tag <tag> ...] <raw-log>`.
 - [x] `GAORI-REQ-RQCLI-005` Support excerpt retrieval with `gaori excerpt --summary <summary-path> <failure-id>`.
 - [x] `GAORI-REQ-RQCLI-006` Return process-compatible exit codes: successful test commands exit `0`, failed test commands return the underlying non-zero exit code when possible, and Gaori internal errors use distinct documented codes.
+- [x] `GAORI-REQ-RQCLI-007` Allow a tagged ad-hoc run to select one implemented parser explicitly with `gaori run --parser <label> --tag <tag> [--tag <tag> ...] -- <command...>`; default omitted parser selection to `generic`, reject invalid selection or configured-command overrides before execution or artifact creation, and preserve the child argv after `--` unchanged.
 
 ## RQCFG: Project configuration
 

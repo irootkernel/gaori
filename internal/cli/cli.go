@@ -132,37 +132,48 @@ func versionCommand(opts globalOptions, args []string, stdout, stderr io.Writer,
 }
 
 func runCommand(opts globalOptions, args []string, stdout, stderr io.Writer, execute commandExecutor) int {
-	fs := flag.NewFlagSet("run", flag.ContinueOnError)
-	fs.SetOutput(io.Discard)
-	var tags stringList
-	fs.Var(&tags, "tag", "tag (repeatable)")
-	if err := fs.Parse(args); err != nil {
+	parsed, err := parseRunArguments(args)
+	if err != nil {
 		writeLine(stderr, err)
 		return int(model.ExitCodeConfigError)
 	}
-	rest := fs.Args()
+	if parsed.Parser.set {
+		if err := config.ValidateParserLabel(parsed.Parser.value); err != nil {
+			writeLine(stderr, err)
+			return model.ExitCodeFor(err)
+		}
+		if !parsed.HasBoundary {
+			writeLine(stderr, "--parser is valid only for the ad-hoc -- <command...> form")
+			return int(model.ExitCodeConfigError)
+		}
+		if len(parsed.Tags) == 0 {
+			writeLine(stderr, "--parser requires at least one --tag for an ad-hoc run")
+			return int(model.ExitCodeConfigError)
+		}
+	}
 	req := model.RunRequest{
 		RepoRoot:   opts.RepoRoot,
 		ConfigPath: opts.ConfigPath,
 		OutputDir:  opts.OutputDir,
 		RunID:      opts.RunID,
 		JSON:       opts.JSON,
+		Parser:     parsed.Parser.value,
 	}
-	if len(tags) > 0 {
+	if len(parsed.Tags) > 0 {
 		req.Mode = model.RunModeAdHoc
-		req.Tags = tags
-		req.CommandArgv = append([]string(nil), rest...)
+		req.Tags = parsed.Tags
+		req.CommandArgv = append([]string(nil), parsed.Rest...)
 		if len(req.CommandArgv) == 0 {
 			writeLine(stderr, "ad-hoc run requires command after --")
 			return int(model.ExitCodeConfigError)
 		}
 	} else {
-		if len(rest) != 1 {
+		if len(parsed.Rest) != 1 {
 			writeLine(stderr, "configured run requires a command id")
 			return int(model.ExitCodeConfigError)
 		}
 		req.Mode = model.RunModeConfigured
-		req.CommandID = rest[0]
+		req.CommandID = parsed.Rest[0]
 	}
 
 	result, exitCode, err := executeRun(req, execute)
@@ -222,6 +233,9 @@ func summarizeCommand(opts globalOptions, args []string, stdout, stderr io.Write
 }
 
 func executeRun(req model.RunRequest, execute commandExecutor) (runResult, int, error) {
+	if req.Mode == model.RunModeConfigured && req.Parser != "" {
+		return runResult{}, 0, model.NewGaoriError(model.ExitCodeConfigError, "validate parser", fmt.Errorf("--parser is valid only for ad-hoc runs"))
+	}
 	allowMissing := req.Mode == model.RunModeAdHoc
 	cfg, _, err := config.Load(req.RepoRoot, req.ConfigPath, allowMissing)
 	if err != nil {
@@ -249,7 +263,10 @@ func executeRun(req model.RunRequest, execute commandExecutor) (runResult, int, 
 		}
 		commandID = generatedCommandID()
 		tags = canonical
-		parser = "generic"
+		parser = req.Parser
+		if parser == "" {
+			parser = "generic"
+		}
 		argv = append([]string(nil), req.CommandArgv...)
 		timeoutSec = 600
 	}
@@ -701,6 +718,62 @@ func (values *stringList) String() string {
 func (values *stringList) Set(value string) error {
 	*values = append(*values, value)
 	return nil
+}
+
+type singleRunParser struct {
+	value string
+	set   bool
+}
+
+func (parser *singleRunParser) String() string {
+	return parser.value
+}
+
+func (parser *singleRunParser) Set(value string) error {
+	if parser.set {
+		return fmt.Errorf("--parser may be specified only once")
+	}
+	if strings.TrimSpace(value) == "" {
+		return fmt.Errorf("--parser requires a non-empty value")
+	}
+	parser.value = value
+	parser.set = true
+	return nil
+}
+
+type parsedRunArguments struct {
+	Tags        stringList
+	Parser      singleRunParser
+	Rest        []string
+	HasBoundary bool
+}
+
+func parseRunArguments(args []string) (parsedRunArguments, error) {
+	if boundary := slices.Index(args, "--"); boundary >= 0 {
+		prefix, err := parseRunFlags(args[:boundary])
+		if err != nil {
+			return parsedRunArguments{}, err
+		}
+		if len(prefix.Rest) == 0 {
+			prefix.Rest = append([]string(nil), args[boundary+1:]...)
+			prefix.HasBoundary = true
+			return prefix, nil
+		}
+	}
+	return parseRunFlags(args)
+}
+
+func parseRunFlags(args []string) (parsedRunArguments, error) {
+	var parsed parsedRunArguments
+	fs := flag.NewFlagSet("run", flag.ContinueOnError)
+	fs.SetOutput(io.Discard)
+	fs.Var(&parsed.Tags, "tag", "tag (repeatable)")
+	fs.Var(&parsed.Parser, "parser", "parser")
+	if err := fs.Parse(args); err != nil {
+		return parsedRunArguments{}, err
+	}
+	parsed.Rest = append([]string(nil), fs.Args()...)
+	return parsed, nil
 }
 
 func summarizeCommandID(path string) string {

@@ -1,7 +1,7 @@
 # Gaori Roadmap
 
 Status: v0.1 standalone MVP, HARDE hardening epic, `TAGS-001`, `RELRV-001` through `RELRV-009`, and `BRAND-001` complete
-Scope: Implementation tracking for the Gaori v0.1 standalone baseline, post-baseline hardening, schema-v2 tag migration, release-readiness follow-up, and v0.1.6 identity migration
+Scope: Implementation tracking for the Gaori v0.1 standalone baseline, post-baseline hardening, schema-v2 tag migration, explicit ad-hoc parser selection, release-readiness follow-up, and v0.1.6 identity migration
 
 This roadmap is a delivery record, not an operator guide or a promise that out-of-scope capabilities will be added. See the [integration guide](integration-guide.md) for the current supported/unsupported capability boundary and `todo.md` for explicitly accepted open work.
 
@@ -11,7 +11,7 @@ Existing `Done` entries record completion of the original v0.1 implementation sl
 
 Current implementation snapshot:
 - `Done`: `SETUP-001` to `SETUP-003`, `RUNNR-001` to `RUNNR-003`, `ARTIF-001` to `ARTIF-003`, `PARSE-001` to `PARSE-003`, `SAFEY-001` to `SAFEY-003`, `CLIUX-001`, `CLIUX-002`, `RULES-001` to `RULES-003`, `DOCUM-001` to `DOCUM-003`, `HARDE-001` to `HARDE-007`, `TAGS-001`, `RELRV-001`, `RELRV-002`, `RELRV-003`, `RELRV-004`, `RELRV-005`, `RELRV-006`, `RELRV-007`, `RELRV-008`, `RELRV-009`, `BRAND-001`
-- `In Progress`: none
+- `In Progress`: `ADHOC-001`
 - `Deferred`: none
 - `Planned`: none
 
@@ -97,6 +97,12 @@ These tasks were implemented as separate, reviewable units in numerical order. A
 | Task ID | Status | Goal | Reference |
 |---|---|---|---|
 | TAGS-001 | Done | Replace the single execution grouping label with canonical multi-value tags across schema v2, CLI, rule selection, artifacts, watcher hashes, tests, and documentation. | `GAORI-REQ-RQCLI-003`, `GAORI-REQ-RQCFG-003`, `GAORI-REQ-RQRUL-008`, `GAORI-REQ-RQWAT-002` |
+
+## ADHOC: Dynamic command evidence
+
+| Task ID | Status | Goal | Verification | Reference |
+|---|---|---|---|---|
+| ADHOC-001 | In Progress | Allow tagged ad-hoc runs to select an existing parser explicitly without changing configured commands, parser fallback, or command-result authority. | Cover all implemented parsers, misses, exact parser-and-tag rule selection, CLI boundary handling, child argv passthrough, and pre-execution sentinel failures; pass focused CLI/E2E tests and the full test suite. | `GAORI-REQ-RQCLI-007`, `GAORI-REQ-RQEXT-002`, `GAORI-REQ-RQEXT-007`, `GAORI-REQ-RQRUL-008`, `GAORI-REQ-RQSEC-003`, `GAORI-REQ-RQSEC-005` |
 
 ## RELRV: v0.1.4 release-readiness follow-up
 

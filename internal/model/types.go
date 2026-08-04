@@ -94,6 +94,7 @@ type RunRequest struct {
 	Mode        RunMode
 	CommandID   string
 	Tags        []string
+	Parser      string
 	CommandArgv []string
 }
 
