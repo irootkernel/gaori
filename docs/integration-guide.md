@@ -1,6 +1,6 @@
 # Gaori Parent-Project Integration Guide
 
-Status: Current development baseline after `gaori v0.1.7`; `ADHOC-001` is intended for v0.1.8
+Status: Current for `gaori v0.1.8`
 Audience: Projects that invoke Gaori or consume Gaori evidence
 
 Gaori is an optional standalone execution and evidence-compression adapter for long or noisy test commands. It lets coding agents and other consumers inspect bounded evidence without pulling complete raw output into their working context. A parent project owns which tests are required and when and why they run; Gaori owns command execution, raw-log preservation, bounded extraction, and factual artifacts for an invocation routed through it.
@@ -26,7 +26,7 @@ The default adoption model is selective: route commands through Gaori when their
 
 ## Supported capability matrix
 
-| Area | Supported on current `main` | Integration note |
+| Area | Supported in v0.1.8 | Integration note |
 |---|---|---|
 | Configured execution | Yes | `run <command-id>` reads `.gaori/tester.yaml`. |
 | Ad-hoc execution | Yes | `run [--parser <label>] --tag <tag> [--tag <tag> ...] -- <argv...>` can run without configured commands. |
@@ -77,7 +77,7 @@ Projects that need shared automation must generate or provision their local Gaor
 For ordinary local use, install and verify the pinned release:
 
 ```bash
-go install github.com/irootkernel/gaori@v0.1.7
+go install github.com/irootkernel/gaori@v0.1.8
 gaori --version
 ```
 
@@ -92,7 +92,7 @@ Example portable version selection:
 ```yaml
 schema_version: "gaori.toolchain.v1"
 gaori:
-  cli_version: "0.1.7"
+  cli_version: "0.1.8"
 ```
 
 Validate selection before invoking Gaori:

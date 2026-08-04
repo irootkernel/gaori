@@ -1,6 +1,6 @@
 # Gaori User Interface
 
-Status: Current development baseline after `gaori v0.1.7`; complete through `HARDE-007`, `TAGS-001`, `ADHOC-001`, `RELRV-009`, and `BRAND-001`
+Status: Current for `gaori v0.1.8`; complete through `HARDE-007`, `TAGS-001`, `ADHOC-001`, `RELRV-009`, and `BRAND-001`
 Scope: CLI-first interface for Gaori v0.1, including schema-v2 tag selectors, explicit ad-hoc parser selection, and release-readiness follow-up
 
 This is the complete command reference. First-time users should begin with the repository [README](../README.md); parent-project owners should use the [integration guide](integration-guide.md) for ownership boundaries and adoption steps.
@@ -104,7 +104,7 @@ Versioned selection uses local metadata such as:
 ```yaml
 schema_version: "gaori.toolchain.v1"
 gaori:
-  cli_version: "0.1.7"
+  cli_version: "0.1.8"
 ```
 
 An absolute override may be recorded with an optional version assertion:
@@ -112,7 +112,7 @@ An absolute override may be recorded with an optional version assertion:
 ```yaml
 schema_version: "gaori.toolchain.v1"
 gaori:
-  cli_version: "0.1.7"
+  cli_version: "0.1.8"
   binary_path: "/absolute/path/to/gaori"
 ```
 

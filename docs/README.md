@@ -1,6 +1,6 @@
 # Gaori Documentation
 
-Status: Current development baseline after `gaori v0.1.7`; `ADHOC-001` is intended for v0.1.8
+Status: Current for `gaori v0.1.8`
 
 This directory contains Gaori's integration contracts, technical design, delivery history, and maintainer guidance. Start with the document that matches your role instead of reading the directory in filename order.
 
@@ -24,11 +24,11 @@ For Gaori maintainers:
 3. Use the [requirements-to-test matrix](requirements-test-matrix.md) to find executable evidence.
 4. Read the [implementation note](implementation-note.md) before changing runner, parser, artifact, redaction, or rule behavior.
 5. Use the [roadmap](roadmap.md) and [todo](todo.md) for recorded delivery and open-work state.
-6. Use the [v0.1.7 release notes](releases/v0.1.7.md) when publishing the GitHub Release.
+6. Use the [v0.1.8 release notes](releases/v0.1.8.md) when publishing the GitHub Release.
 
 ## Current delivery state
 
-The standalone v0.1 baseline, the recorded `HARDE-001` through `HARDE-007` hardening requirements, the schema-v2 canonical tag selector contract, explicit ad-hoc parser selection `ADHOC-001`, release-readiness follow-up `RELRV-001` through `RELRV-009`, v0.1.6 identity migration `BRAND-001`, and v0.1.7 coding-agent adoption guidance are implemented. The current supported surfaces include configured and tagged ad-hoc command execution with explicit parser choice, raw-log summarization, excerpt lookup, five parsers, rule lifecycle commands, bounded/redacted derived evidence with explicit record truncation, collision-free standalone artifacts, fixed run-scoped artifacts, and deterministic status JSON. All `.gaori/` content is local-only state.
+The standalone v0.1 baseline, the recorded `HARDE-001` through `HARDE-007` hardening requirements, the schema-v2 canonical tag selector contract, explicit ad-hoc parser selection `ADHOC-001`, release-readiness follow-up `RELRV-001` through `RELRV-009`, v0.1.6 identity migration `BRAND-001`, and v0.1.7 coding-agent adoption guidance are implemented. The current v0.1.8 surfaces include configured and tagged ad-hoc command execution with explicit parser choice, raw-log summarization, excerpt lookup, five parsers, rule lifecycle commands, bounded/redacted derived evidence with explicit record truncation, collision-free standalone artifacts, fixed run-scoped artifacts, and deterministic status JSON. All `.gaori/` content is local-only state.
 
 There are currently no open implementation items in `todo.md`. The delivery statement above is intentionally narrower than “Gaori provides every testing or orchestration capability.” Features listed as unsupported or out of scope in the [integration guide](integration-guide.md#not-provided-by-gaori-v01) are not implicitly planned or promised.
 
@@ -48,7 +48,8 @@ There are currently no open implementation items in `todo.md`. The delivery stat
 | [Todo](todo.md) | Project maintainers | Explicitly accepted open work; currently empty |
 | [v0.1.5 release notes](releases/v0.1.5.md) | Users and maintainers | Previous published changes and known limitations |
 | [v0.1.6 release notes](releases/v0.1.6.md) | Users and maintainers | Previous identity migration, compatibility notes, and known limitations |
-| [v0.1.7 release notes](releases/v0.1.7.md) | Users and maintainers | Current coding-agent guidance, compatibility notes, and known limitations |
+| [v0.1.7 release notes](releases/v0.1.7.md) | Users and maintainers | Previous coding-agent guidance, compatibility notes, and known limitations |
+| [v0.1.8 release notes](releases/v0.1.8.md) | Users and maintainers | Current ad-hoc parser selection, compatibility notes, and known limitations |
 
 ## Source-of-truth order
 

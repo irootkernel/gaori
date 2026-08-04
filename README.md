@@ -21,11 +21,9 @@ Gaori is not a test gate or verification authority. The parent project decides w
 Install the current release with Go:
 
 ```bash
-go install github.com/irootkernel/gaori@v0.1.7
+go install github.com/irootkernel/gaori@v0.1.8
 gaori --version
 ```
-
-`v0.1.7` is the latest published release. The current `main` documentation also covers `ADHOC-001` explicit parser selection, which is intended for v0.1.8; build from the source checkout to use that interface before v0.1.8 is released.
 
 From a source checkout, use:
 
@@ -33,10 +31,10 @@ From a source checkout, use:
 make install
 ```
 
-Projects that pin a local Gaori toolchain can install the versioned binary at `~/.local/gaori/toolchains/v0.1.7/bin/`:
+Projects that pin a local Gaori toolchain can install the versioned binary at `~/.local/gaori/toolchains/v0.1.8/bin/`:
 
 ```bash
-VERSION=0.1.7 make install-toolchain
+VERSION=0.1.8 make install-toolchain
 ```
 
 ## Try it in five minutes

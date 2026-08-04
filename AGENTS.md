@@ -6,7 +6,7 @@ Gaori is a standalone deterministic Go CLI for running test commands, preserving
 
 Current local-dev baseline:
 
-- Gaori: `gaori 0.1.7`
+- Gaori: `gaori 0.1.8`
 - Project root: `/Users/draccoon/Workspace/SeventeenthEarth/kkachi/kkachi-agent-tester`
 - Gaori standalone evidence: `.gaori/`
 
