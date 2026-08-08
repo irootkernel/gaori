@@ -244,7 +244,7 @@ import "testing"
 
 func TestIgnored(t *testing.T) {}
 `
-		for _, directory := range []string{".gaori", "vendor"} {
+		for _, directory := range []string{".gaori", ".mulgae", "vendor"} {
 			writeAuditGoFixture(t, root, filepath.Join(directory, "hidden_test.go"), ignoredTest)
 		}
 
@@ -331,6 +331,7 @@ var (
 		".git":                     true,
 		"." + "man" + "ta":         true,
 		".gaori":                   true,
+		".mulgae":                  true,
 		".gjc":                     true,
 		".kat":                     true,
 		".codegraph":               true,

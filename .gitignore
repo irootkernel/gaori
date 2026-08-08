@@ -3,9 +3,11 @@ bin/
 .gjc/
 .kat/
 .gaori/
+.mulgae/
 .codegraph/
 .omx/
 .omc/
 .external-review-sidecar/
 
 .DS_Store
+.mulgaeignore
