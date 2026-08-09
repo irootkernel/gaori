@@ -1,0 +1,13 @@
+running 1 test
+test rejects_empty_title ... FAILED
+
+failures:
+
+---- rejects_empty_title stdout ----
+thread 'rejects_empty_title' panicked at crates/domain/tests/book.rs:42:5:
+assertion failed: title.is_empty()
+
+failures:
+    rejects_empty_title
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out

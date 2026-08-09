@@ -14,7 +14,7 @@ Gaori is a deterministic test and log-evidence tool. It should run test commands
 - Implementation language: Go.
 - Packaging target: standalone single binary named `gaori`.
 - Regex engine baseline: Go `regexp` (RE2 semantics) only.
-- Current supported parser labels: `generic`, `vitest`, `pytest`, `go-test`, and `playwright`.
+- Current supported parser labels: `generic`, `vitest`, `pytest`, `go-test`, `playwright`, `ginkgo`, `godog`, `cargo-test`, `flutter-test`, `bun-test`, and `node-test`.
 - Unknown parser labels fail closed.
 
 ## Non-goals
@@ -89,12 +89,12 @@ When `--parser` is omitted, step 2 selects `generic`. A specialized parser does 
 ## Data flow: summarize existing raw log
 
 ```text
-1. User runs `gaori summarize fixtures/unit.raw.log`.
-2. CLI resolves repository root, config path, and raw-log path.
+1. User runs `gaori summarize [--parser <label>] fixtures/unit.raw.log`.
+2. CLI validates the optional parser, defaulting it to `generic`, and resolves the repository root, config path, and raw-log path.
 3. Config loader validates optional redaction/noise config and project rules.
 4. Gaori infers `command_id` from the raw-log basename and uses it as a single tag when the caller does not supply `--tag` values.
 5. Artifact writer reserves a standalone run directory, or uses the fixed `--run-id` layout, and copies the original raw bytes into it.
-6. Extraction engine applies the `generic` parser plus matching project rules to the copied evidence.
+6. Extraction engine applies the selected parser plus exact-parser, all-tag matching project rules to the copied evidence.
 7. Redactor and noise filters shape surfaced artifacts; the artifact layer retains bounded deterministic failure/warning prefixes that fit both summary formats.
 8. Artifact writer writes excerpts only for retained failures, then summary JSON, summary Markdown, and status JSON in the same artifact layout.
 9. CLI exits `0` when summarization succeeds because no test command was executed in this mode.

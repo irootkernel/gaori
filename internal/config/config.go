@@ -16,7 +16,19 @@ import (
 
 const DefaultConfigPath = ".gaori/tester.yaml"
 
-var knownParsers = []string{"generic", "vitest", "pytest", "go-test", "playwright"}
+var knownParsers = []string{
+	"generic",
+	"vitest",
+	"pytest",
+	"go-test",
+	"playwright",
+	"ginkgo",
+	"godog",
+	"cargo-test",
+	"flutter-test",
+	"bun-test",
+	"node-test",
+}
 
 func ResolveConfigPath(repoRoot, override string) string {
 	if override != "" {

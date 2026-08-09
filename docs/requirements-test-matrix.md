@@ -10,10 +10,10 @@ This matrix records the primary evidence for every requirement marked complete. 
 | `GAORI-REQ-RQCLI-001` | `TestDocumentedCLIWorkflowAgainstFreshFixture`; `TestMakeInstallTargetsAndResolver` |
 | `GAORI-REQ-RQCLI-002` | `TestConfiguredRunAndExcerpt`; `TestBinaryConfiguredRunAndExcerpt` |
 | `GAORI-REQ-RQCLI-003` | `TestAdHocRunWithoutConfig`; `TestBinaryTagsSelectRulesByAllTags`; `TestBinaryTagInterfacesFailBeforeExecution`; `TestDocumentedCLIWorkflowAgainstFreshFixture` |
-| `GAORI-REQ-RQCLI-004` | `TestSummarizeRawLogUsesConfigRedaction`; `TestRunAndSummarizeSelectRulesByAllTags`; `TestBinaryTagsSelectRulesByAllTags`; `TestDocumentedCLIWorkflowAgainstFreshFixture` |
+| `GAORI-REQ-RQCLI-004` | `TestSummarizeRawLogUsesConfigRedaction`; `TestRunAndSummarizeSelectRulesByAllTags`; `TestFrameworkParsersFromRawLogFile`; `TestSummarizeParserValidationPreventsArtifacts`; `TestBinaryTagsSelectRulesByAllTags`; `TestDocumentedCLIWorkflowAgainstFreshFixture` |
 | `GAORI-REQ-RQCLI-005` | `TestConfiguredRunAndExcerpt`; `TestExcerptRejectsUnsafeReferences` |
 | `GAORI-REQ-RQCLI-006` | `TestTimeoutPreservesPartialArtifacts`; `TestBinaryExtractionContracts` |
-| `GAORI-REQ-RQCLI-007` | `TestAdHocRunsUseExplicitParsers`; `TestAdHocParserMissPreservesCommandResult`; `TestAdHocParserAndTagsSelectRules`; `TestAdHocParserOptionValidationPreventsExecution`; `TestAdHocChildParserArgumentIsPreserved`; `TestBinaryAdHocParserContract`; `TestBinaryAdHocParserValidationFailsBeforeExecution` |
+| `GAORI-REQ-RQCLI-007` | `TestFrameworkParsersFromCapturedStream`; `TestAdHocParserMissPreservesCommandResult`; `TestAdHocParserAndTagsSelectRules`; `TestAdHocParserOptionValidationPreventsExecution`; `TestAdHocChildParserArgumentIsPreserved`; `TestBinaryAdHocParserContract`; `TestBinaryAdHocParserValidationFailsBeforeExecution` |
 | `GAORI-REQ-RQCFG-001` | `TestConfiguredRunAndExcerpt`; `TestAdHocRunWithoutConfig` |
 | `GAORI-REQ-RQCFG-002` | `TestDocumentedCLIWorkflowAgainstFreshFixture` |
 | `GAORI-REQ-RQCFG-003` | `TestValidateAcceptsImplementedParsers`; `TestLoadCanonicalizesTags`; `TestValidateRejectsMissingAndUnsafeTags`; `TestBinaryTagsSelectRulesByAllTags` |
@@ -34,9 +34,9 @@ This matrix records the primary evidence for every requirement marked complete. 
 | `GAORI-REQ-RQART-006` | `TestConfiguredRunAndExcerpt`; `TestExcerptSymlinkContainment` |
 | `GAORI-REQ-RQART-007` | `TestArtifactOutputDirectories`; `TestRunIDArtifactLayout` |
 | `GAORI-REQ-RQEXT-001` | `TestProcessGenericFailureProducesPreciseSpan` |
-| `GAORI-REQ-RQEXT-002` | `TestValidateAcceptsImplementedParsers`; `TestProcessVitestFixture`; `TestProcessPytestFixture`; `TestProcessGoTestFixture`; `TestProcessPlaywrightFixture`; `TestConfiguredRunsUseSpecializedParsers`; `TestBinaryExtractionContracts` |
+| `GAORI-REQ-RQEXT-002` | `TestValidateAcceptsImplementedParsers`; `TestProcessVitestFixture`; `TestProcessPytestFixture`; `TestProcessGoTestFixture`; `TestProcessPlaywrightFixture`; `TestProcessExtendedParserFixtures`; `TestGoTestFailureVariants`; `TestFrameworkParsersFromCapturedStream`; `TestFrameworkParsersFromRawLogFile`; `TestConfiguredRunsUseSpecializedParsers`; `TestBinaryExtractionContracts` |
 | `GAORI-REQ-RQEXT-003` | `TestProcessGenericFailureProducesPreciseSpan`; `TestProcessRulesBoundsUnvalidatedContext` |
-| `GAORI-REQ-RQEXT-004` | `TestProcessGenericFailureProducesPreciseSpan`; `TestProcessVitestFixture`; `TestProcessPytestFixture`; `TestProcessGoTestFixture`; `TestProcessPlaywrightFixture`; `TestConfiguredRunsUseSpecializedParsers`; `TestBinaryExtractionContracts` |
+| `GAORI-REQ-RQEXT-004` | `TestProcessGenericFailureProducesPreciseSpan`; `TestProcessVitestFixture`; `TestProcessPytestFixture`; `TestProcessGoTestFixture`; `TestProcessPlaywrightFixture`; `TestProcessExtendedParserFixtures`; `TestFrameworkParsersFromCapturedStream`; `TestFrameworkParsersFromRawLogFile`; `TestConfiguredRunsUseSpecializedParsers`; `TestBinaryExtractionContracts` |
 | `GAORI-REQ-RQEXT-005` | `TestProcessExtractorStatusContract`; `TestNoisyRunsWriteBoundedTerminalArtifacts` |
 | `GAORI-REQ-RQEXT-006` | `TestProcessExtractorStatusContract`; `TestBinaryExtractionContracts` |
 | `GAORI-REQ-RQEXT-007` | `TestMaterializeArtifactsExtractionErrorContract`; `TestBinaryExtractionContracts` |

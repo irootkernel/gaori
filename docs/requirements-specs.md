@@ -18,7 +18,7 @@ Implementation note: the original v0.1 roadmap and the recorded `RQHAR` hardenin
 - [x] `GAORI-REQ-RQCLI-001` Provide a standalone CLI binary named `gaori`.
 - [x] `GAORI-REQ-RQCLI-002` Support configured command execution with `gaori run <command-id>`.
 - [x] `GAORI-REQ-RQCLI-003` Support ad-hoc command execution with repeatable tags using `gaori run --tag <tag> [--tag <tag> ...] -- <command...>`.
-- [x] `GAORI-REQ-RQCLI-004` Support raw-log summarization with optional repeatable tags using `gaori summarize [--tag <tag> ...] <raw-log>`.
+- [x] `GAORI-REQ-RQCLI-004` Support raw-log summarization with one optional implemented parser and optional repeatable tags using `gaori summarize [--parser <label>] [--tag <tag> ...] <raw-log>`, defaulting the parser to `generic` and rejecting invalid parser selection before artifact creation.
 - [x] `GAORI-REQ-RQCLI-005` Support excerpt retrieval with `gaori excerpt --summary <summary-path> <failure-id>`.
 - [x] `GAORI-REQ-RQCLI-006` Return process-compatible exit codes: successful test commands exit `0`, failed test commands return the underlying non-zero exit code when possible, and Gaori internal errors use distinct documented codes.
 - [x] `GAORI-REQ-RQCLI-007` Allow a tagged ad-hoc run to select one implemented parser explicitly with `gaori run --parser <label> --tag <tag> [--tag <tag> ...] -- <command...>`; default omitted parser selection to `generic`, reject invalid selection or configured-command overrides before execution or artifact creation, and preserve the child argv after `--` unchanged.
@@ -54,7 +54,7 @@ Implementation note: the original v0.1 roadmap and the recorded `RQHAR` hardenin
 ## RQEXT: Extraction and parser behavior
 
 - [x] `GAORI-REQ-RQEXT-001` Provide a generic parser that can identify common failure and warning patterns.
-- [x] `GAORI-REQ-RQEXT-002` Support parser labels such as `generic`, `vitest`, `pytest`, `go-test`, and `playwright`, while requiring only `generic` in the first runnable implementation slice.
+- [x] `GAORI-REQ-RQEXT-002` Support the exact built-in parser labels `generic`, `vitest`, `pytest`, `go-test`, `playwright`, `ginkgo`, `godog`, `cargo-test`, `flutter-test`, `bun-test`, and `node-test`; each specialized parser uses bounded fixture-backed patterns without automatic generic fallback.
 - [x] `GAORI-REQ-RQEXT-003` Extract bounded failure spans with start/end line and byte offsets.
 - [x] `GAORI-REQ-RQEXT-004` Extract signature, file, line, test name, stack-top entries, and excerpt path when available.
 - [x] `GAORI-REQ-RQEXT-005` Report `extractor_status` as `precise`, `partial`, `degraded`, or `no_match`, with degraded evidence when surfaced records are truncated.

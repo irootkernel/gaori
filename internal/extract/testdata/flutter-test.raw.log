@@ -1,0 +1,7 @@
+00:00 +0: loading test/book_test.dart
+00:01 +0 -1: rejects empty title [E]
+  Expected: false
+    Actual: <true>
+  package:matcher                 expect
+  test/book_test.dart 42:7        main.<fn>
+00:01 +0 -1: Some tests failed.

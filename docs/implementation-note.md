@@ -68,8 +68,14 @@ Current supported parser labels:
 - `pytest`
 - `go-test`
 - `playwright`
+- `ginkgo`
+- `godog`
+- `cargo-test`
+- `flutter-test`
+- `bun-test`
+- `node-test`
 
-Generic extraction is used only for the `generic` parser label. Fixture-backed Vitest, Pytest, Go test, and Playwright parsers fail closed when their own patterns do not match; they do not retry generic extraction.
+Generic extraction is used only for the `generic` parser label. Every specialized parser is fixture-backed and fails closed when its own patterns do not match; specialized parsers do not retry generic extraction. ANSI control sequences are ignored for parser matching while original raw spans continue to reference the unchanged raw log.
 
 Recommended generic patterns still matter for unknown output shapes:
 
@@ -102,12 +108,25 @@ After redaction and noise filtering, retain deterministic prefixes of at most 50
 
 Current fixture logs live under `internal/extract/testdata/`:
 
+- `generic.raw.log`
 - `vitest.raw.log`
 - `pytest.raw.log`
 - `go-test.raw.log`
 - `playwright.raw.log`
+- `ginkgo.raw.log`
+- `godog.raw.log`
+- `cargo-test.raw.log`
+- `flutter-test.raw.log`
+- `bun-test.raw.log`
+- `node-test.raw.log`
 
 These fixtures back automated extraction tests and should remain the source of truth for parser-specific documentation.
+
+Parser verification is split by repository test layer:
+
+- Unit tests call the extraction engine directly for regex boundaries, metadata capture, deduplication, ANSI handling, and parser-specific edge cases.
+- Integration tests feed every parser fixture through both supported ingestion paths: a child stdout stream captured by `run`, and an existing raw-log file imported by `summarize`. They verify raw preservation, hashes, inferred or authoritative status, and summary/status/excerpt artifacts.
+- E2E tests are reserved for built-binary process, signal, path-containment, install, and documented-workflow boundaries; fixture parsing alone is not classified as E2E.
 
 ## Rule implementation guidance
 
@@ -218,7 +237,7 @@ Before the next release tag, verify all of the following:
 - explicit ad-hoc parser smoke covering parser-and-tag rule selection, specialized misses, invalid-input sentinel behavior, and child argv passthrough
 - built-binary SIGINT/SIGTERM interruption smoke across standalone and `--run-id` layouts, including partial raw evidence, `killed` status, and exit codes `130` and `143`
 - summarize smoke test from an existing raw log
-- parser fixture coverage for `generic`, `vitest`, `pytest`, `go-test`, and `playwright`
+- parser fixture coverage for every implemented parser label
 - rule lifecycle coverage for `list/search/show/create/update/delete/test/propose`
 - fresh-fixture execution of every documented Gaori CLI command with generated Markdown compared to the documented shape
 - toolchain resolver status and forwarding checks for environment, absolute-path metadata, and versioned metadata selection

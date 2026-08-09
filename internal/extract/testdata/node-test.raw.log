@@ -1,0 +1,14 @@
+TAP version 13
+# Subtest: rejects empty title
+not ok 1 - rejects empty title
+  ---
+  duration_ms: 1.25
+  location: 'file:///repo/tests/book.test.js:42:7'
+  failureType: 'testCodeFailure'
+  error: 'expected false'
+  code: 'ERR_ASSERTION'
+  ...
+1..1
+# tests 1
+# pass 0
+# fail 1

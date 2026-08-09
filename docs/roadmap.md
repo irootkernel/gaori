@@ -46,6 +46,7 @@ Current implementation snapshot:
 | PARSE-001 | Done | Implement generic parser for common failure, warning, file-line, stack-top, and test-name patterns with bounded spans. | `GAORI-REQ-RQEXT-001`, `GAORI-REQ-RQEXT-003`, `GAORI-REQ-RQEXT-004` |
 | PARSE-002 | Done | Implement parser registry and parser labels while requiring only `generic` in the first runnable slice and failing closed on unsupported specialized labels. | `GAORI-REQ-RQEXT-002`, `ADR-0008`, `GAORI-REQ-RQSEC-003` |
 | PARSE-003 | Done | Implement extractor status computation and degraded extraction signals for non-zero exits with missing or overly broad spans. | `GAORI-REQ-RQEXT-005`, `GAORI-REQ-RQEXT-006`, `GAORI-REQ-RQEXT-007` |
+| PARSE-004 | Done | Add fixture-backed Ginkgo, Godog, Cargo test, Flutter test, Bun test, and Node.js test parsers and harden Go test, Vitest, and Playwright matching without generic fallback. | `GAORI-REQ-RQEXT-002`, `GAORI-REQ-RQEXT-004`, `GAORI-REQ-RQSEC-005` |
 
 ## SAFEY: Safety and filtering
 
@@ -61,6 +62,7 @@ Current implementation snapshot:
 |---|---|---|---|
 | CLIUX-001 | Done | Implement `summarize <raw-log>` so existing logs can be converted into Gaori summary and status artifacts without rerunning the command. | `GAORI-REQ-RQCLI-004`, `GAORI-REQ-RQART-003` to `GAORI-REQ-RQART-006` |
 | CLIUX-002 | Done | Implement deterministic excerpt retrieval with `excerpt --summary <summary-path> <failure-id>`. | `GAORI-REQ-RQCLI-005`, `ADR-0002` |
+| CLIUX-003 | Done | Allow existing-log summarization to select one implemented parser explicitly while preserving generic default behavior and fail-closed validation. | `GAORI-REQ-RQCLI-004`, `GAORI-REQ-RQEXT-002`, `GAORI-REQ-RQSEC-003` |
 
 ## RULES: Rule management
 

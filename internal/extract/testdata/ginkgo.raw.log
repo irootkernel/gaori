@@ -1,0 +1,20 @@
+Running Suite: Books Suite
+==========================
+Random Seed: 1234
+
+Will run 1 of 1 specs
+
+• [FAILED] [0.001 seconds]
+Books
+  [It] rejects empty title
+  books/books_test.go:42
+  [FAILED] Expected true to be false
+
+Summarizing 1 Failure:
+  [FAIL] Books [It] rejects empty title
+  books/books_test.go:42
+
+Ran 1 of 1 Specs in 0.001 seconds
+FAIL! -- 0 Passed | 1 Failed | 0 Pending | 0 Skipped
+--- FAIL: TestBooks (0.00s)
+FAIL

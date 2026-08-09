@@ -1,0 +1,15 @@
+Feature: authenticate users
+
+  Scenario: rejects invalid token # features/auth.feature:12
+    Then access is denied       # features/auth.feature:15
+
+--- Failed steps:
+
+  Scenario: rejects invalid token # features/auth.feature:12
+    Then access is denied       # features/auth.feature:15
+      Error: expected unauthorized response
+
+1 scenarios (1 failed)
+1 steps (1 failed)
+--- FAIL: TestFeatures (0.00s)
+FAIL

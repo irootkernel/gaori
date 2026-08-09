@@ -21,7 +21,7 @@ Gaori is not a test gate or verification authority. The parent project decides w
 Install the current release with Go:
 
 ```bash
-go install github.com/irootkernel/gaori@v0.1.8
+go install github.com/irootkernel/gaori@v0.1.9
 gaori --version
 ```
 
@@ -31,10 +31,10 @@ From a source checkout, use:
 make install
 ```
 
-Projects that pin a local Gaori toolchain can install the versioned binary at `~/.local/gaori/toolchains/v0.1.8/bin/`:
+Projects that pin a local Gaori toolchain can install the versioned binary at `~/.local/gaori/toolchains/v0.1.9/bin/`:
 
 ```bash
-VERSION=0.1.8 make install-toolchain
+VERSION=0.1.9 make install-toolchain
 ```
 
 ## Try it in five minutes
@@ -111,6 +111,12 @@ Choose the parser that matches the command output:
 | Pytest | `pytest` |
 | `go test` | `go-test` |
 | Playwright | `playwright` |
+| Ginkgo | `ginkgo` |
+| Godog | `godog` |
+| Cargo test | `cargo-test` |
+| Flutter test | `flutter-test` |
+| Bun test | `bun-test` |
+| Node.js test runner | `node-test` |
 
 Run a configured command by ID:
 
@@ -140,7 +146,7 @@ gaori run --parser playwright --tag web --tag e2e -- \
   pnpm playwright test tests/login.spec.ts
 ```
 
-`--parser` applies only to the tagged ad-hoc `-- <command...>` form. It does not override a configured command. Tags select which local extraction rules may inspect a raw log; they do not select the parser or change pass/fail. A rule applies only when its parser matches and all of its tags are present on the run. This lets a `tags: [go]` rule apply to both Go unit and integration runs while a `tags: [go, unit]` rule remains unit-specific. Multiple applicable rules may run against the same log. Specialized parsers use only their own patterns and do not retry generic extraction after a miss.
+For `run`, `--parser` applies only to the tagged ad-hoc `-- <command...>` form; it does not override a configured command. `summarize` also accepts one explicit parser and otherwise defaults to `generic`. Tags select which local extraction rules may inspect a raw log; they do not select the parser or change pass/fail. A rule applies only when its parser matches and all of its tags are present on the run. This lets a `tags: [go]` rule apply to both Go unit and integration runs while a `tags: [go, unit]` rule remains unit-specific. Multiple applicable rules may run against the same log. Specialized parsers use only their own patterns and do not retry generic extraction after a miss.
 
 ## Guide coding agents
 
@@ -181,6 +187,12 @@ Add repeatable tags when the filename alone does not describe the applicable rul
 
 ```bash
 gaori summarize --tag go --tag unit path/to/unit.raw.log
+```
+
+Select the parser that produced an existing log when it is not generic text:
+
+```bash
+gaori summarize --parser ginkgo --tag go --tag unit path/to/ginkgo.raw.log
 ```
 
 Use `--run-id` when a parent workflow needs a stable run-scoped location:

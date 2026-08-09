@@ -1,0 +1,11 @@
+bun test v1.3.14
+
+tests/book.test.ts:
+(fail) rejects empty title [1.00ms]
+error: expect(received).toBe(expected)
+Expected: false
+Received: true
+      at <anonymous> (tests/book.test.ts:42:7)
+
+ 0 pass
+ 1 fail

@@ -1,6 +1,6 @@
 # Gaori User Interface
 
-Status: Current for `gaori v0.1.8`; complete through `HARDE-007`, `TAGS-001`, `ADHOC-001`, `RELRV-009`, and `BRAND-001`
+Status: Current for `gaori v0.1.9`; complete through `HARDE-007`, `TAGS-001`, `ADHOC-001`, `RELRV-009`, and `BRAND-001`
 Scope: CLI-first interface for Gaori v0.1, including schema-v2 tag selectors, explicit ad-hoc parser selection, and release-readiness follow-up
 
 This is the complete command reference. First-time users should begin with the repository [README](../README.md); parent-project owners should use the [integration guide](integration-guide.md) for ownership boundaries and adoption steps.
@@ -22,7 +22,7 @@ This is the complete command reference. First-time users should begin with the r
 gaori run <command-id>
 gaori run --tag <tag> [--tag <tag> ...] -- <command...>
 gaori run --parser <parser> --tag <tag> [--tag <tag> ...] -- <command...>
-gaori summarize [--tag <tag> ...] <raw-log>
+gaori summarize [--parser <parser>] [--tag <tag> ...] <raw-log>
 gaori excerpt --summary <summary-path> <failure-id>
 ```
 
@@ -48,10 +48,18 @@ Implemented parser labels:
 - `pytest`
 - `go-test`
 - `playwright`
+- `ginkgo`
+- `godog`
+- `cargo-test`
+- `flutter-test`
+- `bun-test`
+- `node-test`
 
 Applicable project rules are evaluated first. The selected parser is a fallback and runs only when no rule produces a failure. The `generic` label uses generic extraction patterns; specialized labels use only their own parser patterns and never retry generic extraction. A specialized-parser miss reports `no_match` after a pass and `degraded` after a non-pass result.
 
 Configured runs always use the parser stored in `.gaori/tester.yaml`. Tagged ad-hoc runs default to `generic`; add exactly one `--parser <label>` or `--parser=<label>` before the `--` command boundary to select a specialized parser. At least one tag and a non-empty child command remain required. Tags select project rules and never select a parser. The selected parser is recorded in `summary.json`; the existing human console, console JSON, summary Markdown, status JSON, and watcher-hash shapes do not add a parser field.
+
+Existing-log summarization also defaults to `generic`; add exactly one `--parser <label>` to select the output format that produced the raw log. The selected parser controls failure inference and extraction, and exact-parser project rules remain eligible when all of their tags match. Unknown, empty, or repeated summarize parser values fail with config exit code `2` before artifact creation.
 
 An unknown, missing, empty, or repeated parser value, a parser without the explicit ad-hoc `--` boundary, or `--parser` used with a configured command fails with config exit code `2` before config/rule loading, artifact creation, or child execution. Arguments after the boundary belong to the child, so `gaori run --parser generic --tag unit -- my-command --parser child-value` passes the child `--parser` argument through unchanged.
 
@@ -104,7 +112,7 @@ Versioned selection uses local metadata such as:
 ```yaml
 schema_version: "gaori.toolchain.v1"
 gaori:
-  cli_version: "0.1.8"
+  cli_version: "0.1.9"
 ```
 
 An absolute override may be recorded with an optional version assertion:
@@ -112,7 +120,7 @@ An absolute override may be recorded with an optional version assertion:
 ```yaml
 schema_version: "gaori.toolchain.v1"
 gaori:
-  cli_version: "0.1.8"
+  cli_version: "0.1.9"
   binary_path: "/absolute/path/to/gaori"
 ```
 

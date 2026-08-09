@@ -55,7 +55,7 @@ const (
 )
 
 func Main(args []string, stdout, stderr io.Writer) int {
-	return Run(args, stdout, stderr, NewBuildInfo("gaori", "0.1.8", "unknown", "unknown"))
+	return Run(args, stdout, stderr, NewBuildInfo("gaori", "0.1.9", "unknown", "unknown"))
 }
 
 func Run(args []string, stdout, stderr io.Writer, info BuildInfo) int {
@@ -197,15 +197,23 @@ func summarizeCommand(opts globalOptions, args []string, stdout, stderr io.Write
 	fs := flag.NewFlagSet("summarize", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
 	var tags stringList
+	var parser singleRunParser
 	fs.Var(&tags, "tag", "tag (repeatable)")
+	fs.Var(&parser, "parser", "parser")
 	if err := fs.Parse(args); err != nil {
 		writeLine(stderr, err)
 		return int(model.ExitCodeConfigError)
 	}
 	rest := fs.Args()
 	if len(rest) != 1 {
-		writeLine(stderr, "usage: gaori summarize [--tag <tag> ...] <raw-log>")
+		writeLine(stderr, "usage: gaori summarize [--parser <label>] [--tag <tag> ...] <raw-log>")
 		return int(model.ExitCodeConfigError)
+	}
+	if parser.set {
+		if err := config.ValidateParserLabel(parser.value); err != nil {
+			writeLine(stderr, err)
+			return model.ExitCodeFor(err)
+		}
 	}
 	req := model.RunRequest{
 		RepoRoot:   opts.RepoRoot,
@@ -214,6 +222,7 @@ func summarizeCommand(opts globalOptions, args []string, stdout, stderr io.Write
 		RunID:      opts.RunID,
 		JSON:       opts.JSON,
 		Tags:       tags,
+		Parser:     parser.value,
 	}
 	result, exitCode, err := executeSummarize(req, rest[0])
 	if err != nil {
@@ -329,7 +338,10 @@ func executeSummarize(req model.RunRequest, rawLogArg string) (runResult, int, e
 	if err != nil {
 		return runResult{}, 0, err
 	}
-	parser := "generic"
+	parser := req.Parser
+	if parser == "" {
+		parser = "generic"
+	}
 	if err := config.ValidateParserLabel(parser); err != nil {
 		return runResult{}, 0, err
 	}
@@ -346,7 +358,7 @@ func executeSummarize(req model.RunRequest, rawLogArg string) (runResult, int, e
 		return runResult{}, 0, err
 	}
 	relRaw := artifacts.Rel(req.RepoRoot, paths.RawLogPath)
-	status, exitCode := inferSummarizeStatus(raw)
+	status, exitCode := inferSummarizeStatus(raw, parser)
 	runOutput := model.RunOutput{
 		Metadata: model.RunMetadata{
 			CommandID:   commandID,
@@ -459,8 +471,18 @@ func materializeArtifactsWithExtractor(req model.RunRequest, cfg model.Config, p
 	return result, nil
 }
 
-func inferSummarizeStatus(raw []byte) (model.RunStatus, int) {
+func inferSummarizeStatus(raw []byte, parsers ...string) (model.RunStatus, int) {
 	text := string(raw)
+	parser := "generic"
+	if len(parsers) > 0 {
+		parser = parsers[0]
+	}
+	if extract.ParserIndicatesFailure(parser, text) {
+		return model.RunStatusFailed, 1
+	}
+	if parser != "generic" {
+		return model.RunStatusPassed, 0
+	}
 	for _, marker := range []string{"Error:", "TypeError:", "ReferenceError:", "AssertionError:", "panic:", "Traceback", "FAIL", "FAILED", "✗"} {
 		if strings.Contains(text, marker) {
 			return model.RunStatusFailed, 1

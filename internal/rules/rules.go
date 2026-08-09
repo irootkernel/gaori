@@ -14,11 +14,17 @@ import (
 )
 
 var knownRuleParsers = map[string]bool{
-	"generic":    true,
-	"vitest":     true,
-	"pytest":     true,
-	"go-test":    true,
-	"playwright": true,
+	"generic":      true,
+	"vitest":       true,
+	"pytest":       true,
+	"go-test":      true,
+	"playwright":   true,
+	"ginkgo":       true,
+	"godog":        true,
+	"cargo-test":   true,
+	"flutter-test": true,
+	"bun-test":     true,
+	"node-test":    true,
 }
 
 func Discover(repoRoot string) ([]string, error) {
