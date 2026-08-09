@@ -1,5 +1,7 @@
 # gaori
 
+![A ray scanning a vast test log while preserving the original stream and extracting compact failure evidence](docs/assets/gaori-hero.webp)
+
 Gaori is an optional local execution and evidence-compression adapter for long or noisy test commands. It preserves the original output and produces compact failure evidence that is easier for people, coding agents, and automation to consume.
 
 ## Why Gaori?
