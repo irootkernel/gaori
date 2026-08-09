@@ -1,7 +1,7 @@
 # Gaori Implementation Note
 
-Status: v0.1 baseline, `HARDE-001` through `HARDE-007`, `TAGS-001`, `ADHOC-001`, `RELRV-001` through `RELRV-009`, and `BRAND-001` complete
-Scope: Maintainer guidance for the standalone Gaori v0.1 implementation, schema-v2 tags, explicit ad-hoc parser selection, release-readiness follow-up, and future changes
+Status: v0.1 baseline and `CLEAN-001` complete
+Scope: Maintainer guidance for standalone execution, evidence artifacts, parser/rule behavior, and operator-directed cleanup
 
 This document explains implementation constraints and verification expectations for contributors. It is not the parent-project adoption contract; integrators should start with the [integration guide](integration-guide.md).
 
@@ -23,7 +23,7 @@ internal/config/
 internal/runner/
   process execution, timeout, stdout/stderr capture, raw-log writer
 internal/artifacts/
-  path planner, summary JSON, summary Markdown, status JSON, excerpts
+  path planner, artifact writers, completed-run cleanup and byte accounting
 internal/extract/
   generic parser, parser registry, parser-specific modules, span utilities
 internal/rules/
@@ -209,6 +209,7 @@ Tests should cover:
 - Exact-limit and oversized config, stored rule, imported rule, and `rules propose` raw-log inputs, including config exit `2` and absence of command or output side effects.
 - Artifact path generation for `.gaori/`, caller-selected `--output-dir`, and `.gaori/runs/scoped/<run_id>/...` layouts, plus built-binary rejection of external `.gaori/runs/standalone` and `.gaori/runs/scoped` symlinks before command execution.
 - Sequential, goroutine-concurrent, and cross-process standalone directory allocation within one UTC-second interval, including configured, ad-hoc, and summarize evidence preservation.
+- Cleanup selector fail-closed behavior, UTC directory-age boundaries, dry-run and JSON counts, incomplete/scoped/config preservation, candidate-wide preflight, and symlink containment through a built binary.
 - Invalid run, command, rule, and failure IDs failing before command execution or artifact writes.
 - Traversal, cross-run excerpt access, dangling links, and external symlink escape failing closed across artifact and rule operations.
 - Internal symlinks whose canonical targets remain inside the applicable boundary continuing to work.
@@ -243,6 +244,7 @@ Before the next release tag, verify all of the following:
 - toolchain resolver status and forwarding checks for environment, absolute-path metadata, and versioned metadata selection
 - artifact path and containment verification for `.gaori/`, `--output-dir`, and `.gaori/runs/scoped/<run_id>/...`, including external `.gaori/runs/standalone` and `.gaori/runs/scoped` symlink rejection
 - collision checks confirming repeated standalone operations retain distinct raw, summary, Markdown, status, and excerpt artifacts with unchanged raw-log checksums
+- cleanup smokes covering missing-selector exit `2`, dry-run, age selection, `--all`, preserved incomplete/scoped state, and unsafe-target exit `3`
 - watcher status JSON compatibility, including status-hash inputs
 - release notes mention known limitations, especially raw-log redaction policy, rule proposals remaining run-local until promoted, and the current platform-verification boundary
 

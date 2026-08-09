@@ -1,6 +1,6 @@
 # Gaori Requirement Specs
 
-Status: v0.1 baseline complete; standalone evidence cleanup in progress
+Status: v0.1 baseline and operator-directed standalone evidence cleanup complete
 Scope: Gaori v0.1 standalone baseline, post-baseline hardening, schema-v2 tag selectors, explicit parser selection, release-readiness follow-up, and operator-directed standalone evidence cleanup
 Source context: standalone deterministic Gaori v0.1 CLI behavior and evidence contracts.
 
@@ -53,11 +53,11 @@ Implementation note: the original v0.1 roadmap and the recorded `RQHAR` hardenin
 
 ## RQCLE: Operator-directed evidence cleanup
 
-- [~] `GAORI-REQ-RQCLE-001` Provide `gaori clean` for explicit cleanup of completed standalone evidence under `.gaori/runs/standalone/` without deleting project config, rules, proposals, toolchain metadata, scoped runs, or caller-selected output directories.
-- [~] `GAORI-REQ-RQCLE-002` Require exactly one cleanup selector, either `--older-than <Nd>` for a positive whole-day age or `--all`; fail closed with config exit code `2` when neither or both are supplied.
-- [~] `GAORI-REQ-RQCLE-003` Select run age from the validated UTC standalone directory name rather than filesystem modification time, operate on a command-start snapshot, and skip incomplete or unrecognized entries.
-- [~] `GAORI-REQ-RQCLE-004` Support a side-effect-free `--dry-run` and deterministic human and JSON result counts for selected, removed, and skipped runs and selected and removed regular-file bytes.
-- [~] `GAORI-REQ-RQCLE-005` Fail closed with artifact exit code `3` before deletion when cleanup target validation detects a symlink, special file, containment violation, or unsafe path change.
+- [x] `GAORI-REQ-RQCLE-001` Provide `gaori clean` for explicit cleanup of completed standalone evidence under `.gaori/runs/standalone/` without deleting project config, rules, proposals, toolchain metadata, scoped runs, or caller-selected output directories.
+- [x] `GAORI-REQ-RQCLE-002` Require exactly one cleanup selector, either `--older-than <Nd>` for a positive whole-day age or `--all`; fail closed with config exit code `2` when neither or both are supplied.
+- [x] `GAORI-REQ-RQCLE-003` Select run age from the validated UTC standalone directory name rather than filesystem modification time, operate on a command-start snapshot, and skip incomplete or unrecognized entries.
+- [x] `GAORI-REQ-RQCLE-004` Support a side-effect-free `--dry-run` and deterministic human and JSON result counts for selected, removed, and skipped runs and selected and removed regular-file bytes.
+- [x] `GAORI-REQ-RQCLE-005` Fail closed with artifact exit code `3` before deletion when cleanup target validation detects a symlink, special file, containment violation, or unsafe path change.
 
 ## RQEXT: Extraction and parser behavior
 

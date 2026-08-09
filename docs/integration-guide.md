@@ -36,6 +36,7 @@ The default adoption model is selective: route commands through Gaori when their
 | Project extraction rules | Yes | Strict YAML CRUD, provenance, fixture testing, bounded spans, and run-local proposals. |
 | Standalone artifacts | Yes | Collision-free `.gaori/runs/standalone/<UTC-timestamp>[-NNN]/` or `<output-dir>/runs/...`. |
 | Parent run artifacts | Yes | `--run-id <id>` writes only under `.gaori/runs/scoped/<id>/artifacts/test/`. |
+| Standalone cleanup | Yes | `clean (--older-than <Nd> \| --all) [--dry-run]` applies an explicit operator policy only to completed default standalone runs. |
 | Human output | Yes | Compact console output, Markdown summary, and bounded excerpts. |
 | Machine output | Yes | `--json`, summary JSON, and deterministic status JSON. |
 | Redacted derived evidence | Yes | Configured redaction covers surfaced metadata, summaries, status, warnings, failures, and excerpts. |
@@ -56,6 +57,7 @@ These are current boundaries, not hidden partial features:
 - Automatic generic-parser fallback after a specialized parser misses.
 - Redaction of the original raw log or of literal artifact-reference paths.
 - Automatic promotion of `.gaori/rule-proposals/` into active project rules.
+- Automatic retention, scheduled cleanup, cleanup of incomplete or scoped runs, and cleanup of caller-selected output directories.
 - Consumer-specific evidence snapshots. Consumers should use or normalize the existing status, summary, and raw-log references.
 - A bundled CI-provider workflow or a cross-platform release matrix. The repository tests platform-neutral behavior plus additional Unix-only install, process-group, and signal behavior.
 - A successful built-in `--help` surface. The current CLI returns config exit code `2` for `--help`; use the [CLI reference](user-interface.md) for command syntax.
@@ -181,6 +183,17 @@ gaori --json --run-id "$run_id" run unit
 
 The Gaori process exits with the test command's non-zero code when available. Callers must capture output and artifact paths without treating every non-zero Gaori process as an infrastructure failure.
 
+### Apply an explicit standalone retention policy
+
+Preview before applying the parent project's chosen age:
+
+```bash
+gaori clean --older-than 30d --dry-run
+gaori clean --older-than 30d
+```
+
+Use `--all` only when all completed standalone history is intentionally disposable. Omitting both selectors or supplying both fails with exit code `2` and deletes nothing. Cleanup uses run-directory UTC timestamps, skips incomplete and unrecognized entries, and never touches `.gaori/runs/scoped/`, project config/rules/proposals/toolchain metadata, or `--output-dir` evidence. `--json` returns deterministic selection, deletion, byte, and skipped counts. The parent still owns the retention policy and coordination with evidence consumers.
+
 ## 4. Consume artifacts by purpose
 
 With `--run-id`, artifacts are written under:
@@ -273,7 +286,7 @@ Gaori remains standalone and imposes no evidence-consumer runtime dependency.
 - [ ] Verify the caller preserves underlying exit codes and does not treat parser quality as pass/fail.
 - [ ] If using `--run-id`, verify all paths stay inside the matching run and the consumer resolves literal references unchanged.
 - [ ] If polling, contract-test the status fields and ordered watcher hash inputs.
-- [ ] Record which component owns retries, notifications, acceptance, retention, and cleanup.
+- [ ] Record which component owns retries, notifications, acceptance, and retention; when using `gaori clean`, record the explicit selector and consumer-coordination policy.
 
 ## Compatibility and upgrades
 

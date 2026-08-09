@@ -12,7 +12,8 @@ Use it when you want to:
 - keep a raw log for audit while reviewing a much smaller summary;
 - let a coding agent inspect bounded summaries and excerpts before opening sensitive raw output;
 - give another tool stable JSON status and evidence paths;
-- summarize a log that was produced outside Gaori.
+- summarize a log that was produced outside Gaori;
+- remove completed standalone evidence after an operator-selected retention period.
 
 Gaori is not a test gate or verification authority. The parent project decides which checks are required and when they run; reviewers or parent workflows decide acceptance. Gaori may wrap a required command, but it does not make that command required. It also never changes a command result: a failing test command remains failed even when no parser recognizes its output.
 
@@ -217,6 +218,15 @@ For standalone runs, Gaori creates a collision-free directory under `.gaori/runs
 | `excerpts/*.log` | Bounded evidence for one failure |
 | `*.raw.log` | Original, potentially unredacted output |
 
+Preview completed standalone evidence older than 30 whole days, then remove it explicitly:
+
+```bash
+gaori clean --older-than 30d --dry-run
+gaori clean --older-than 30d
+```
+
+Use `gaori clean --all --dry-run` to preview all eligible history. Cleanup requires exactly one of `--older-than <Nd>` or `--all`; omitting a selector fails without deleting anything. It only removes completed `.gaori/runs/standalone/` directories. Config, rules, proposals, toolchain metadata, incomplete runs, scoped runs, and `--output-dir` evidence remain unchanged.
+
 Retrieve one failure excerpt without opening the full raw log:
 
 ```bash
@@ -233,6 +243,7 @@ Add `--json` when a script needs compact command output. Use `--repo`, `--config
 - Summaries and excerpts are bounded; raw logs are preserved unchanged. Summaries retain at most 50 failures and 50 warnings, report truncation explicitly, and remain within their byte budget. Logs larger than 256 KiB use degraded extraction from a bounded complete-line tail instead of becoming internal errors.
 - Config YAML, stored and imported rule YAML, and `rules propose --raw-log` inputs are limited to 256 KiB and fail with config exit code `2` when oversized.
 - Redaction applies to surfaced summaries, excerpts, status, and console metadata, not to raw logs or literal artifact paths.
+- Cleanup has no implicit default: it requires an explicit age or `--all`, supports dry-run, and never treats incomplete or unrecognized entries as safe deletion targets.
 - Do not put secrets in run IDs, command IDs, output directories, or filenames.
 - Ignore the entire `.gaori/` directory. Config, rules, toolchain metadata, proposals, and evidence are local-only state.
 

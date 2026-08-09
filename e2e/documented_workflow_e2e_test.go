@@ -130,6 +130,12 @@ func TestDocumentedCLIWorkflowAgainstFreshFixture(t *testing.T) {
 		}
 	}
 
+	cleanPreview := runDocumentationBlock(t, bin, repo, 0,
+		markdownCodeBlockAfter(t, userInterface, "Preview completed standalone evidence cleanup", "bash"))
+	if !strings.HasPrefix(cleanPreview, "Would remove ") {
+		t.Fatalf("unexpected documented cleanup output %q", cleanPreview)
+	}
+
 	ruleWorkflow := runDocumentationBlock(t, bin, repo, 0,
 		markdownCodeBlockAfter(t, userInterface, "Fixture-backed rule workflow examples", "bash"))
 	for _, want := range []string{"PASS generic-v1 expected=2:5 actual=2:5", "Proposed rule:", ".gaori/rule-proposals/", "disabled"} {

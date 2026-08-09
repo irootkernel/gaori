@@ -33,6 +33,11 @@ This matrix records the primary evidence for every requirement marked complete. 
 | `GAORI-REQ-RQART-005` | `TestConfiguredRunAndExcerpt`; `TestBinaryJSONRedactsCommandMetadata`; `TestArchitectureJSONContractExamplesMatchFreshRunArtifacts` |
 | `GAORI-REQ-RQART-006` | `TestConfiguredRunAndExcerpt`; `TestExcerptSymlinkContainment` |
 | `GAORI-REQ-RQART-007` | `TestArtifactOutputDirectories`; `TestRunIDArtifactLayout` |
+| `GAORI-REQ-RQCLE-001` | `TestCleanCommandContract`; `TestBinaryCleanContract` |
+| `GAORI-REQ-RQCLE-002` | `TestCleanCommandContract`; `TestBinaryCleanContract` |
+| `GAORI-REQ-RQCLE-003` | `TestCleanStandaloneSelectsCompletedRunsAndPreservesOtherState`; `TestCleanCutoffUsesWholeUTCDays`; `TestBinaryCleanContract` |
+| `GAORI-REQ-RQCLE-004` | `TestCleanCommandContract`; `TestBinaryCleanContract`; `TestDocumentedCLIWorkflowAgainstFreshFixture` |
+| `GAORI-REQ-RQCLE-005` | `TestCleanStandaloneRejectsUnsafeTargetsBeforeDeletion`; `TestCleanStandaloneContainsGaoriSymlinks`; `TestBinaryCleanContract` |
 | `GAORI-REQ-RQEXT-001` | `TestProcessGenericFailureProducesPreciseSpan` |
 | `GAORI-REQ-RQEXT-002` | `TestValidateAcceptsImplementedParsers`; `TestProcessVitestFixture`; `TestProcessPytestFixture`; `TestProcessGoTestFixture`; `TestProcessPlaywrightFixture`; `TestProcessExtendedParserFixtures`; `TestGoTestFailureVariants`; `TestFrameworkParsersFromCapturedStream`; `TestFrameworkParsersFromRawLogFile`; `TestConfiguredRunsUseSpecializedParsers`; `TestBinaryExtractionContracts` |
 | `GAORI-REQ-RQEXT-003` | `TestProcessGenericFailureProducesPreciseSpan`; `TestProcessRulesBoundsUnvalidatedContext` |

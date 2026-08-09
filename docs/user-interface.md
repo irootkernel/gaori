@@ -1,7 +1,7 @@
 # Gaori User Interface
 
-Status: Current for `gaori v0.1.9`; complete through `HARDE-007`, `TAGS-001`, `ADHOC-001`, `RELRV-009`, and `BRAND-001`
-Scope: CLI-first interface for Gaori v0.1, including schema-v2 tag selectors, explicit ad-hoc parser selection, and release-readiness follow-up
+Status: Current for `gaori v0.1.9`; complete through `CLEAN-001`
+Scope: CLI-first interface for Gaori v0.1, including schema-v2 tags, explicit parser selection, and operator-directed standalone cleanup
 
 This is the complete command reference. First-time users should begin with the repository [README](../README.md); parent-project owners should use the [integration guide](integration-guide.md) for ownership boundaries and adoption steps.
 
@@ -24,6 +24,7 @@ gaori run --tag <tag> [--tag <tag> ...] -- <command...>
 gaori run --parser <parser> --tag <tag> [--tag <tag> ...] -- <command...>
 gaori summarize [--parser <parser>] [--tag <tag> ...] <raw-log>
 gaori excerpt --summary <summary-path> <failure-id>
+gaori clean (--older-than <Nd> | --all) [--dry-run]
 ```
 
 ## Rule commands
@@ -77,6 +78,8 @@ Recommended global options:
 | `--output-dir <path>` | Write standalone artifacts outside `.gaori/`. |
 | `--run-id <id>` | Use the fixed `.gaori/runs/scoped/<run_id>/...` run-scoped artifact layout. |
 | `--json` | Print compact JSON result to stdout. |
+
+`clean` accepts only the global `--repo` and `--json` options. Config, run-scoped, and caller-selected output options are rejected because cleanup is fixed to completed evidence under the selected repository's `.gaori/runs/standalone/` directory.
 
 Run IDs, configured command IDs, rule IDs, and tags must match `[A-Za-z0-9][A-Za-z0-9_-]*`. Invalid identifiers fail with config exit code `2`; run identifiers and tags are checked before the test command starts. Tags are sorted and deduplicated before matching or serialization.
 
@@ -248,6 +251,12 @@ Compact JSON output for scripts:
 gaori --output-dir evidence --json summarize fixtures/unit.raw.log
 ```
 
+Preview completed standalone evidence cleanup:
+
+```bash
+gaori clean --all --dry-run
+```
+
 Fixture-backed rule workflow examples:
 
 ```bash
@@ -266,6 +275,15 @@ For project rules, `max_block_lines` counts the matched block including its star
 Config YAML, stored rule YAML, `rules create/update --file` inputs, and `rules propose --raw-log` inputs may be at most 256 KiB. Larger files fail with config exit code `2` before a command runs or a rule/proposal is created or replaced. This does not change execution and summarize raw-log preservation or the rule-test fixture contract described below.
 
 Tags are rule selectors, not command selectors or automatic rule generators. The parser must match exactly, and every tag declared by a rule must be present on the run. For a run tagged `[go, unit]`, rules tagged `[go]`, `[unit]`, and `[go, unit]` are applicable, while `[integration]` is not. All applicable active rules inspect the raw log first; the selected parser runs only when those rules produce no failure. `rules propose` writes only a local candidate under `.gaori/rule-proposals/`; an operator must review, test, and explicitly create it before it becomes active under `.gaori/tester/rules/`.
+
+## Clean mode notes
+
+- Exactly one selector is required. `--older-than <Nd>` accepts a positive whole number of 24-hour days; `--all` selects all eligible history. Missing, repeated, empty, zero, negative, malformed, overflowing, or combined selectors fail with config exit code `2` before inspection or deletion.
+- Run age comes from the validated UTC directory name `YYYYMMDDTHHMMSS[-NNN...]`, not mtime. A run at the cutoff is retained, and `--all` retains directories stamped in the command's current UTC second.
+- Only a timestamp-valid directory containing a regular top-level `<command-id>.status.json` is complete and eligible. Incomplete and unrecognized entries are counted as skipped.
+- Cleanup is limited to `.gaori/runs/standalone/`. It never removes `.gaori/tester.yaml`, rules, proposals, toolchain metadata, `.gaori/runs/scoped/`, or artifacts created through `--output-dir`.
+- Candidate trees are fully inspected before deletion. Symlinks, special files, containment failures, and unsafe path changes fail with artifact exit code `3`; `--dry-run` performs the same selection and validation without deletion.
+- Human output reports selected or removed runs, regular-file bytes, and skipped entries. `--json` emits exactly `dry_run`, `selected_runs`, `selected_bytes`, `removed_runs`, `removed_bytes`, and `skipped_runs`.
 
 ## Summarize mode notes
 
@@ -298,7 +316,9 @@ Tags are rule selectors, not command selectors or automatic rule generators. The
 | Extraction internal error after a failed, timed-out, or killed command | original command exit code and status |
 | Extraction internal error during `summarize` | CLI and artifact exit code `4` with `status: internal_error` |
 | Other Gaori parser/rule internal error | documented internal code, recommended `4` |
-| Successful `summarize` or `excerpt` | `0` |
+| Successful `summarize`, `excerpt`, or `clean` | `0` |
+| Missing, conflicting, or invalid cleanup selector | `2`, with no cleanup side effect |
+| Unsafe cleanup target or cleanup filesystem failure | `3` |
 
 A raw-log open, streaming, close, or validation failure uses artifact exit code `3`. A streaming or close failure may leave a partial raw log, but that invocation does not write new excerpts, summary/status artifacts, or their hashes. Because fixed `--run-id` paths can retain artifacts from an earlier invocation, callers must use the process exit and their own run/command uniqueness policy rather than artifact presence alone.
 

@@ -1,6 +1,6 @@
 # Gaori Roadmap
 
-Status: Completed v0.1 baseline and hardening; `CLEAN-001` in progress
+Status: Completed through `CLEAN-001`
 Scope: Implementation tracking for the Gaori v0.1 standalone baseline, hardening, tag and parser selection, release readiness, identity migration, and operator-directed standalone evidence cleanup
 
 This roadmap is a delivery record, not an operator guide or a promise that out-of-scope capabilities will be added. See the [integration guide](integration-guide.md) for the current supported/unsupported capability boundary and `todo.md` for explicitly accepted open work.
@@ -10,8 +10,8 @@ Task status values: `Planned`, `In Progress`, `Blocked`, `Done`, `Deferred`.
 Existing `Done` entries record completion of the original v0.1 implementation slices. They do not supersede or satisfy the later `HARDE` tasks, which close correctness, safety, verification, and documentation gaps found during repository review.
 
 Current implementation snapshot:
-- `Done`: `SETUP-001` to `SETUP-003`, `RUNNR-001` to `RUNNR-003`, `ARTIF-001` to `ARTIF-003`, `PARSE-001` to `PARSE-003`, `SAFEY-001` to `SAFEY-003`, `CLIUX-001`, `CLIUX-002`, `RULES-001` to `RULES-003`, `DOCUM-001` to `DOCUM-003`, `HARDE-001` to `HARDE-007`, `TAGS-001`, `ADHOC-001`, `RELRV-001`, `RELRV-002`, `RELRV-003`, `RELRV-004`, `RELRV-005`, `RELRV-006`, `RELRV-007`, `RELRV-008`, `RELRV-009`, `BRAND-001`
-- `In Progress`: `CLEAN-001`
+- `Done`: `SETUP-001` to `SETUP-003`, `RUNNR-001` to `RUNNR-003`, `ARTIF-001` to `ARTIF-003`, `PARSE-001` to `PARSE-003`, `SAFEY-001` to `SAFEY-003`, `CLIUX-001`, `CLIUX-002`, `RULES-001` to `RULES-003`, `DOCUM-001` to `DOCUM-003`, `HARDE-001` to `HARDE-007`, `TAGS-001`, `ADHOC-001`, `RELRV-001`, `RELRV-002`, `RELRV-003`, `RELRV-004`, `RELRV-005`, `RELRV-006`, `RELRV-007`, `RELRV-008`, `RELRV-009`, `BRAND-001`, `CLEAN-001`
+- `In Progress`: none
 - `Deferred`: none
 - `Planned`: none
 
@@ -132,4 +132,4 @@ Completed release-readiness findings are retained here; remaining accepted findi
 
 | Task ID | Status | Goal | Verification | Reference |
 |---|---|---|---|---|
-| CLEAN-001 | In Progress | Add explicit, fail-closed cleanup of completed `.gaori/runs/standalone/` evidence selected by positive whole-day age or `--all`, with dry-run and deterministic result counts. | Cover selector validation, timestamp selection, incomplete-entry preservation, containment, symlink rejection, human/JSON output, documentation examples, and the full repository gate. | `GAORI-REQ-RQCLE-001` to `GAORI-REQ-RQCLE-005`, `ADR-0010` |
+| CLEAN-001 | Done | Add explicit, fail-closed cleanup of completed `.gaori/runs/standalone/` evidence selected by positive whole-day age or `--all`, with dry-run and deterministic result counts. | Cover selector validation, timestamp selection, incomplete-entry preservation, containment, symlink rejection, human/JSON output, documentation examples, and the full repository gate. | `GAORI-REQ-RQCLE-001` to `GAORI-REQ-RQCLE-005`, `ADR-0010` |

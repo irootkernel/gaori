@@ -1,7 +1,7 @@
 # Gaori Architecture
 
-Status: Complete through `HARDE-007`, `TAGS-001`, `RELRV-009`, and `BRAND-001`
-Scope: Standalone Gaori v0.1 architecture, including schema-v2 tag selectors and release-readiness follow-up
+Status: Complete through `CLEAN-001`
+Scope: Standalone Gaori v0.1 architecture, including schema-v2 tags, parser selection, and operator-directed standalone evidence cleanup
 
 This document defines Gaori's technical and artifact contracts. See the [integration guide](integration-guide.md) for parent-project ownership, supported capability status, and rollout guidance.
 
@@ -47,6 +47,10 @@ CLI
  │   ├─ summary.md
  │   ├─ status.json
  │   └─ excerpts/*.log
+ ├─ Cleanup Engine
+ │   ├─ Completed-run selector
+ │   ├─ Contained tree inspector
+ │   └─ Contained remover
  └─ Rule Manager
      ├─ CRUD
      ├─ Rule Test
@@ -134,8 +138,22 @@ The containment boundary depends on the operation:
 - Default `summarize` writes are contained by the repository root and copy the input raw evidence into a newly reserved `.gaori/runs/standalone/` directory before materializing derived artifacts.
 - Excerpt reads are contained by the canonical `<summary-dir>/excerpts/` directory.
 - Project rules and rule proposals are contained by the repository root.
+- Standalone cleanup reads and removes only completed `.gaori/runs/standalone/` directories contained by the repository root.
 
 Absolute `--output-dir` and `--summary` inputs remain valid where documented; the absolute-path rejection applies to artifact-bearing identifiers and embedded excerpt references. Symlinks whose canonical targets remain inside the applicable boundary are allowed, while dangling links and links that resolve outside it fail closed.
+
+## Data flow: clean standalone evidence
+
+```text
+1. User runs `gaori clean --older-than 30d`, or explicitly selects `--all`.
+2. CLI rejects missing, conflicting, or invalid selectors before filesystem inspection.
+3. Cleanup snapshots direct `.gaori/runs/standalone/` entries and parses validated UTC run-directory timestamps.
+4. Entries outside the cutoff, incomplete runs without a regular top-level status artifact, and unrecognized names are skipped.
+5. The artifact layer preflights every selected tree, rejects links or special files, and sums regular-file bytes.
+6. Dry-run returns deterministic counts without mutation; otherwise each preflighted directory is removed through the repository-root `os.Root` boundary.
+```
+
+Cleanup does not load project config and does not infer retention. It cannot target scoped runs or caller-selected output directories. Raw-log preservation remains mandatory during evidence creation; explicit operator cleanup ends retention only for successfully removed completed standalone runs.
 
 ## Config model
 
