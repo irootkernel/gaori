@@ -22,7 +22,7 @@ Gaori is not a test gate or verification authority. The parent project decides w
 Install the current release with Go:
 
 ```bash
-go install github.com/irootkernel/gaori@v0.1.9
+go install github.com/irootkernel/gaori@v0.1.10
 gaori --version
 ```
 
@@ -32,10 +32,10 @@ From a source checkout, use:
 make install
 ```
 
-Projects that pin a local Gaori toolchain can install the versioned binary at `~/.local/gaori/toolchains/v0.1.9/bin/`:
+Projects that pin a local Gaori toolchain can install the versioned binary at `~/.local/gaori/toolchains/v0.1.10/bin/`:
 
 ```bash
-VERSION=0.1.9 make install-toolchain
+VERSION=0.1.10 make install-toolchain
 ```
 
 ## Try it in five minutes
