@@ -194,6 +194,29 @@ Config schema v2 replaces the single grouping field with non-empty tags. Tags us
 - Tags affect evidence selection and watcher hashes but never authoritative command pass/fail.
 - Local config and rules must be provisioned independently on each machine that uses them.
 
+## ADR-0010: Cleanup applies only explicit operator retention policy
+
+Status: Accepted
+Date: 2026-08-09
+
+### Context
+
+Collision-free standalone runs intentionally retain raw logs and derived evidence, so repeated local use can consume material disk space and retain sensitive raw values longer than an operator needs. Gaori must provide a safe cleanup mechanism without choosing retention policy, weakening evidence creation, or deleting unrelated local state.
+
+### Decision
+
+Gaori will provide an operator-invoked `clean` command that applies exactly one explicit selector: a positive whole-day age or all eligible history. Omitting a selector or combining selectors fails closed. Cleanup is limited to completed run directories under `.gaori/runs/standalone/`; it does not delete config, rules, proposals, toolchain metadata, scoped runs, incomplete runs, or caller-selected output directories. Selection uses validated UTC run-directory timestamps, and deletion uses the existing repository containment boundary. Dry-run and deterministic counts let operators inspect the effect without mutation.
+
+Raw-log preservation remains mandatory while Gaori creates evidence. An explicit successful cleanup ends retention only for the selected completed standalone runs. The parent project or operator continues to own the retention decision; Gaori does not schedule cleanup or infer a policy.
+
+### Consequences
+
+- Default and malformed cleanup invocations cannot delete evidence.
+- Parent-owned scoped evidence and referenced external output remain untouched.
+- Completed standalone evidence can be removed without deleting `.gaori/` configuration state.
+- Incomplete or unrecognized entries require separate operator inspection and are not silently treated as safe cleanup targets.
+- Cleanup remains a bounded standalone filesystem operation rather than a watcher, daemon, or workflow state service.
+
 ## Future ADR candidates
 
 - Built-in parser module boundary after specialized parsers exist.

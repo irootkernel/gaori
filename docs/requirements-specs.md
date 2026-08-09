@@ -1,7 +1,7 @@
 # Gaori Requirement Specs
 
-Status: v0.1 baseline, `HARDE-001` through `HARDE-007`, `TAGS-001`, `ADHOC-001`, `RELRV-001` through `RELRV-009`, and `BRAND-001` complete
-Scope: Gaori v0.1 standalone baseline, post-baseline hardening, schema-v2 tag selectors, explicit ad-hoc parser selection, and release-readiness follow-up
+Status: v0.1 baseline complete; standalone evidence cleanup in progress
+Scope: Gaori v0.1 standalone baseline, post-baseline hardening, schema-v2 tag selectors, explicit parser selection, release-readiness follow-up, and operator-directed standalone evidence cleanup
 Source context: standalone deterministic Gaori v0.1 CLI behavior and evidence contracts.
 
 ## Requirement status legend
@@ -11,7 +11,7 @@ Source context: standalone deterministic Gaori v0.1 CLI behavior and evidence co
 - `[x]` Complete
 - `Blocked` means external decision or missing dependency prevents implementation.
 
-Implementation note: the original v0.1 roadmap and the recorded `RQHAR` hardening requirements are implemented. A checked requirement means that specific behavior is implemented and mapped to evidence; it does not imply support for capabilities outside its wording. See the [integration guide](integration-guide.md) for the current capability matrix and explicit v0.1 boundaries. No open implementation items are currently recorded in `todo.md`.
+Implementation note: the original v0.1 roadmap and the recorded `RQHAR` hardening requirements are implemented. A checked requirement means that specific behavior is implemented and mapped to evidence; it does not imply support for capabilities outside its wording. See the [integration guide](integration-guide.md) for the current capability matrix and explicit v0.1 boundaries. Accepted open work is recorded in `todo.md`.
 
 ## RQCLI: Command-line interface
 
@@ -50,6 +50,14 @@ Implementation note: the original v0.1 roadmap and the recorded `RQHAR` hardenin
 - [x] `GAORI-REQ-RQART-005` Write status JSON suitable for no-agent watchers.
 - [x] `GAORI-REQ-RQART-006` Write failure excerpt files for bounded review without replaying full raw logs.
 - [x] `GAORI-REQ-RQART-007` Keep all generated artifact paths stable and relative to the repository root where practical.
+
+## RQCLE: Operator-directed evidence cleanup
+
+- [~] `GAORI-REQ-RQCLE-001` Provide `gaori clean` for explicit cleanup of completed standalone evidence under `.gaori/runs/standalone/` without deleting project config, rules, proposals, toolchain metadata, scoped runs, or caller-selected output directories.
+- [~] `GAORI-REQ-RQCLE-002` Require exactly one cleanup selector, either `--older-than <Nd>` for a positive whole-day age or `--all`; fail closed with config exit code `2` when neither or both are supplied.
+- [~] `GAORI-REQ-RQCLE-003` Select run age from the validated UTC standalone directory name rather than filesystem modification time, operate on a command-start snapshot, and skip incomplete or unrecognized entries.
+- [~] `GAORI-REQ-RQCLE-004` Support a side-effect-free `--dry-run` and deterministic human and JSON result counts for selected, removed, and skipped runs and selected and removed regular-file bytes.
+- [~] `GAORI-REQ-RQCLE-005` Fail closed with artifact exit code `3` before deletion when cleanup target validation detects a symlink, special file, containment violation, or unsafe path change.
 
 ## RQEXT: Extraction and parser behavior
 

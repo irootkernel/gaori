@@ -1,6 +1,6 @@
 # Gaori Todo
 
-Status: No open implementation items
+Status: `CLEAN-001` active
 Scope: Documentation and implementation follow-up notes
 
 ## Todo status legend
@@ -15,7 +15,7 @@ Tag and publish `v0.1.9` only from a clean commit after the release-readiness ch
 
 ## Active items
 
-None.
+- `CLEAN-001` (`Active`): implement and verify operator-directed cleanup of completed standalone evidence according to `GAORI-REQ-RQCLE-001` through `GAORI-REQ-RQCLE-005` and `ADR-0010`.
 
 ## Out-of-scope reminder
 

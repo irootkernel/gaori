@@ -1,7 +1,7 @@
 # Gaori Roadmap
 
-Status: v0.1 standalone MVP, HARDE hardening epic, `TAGS-001`, `ADHOC-001`, `RELRV-001` through `RELRV-009`, and `BRAND-001` complete
-Scope: Implementation tracking for the Gaori v0.1 standalone baseline, post-baseline hardening, schema-v2 tag migration, explicit ad-hoc parser selection, release-readiness follow-up, and v0.1.6 identity migration
+Status: Completed v0.1 baseline and hardening; `CLEAN-001` in progress
+Scope: Implementation tracking for the Gaori v0.1 standalone baseline, hardening, tag and parser selection, release readiness, identity migration, and operator-directed standalone evidence cleanup
 
 This roadmap is a delivery record, not an operator guide or a promise that out-of-scope capabilities will be added. See the [integration guide](integration-guide.md) for the current supported/unsupported capability boundary and `todo.md` for explicitly accepted open work.
 
@@ -11,7 +11,7 @@ Existing `Done` entries record completion of the original v0.1 implementation sl
 
 Current implementation snapshot:
 - `Done`: `SETUP-001` to `SETUP-003`, `RUNNR-001` to `RUNNR-003`, `ARTIF-001` to `ARTIF-003`, `PARSE-001` to `PARSE-003`, `SAFEY-001` to `SAFEY-003`, `CLIUX-001`, `CLIUX-002`, `RULES-001` to `RULES-003`, `DOCUM-001` to `DOCUM-003`, `HARDE-001` to `HARDE-007`, `TAGS-001`, `ADHOC-001`, `RELRV-001`, `RELRV-002`, `RELRV-003`, `RELRV-004`, `RELRV-005`, `RELRV-006`, `RELRV-007`, `RELRV-008`, `RELRV-009`, `BRAND-001`
-- `In Progress`: none
+- `In Progress`: `CLEAN-001`
 - `Deferred`: none
 - `Planned`: none
 
@@ -127,3 +127,9 @@ Completed release-readiness findings are retained here; remaining accepted findi
 | Task ID | Status | Goal | Verification | Reference |
 |---|---|---|---|---|
 | BRAND-001 | Done | Rename the module, binary, local state, toolchain resolver, environment contract, source identifiers, tests, and documentation to Gaori without compatibility aliases. | Verify the built binary and module identity, execute focused install/toolchain/path/documentation tests, reject pre-v0.1.6 default discovery, find no previous identity in tracked source, and pass the full release-style suite. | `GAORI-REQ-RQCLI-001`, `GAORI-REQ-RQCFG-001`, `GAORI-REQ-RQART-001`, `GAORI-REQ-RQRUL-002`, `GAORI-REQ-RQDOC-001` |
+
+## CLEAN: Standalone evidence retention
+
+| Task ID | Status | Goal | Verification | Reference |
+|---|---|---|---|---|
+| CLEAN-001 | In Progress | Add explicit, fail-closed cleanup of completed `.gaori/runs/standalone/` evidence selected by positive whole-day age or `--all`, with dry-run and deterministic result counts. | Cover selector validation, timestamp selection, incomplete-entry preservation, containment, symlink rejection, human/JSON output, documentation examples, and the full repository gate. | `GAORI-REQ-RQCLE-001` to `GAORI-REQ-RQCLE-005`, `ADR-0010` |
