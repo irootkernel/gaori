@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -99,6 +100,60 @@ func ReadDirWithin(rootPath, targetPath string) (entries []os.DirEntry, err erro
 	}
 	defer closeWithError(&err, dir)
 	return dir.ReadDir(-1)
+}
+
+func WalkDirWithin(rootPath, targetPath string, fn fs.WalkDirFunc) (err error) {
+	root, relative, err := openResolvedRoot(rootPath, targetPath, false)
+	if err != nil {
+		return err
+	}
+	defer closeWithError(&err, root)
+	target, err := root.OpenRoot(relative)
+	if err != nil {
+		return err
+	}
+	defer closeWithError(&err, target)
+	return fs.WalkDir(target.FS(), ".", fn)
+}
+
+func RemoveAllWithin(rootPath, targetPath string) (err error) {
+	rootAbs, err := filepath.Abs(rootPath)
+	if err != nil {
+		return err
+	}
+	canonicalRoot, err := filepath.EvalSymlinks(rootAbs)
+	if err != nil {
+		return err
+	}
+	targetAbs, err := filepath.Abs(targetPath)
+	if err != nil {
+		return err
+	}
+	canonicalParent, err := filepath.EvalSymlinks(filepath.Dir(targetAbs))
+	if err != nil {
+		return err
+	}
+	relativeParent, err := filepath.Rel(canonicalRoot, canonicalParent)
+	if err != nil {
+		return err
+	}
+	if !filepath.IsLocal(relativeParent) {
+		return fmt.Errorf("path %q escapes allowed root %q", targetPath, rootPath)
+	}
+	relative := filepath.Join(relativeParent, filepath.Base(targetAbs))
+	root, err := os.OpenRoot(canonicalRoot)
+	if err != nil {
+		return err
+	}
+	defer closeWithError(&err, root)
+	info, err := root.Lstat(relative)
+	if err != nil {
+		return err
+	}
+	if info.Mode()&os.ModeSymlink != 0 {
+		return fmt.Errorf("path %q is a symbolic link", targetPath)
+	}
+	return root.RemoveAll(relative)
 }
 
 func closeWithError(result *error, closer io.Closer) {

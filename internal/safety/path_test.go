@@ -175,3 +175,33 @@ func TestPathOperationsRejectSymlinkEscape(t *testing.T) {
 		}
 	})
 }
+
+func TestRemoveAllWithinRemovesContainedTreeAndRejectsFinalSymlink(t *testing.T) {
+	t.Parallel()
+	root := t.TempDir()
+	target := filepath.Join(root, "runs", "run-001")
+	if err := os.MkdirAll(target, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(target, "status.json"), []byte("done\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := RemoveAllWithin(root, target); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(target); !os.IsNotExist(err) {
+		t.Fatalf("contained target remains, stat error=%v", err)
+	}
+
+	external := t.TempDir()
+	link := filepath.Join(root, "runs", "run-002")
+	if err := os.Symlink(external, link); err != nil {
+		t.Fatal(err)
+	}
+	if err := RemoveAllWithin(root, link); err == nil {
+		t.Fatal("expected final symlink removal to fail closed")
+	}
+	if _, err := os.Stat(external); err != nil {
+		t.Fatalf("external target changed: %v", err)
+	}
+}
