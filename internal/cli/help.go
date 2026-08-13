@@ -7,9 +7,6 @@ import (
 	"strings"
 )
 
-var topLevelCommands = []string{"version", "run", "excerpt", "summarize", "clean", "config", "rules"}
-var ruleCommands = []string{"list", "search", "show", "create", "update", "delete", "test", "propose"}
-
 func helpRequest(args []string) ([]string, bool) {
 	if len(args) == 0 {
 		return nil, false
@@ -22,6 +19,10 @@ func helpRequest(args []string) ([]string, bool) {
 		boundary = len(args)
 	}
 	for i := 0; i < boundary; i++ {
+		if commandOptionNeedsValue(args[i]) && i+1 < boundary {
+			i++
+			continue
+		}
 		if args[i] != "-h" && args[i] != "--help" {
 			continue
 		}
@@ -31,18 +32,15 @@ func helpRequest(args []string) ([]string, bool) {
 }
 
 func helpCommandPath(args []string) []string {
-	path := make([]string, 0, 2)
-	for _, arg := range args {
-		if len(path) == 0 && slices.Contains(topLevelCommands, arg) {
-			path = append(path, arg)
-			continue
-		}
-		if len(path) == 1 && path[0] == "rules" && slices.Contains(ruleCommands, arg) {
-			path = append(path, arg)
-		}
-		if len(path) == 1 && path[0] == "config" && arg == "check" {
-			path = append(path, arg)
-		}
+	if len(args) == 0 {
+		return nil
+	}
+	path := []string{args[0]}
+	if args[0] == "rules" && len(args) > 1 {
+		return append(path, args[1])
+	}
+	if args[0] == "config" && len(args) > 1 {
+		return append(path, args[1])
 	}
 	return path
 }

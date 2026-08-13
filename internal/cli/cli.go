@@ -63,17 +63,17 @@ func Main(args []string, stdout, stderr io.Writer) int {
 }
 
 func Run(args []string, stdout, stderr io.Writer, info BuildInfo) int {
-	if path, ok := helpRequest(args); ok {
+	opts, remaining, err := parseGlobalOptions(args)
+	if err != nil {
+		writeLine(stderr, err)
+		return int(model.ExitCodeConfigError)
+	}
+	if path, ok := helpRequest(remaining); ok {
 		if err := writeHelp(stdout, path); err != nil {
 			writeLine(stderr, err)
 			return int(model.ExitCodeConfigError)
 		}
 		return 0
-	}
-	opts, remaining, err := parseGlobalOptions(args)
-	if err != nil {
-		writeLine(stderr, err)
-		return int(model.ExitCodeConfigError)
 	}
 	if opts.ShowVersion {
 		writeVersion(stdout, info, opts.JSON)
@@ -168,7 +168,7 @@ func parseGlobalOptions(args []string) (globalOptions, []string, error) {
 		}
 	}
 	remaining = append(remaining, args[boundary:]...)
-	if len(remaining) > 0 && strings.HasPrefix(remaining[0], "-") && remaining[0] != "--" {
+	if len(remaining) > 0 && strings.HasPrefix(remaining[0], "-") && remaining[0] != "--" && remaining[0] != "-h" && remaining[0] != "--help" {
 		name := strings.TrimPrefix(strings.TrimPrefix(remaining[0], "-"), "-")
 		if optionName, _, found := strings.Cut(name, "="); found {
 			name = optionName

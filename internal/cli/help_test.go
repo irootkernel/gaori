@@ -15,7 +15,10 @@ func TestHelpSurfacesExitSuccessfully(t *testing.T) {
 		{args: []string{"--help"}, want: "Usage: gaori [global options] <command>"},
 		{args: []string{"help"}, want: "Commands:"},
 		{args: []string{"help", "run"}, want: "gaori run <command-id>"},
+		{args: []string{"--json", "help", "run"}, want: "gaori run <command-id>"},
+		{args: []string{"help", "run", "--json"}, want: "gaori run <command-id>"},
 		{args: []string{"run", "--help"}, want: "Arguments after -- belong to the child"},
+		{args: []string{"run", "--help", "--json"}, want: "Arguments after -- belong to the child"},
 		{args: []string{"config", "check", "--help"}, want: "gaori config check"},
 		{args: []string{"rules", "-h"}, want: "gaori rules <command>"},
 		{args: []string{"help", "rules", "propose"}, want: "--raw-log <raw-log>"},
@@ -47,11 +50,24 @@ func TestHelpDoesNotConsumeChildArguments(t *testing.T) {
 
 func TestUnknownHelpTopicFailsClosed(t *testing.T) {
 	t.Parallel()
-	var stdout, stderr bytes.Buffer
-	if exitCode := Main([]string{"help", "unknown"}, &stdout, &stderr); exitCode != 2 {
-		t.Fatalf("exit = %d", exitCode)
+	for _, args := range [][]string{{"help", "unknown"}, {"bogus", "--help"}, {"rules", "bogus", "--help"}} {
+		var stdout, stderr bytes.Buffer
+		if exitCode := Main(args, &stdout, &stderr); exitCode != 2 {
+			t.Fatalf("args=%q exit=%d", args, exitCode)
+		}
+		if stdout.Len() != 0 || !strings.Contains(stderr.String(), "unknown help topic") {
+			t.Fatalf("args=%q stdout=%q stderr=%q", args, stdout.String(), stderr.String())
+		}
 	}
-	if stdout.Len() != 0 || !strings.Contains(stderr.String(), "unknown help topic") {
-		t.Fatalf("stdout=%q stderr=%q", stdout.String(), stderr.String())
+}
+
+func TestHelpFlagUsedAsCommandOptionValueIsPreserved(t *testing.T) {
+	t.Parallel()
+	var stdout, stderr bytes.Buffer
+	if exitCode := Main([]string{"rules", "delete", "sample", "--reason", "--help"}, &stdout, &stderr); exitCode != 2 {
+		t.Fatalf("exit=%d stdout=%q stderr=%q", exitCode, stdout.String(), stderr.String())
+	}
+	if strings.Contains(stdout.String(), "Usage:") || strings.Contains(stderr.String(), "Usage:") {
+		t.Fatalf("command value was treated as help: stdout=%q stderr=%q", stdout.String(), stderr.String())
 	}
 }
