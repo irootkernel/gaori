@@ -32,6 +32,14 @@ internal/safety/
   identifier validation, rooted path containment, redaction, noise filtering, regex/size bounds
 ```
 
+## Agent skills
+
+`skills/use-gaori/` is optional, source-distributed AI-agent guidance (a `SKILL.md` plus `references/`). It is not linked into the binary or installed by any Make target. Unlike the illustrative package names above, the `skills/use-gaori/` path is fixed: the Agent Skills convention and the README install URLs depend on it, so do not rename it.
+
+Keep skills agent-agnostic and subordinate to the executable and documentation contracts. They may teach safe use of Gaori, but must not add runtime behavior, imply workflow or acceptance authority, or treat local `.gaori/` state as portable source configuration. Source archives include the skill only from the first release tag created after `skills/` was added; binary installation and toolchain installation never copy or activate it.
+
+The skill hardcodes the CLI surface (subcommands, flags, the eleven parser labels, exit codes, config schema, cleanup semantics) and is executed against by agents, so treat it as a user-facing document under the [AGENTS.md](../AGENTS.md) rule to update user-facing docs whenever CLI or artifact behavior changes: verify `skills/use-gaori/**` still matches the current surface in the same change.
+
 ## Runner guidance
 
 - Preserve raw logs before summary filtering.

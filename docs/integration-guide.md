@@ -155,7 +155,7 @@ The caller chooses both the command and parser. Omitting `--parser` preserves th
 
 Explicit parser selection is valid only before the `--` boundary of a tagged ad-hoc run. It cannot override a configured command. Missing, empty, repeated, or unsupported parser values and configured-command misuse fail with exit code `2` before child execution or completed evidence creation. A child argument named `--parser` after the boundary is passed through unchanged.
 
-Ad-hoc execution can operate without `.gaori/tester.yaml`. In that case Gaori still preserves raw output and applies the selected built-in parser, but no project-specific redaction, noise filters, or extraction rules are available. Parent guidance should distinguish this from configured command execution, which requires the local config.
+Ad-hoc execution can operate without `.gaori/tester.yaml`. In that case Gaori still preserves raw output and applies the selected built-in parser, but the redaction and noise filters defined in that config file are unavailable. Project extraction rules live separately under `.gaori/tester/rules/` and still apply whenever their parser and all their tags match the run. Parent guidance should distinguish this from configured command execution, which requires the local config.
 
 ## 3. Choose an invocation layout
 

@@ -1,4 +1,4 @@
-# gaori
+# Gaori
 
 ![A ray scanning a vast test log while preserving the original stream and extracting compact failure evidence](docs/assets/gaori-hero.webp)
 
@@ -39,6 +39,49 @@ Projects that pin a local Gaori toolchain can install the versioned binary at `~
 ```bash
 VERSION=0.1.10 make install-toolchain
 ```
+
+## Optional: configure an AI coding agent
+
+Installing Gaori does not modify a project's `AGENTS.md` and does not install an agent skill. Gaori works normally without either integration. You may use the `AGENTS.md` template below, the reusable skill, both together, or neither: use the `AGENTS.md` block for rules every agent in the repo should always follow, and the skill when you want the full operating procedure loaded only for tasks that actually touch Gaori. The two compose — the `AGENTS.md` block is a deliberate subset of the skill, so using both is duplication, not conflict.
+
+Before pasting the block below, replace `<expected-version>` and `<command-id>` with the project's actual values, add or remove command entries as needed, and replace `gaori` with the project's pinned wrapper command when it uses one. Copy it into the project-wide instruction file supported by your agent runtime, such as `AGENTS.md`:
+
+````markdown
+## Gaori test evidence
+
+- The project's own documentation determines which checks are required. Gaori is an optional execution and evidence-compression adapter, not a test gate or acceptance authority. Route a command through Gaori only when its output is long or noisy enough that bounded evidence helps.
+- Confirm `gaori` is available and reports `<expected-version>`; do not install it or initialize `.gaori/` automatically. If it is missing or the version differs, run the project's normal documented command instead and report that Gaori evidence compression was unavailable. Use configured commands only when `.gaori/tester.yaml` exists; otherwise use an explicitly chosen tagged ad-hoc run.
+- Treat the executed command's exit code as authoritative. Tags select extraction rules, not parsers; a specialized parser that misses never falls back to `generic` and never changes pass/fail. Read `<command-id>.status.json` or structured command output for the result and `extractor_status`, then inspect `<command-id>.summary.md` (or `.summary.json`) and bounded excerpts before opening the potentially unredacted raw log; on a pass, do not open logs at all.
+- Keep `.gaori/` out of Git. Record only claims supported by the current command result and artifacts; Gaori evidence does not establish review acceptance, release, installation, or runtime activation.
+- Require explicit user intent before cleanup, cancellation, rule deletion, or reuse of a fixed `--run-id` and command ID that can replace earlier artifacts.
+- In the final report, include the Gaori command, process exit code, artifact `status` and `extractor_status`, relevant summary and raw-log paths when opened, and any skipped checks.
+````
+
+For task-level operating guidance, use the complete [`use-gaori` skill directory](skills/use-gaori/). In a source checkout, copy it directly after confirming that the destination does not already exist:
+
+```bash
+gaori_skill_dir=/path/to/agent/skills/use-gaori
+test ! -e "$gaori_skill_dir"
+cp -R skills/use-gaori "$gaori_skill_dir"
+```
+
+Otherwise fetch it. There is no universal skill-discovery path, so set the destination to the path your agent runtime documents and pin the ref to the release tag whose source ships the skill:
+
+```bash
+set -e
+: "${GAORI_SKILL_DIR:?set to the documented use-gaori skill directory}"
+gaori_skill_ref=main   # replace with the release tag matching your installed binary once one ships skills/
+mkdir -p "$GAORI_SKILL_DIR/references"
+curl -fsSLo "$GAORI_SKILL_DIR/SKILL.md" \
+  "https://raw.githubusercontent.com/irootkernel/gaori/$gaori_skill_ref/skills/use-gaori/SKILL.md"
+for reference in lifecycle authoring recovery; do
+  curl -fsSLo "$GAORI_SKILL_DIR/references/$reference.md" \
+    "https://raw.githubusercontent.com/irootkernel/gaori/$gaori_skill_ref/skills/use-gaori/references/$reference.md"
+done
+ls "$GAORI_SKILL_DIR"/SKILL.md "$GAORI_SKILL_DIR"/references/*.md
+```
+
+The skill is source-distributed: a GitHub source archive includes it only from the first release tag created after `skills/` was added, so fetch from `main` until such a release ships. `go install`, `make install`, and `make install-toolchain` install only the Gaori binary and do not copy or activate the skill.
 
 ## Try it in five minutes
 
@@ -150,33 +193,6 @@ gaori run --parser playwright --tag web --tag e2e -- \
 ```
 
 For `run`, `--parser` applies only to the tagged ad-hoc `-- <command...>` form; it does not override a configured command. `summarize` also accepts one explicit parser and otherwise defaults to `generic`. Tags select which local extraction rules may inspect a raw log; they do not select the parser or change pass/fail. A rule applies only when its parser matches and all of its tags are present on the run. This lets a `tags: [go]` rule apply to both Go unit and integration runs while a `tags: [go, unit]` rule remains unit-specific. Multiple applicable rules may run against the same log. Specialized parsers use only their own patterns and do not retry generic extraction after a miss.
-
-## Guide coding agents
-
-After making Gaori available in a project, add the following shared guidance to that project's `AGENTS.md` or `CLAUDE.md`. Before pasting it, replace `<expected-version>`, `<check-name>`, and `<command-id>` with the project's actual values, add or remove command entries as needed, and replace `gaori` with the project's pinned wrapper command when it uses one.
-
-````markdown
-## Gaori test evidence
-
-The project's own documentation is authoritative for which tests are required. Gaori is an optional local execution and evidence-compression adapter, not an additional test gate or acceptance authority.
-
-When a required test command is expected to produce long or noisy output, prefer running it through Gaori from the repository root so the conversation can use bounded evidence instead of the complete raw log:
-
-- `<check-name>`: `gaori run <command-id>`
-- Dynamically selected Go test: `gaori run --parser go-test --tag go --tag unit -- go test <package> <test arguments>`
-
-Before the first Gaori run, verify the selected binary with `gaori --version`; it must report `<expected-version>`. A configured command requires `.gaori/tester.yaml`. A tagged ad-hoc command can run without that file, but project-specific rules, redaction, and noise filtering are unavailable when no config exists. If the binary or expected version is unavailable, follow the project's normal documented test command instead and report that Gaori evidence compression was unavailable. Do not install Gaori or change local Gaori state unless the user explicitly asks.
-
-For `gaori run`, the executed command's exit code is authoritative for pass/fail. `extractor_status` describes evidence quality only and never changes the command result. Tags do not select a parser, and specialized parsers do not automatically fall back to `generic`.
-
-When a command passes, do not open its generated logs by default. When it does not pass, inspect the generated `*.summary.md` first, followed by `*.summary.json` or a bounded excerpt when more detail is needed. Read only a bounded raw-log section when the compact evidence is insufficient or degraded. Open or share `*.raw.log` only when necessary because raw logs are preserved without redaction and may contain secrets.
-
-Keep the entire `.gaori/` directory out of Git. Do not add or commit its config, rules, toolchain metadata, proposals, or evidence.
-
-In the final report, include the Gaori command, process exit code, artifact `status`, `extractor_status`, relevant summary and raw-log paths when emitted, and any skipped checks. Gaori evidence alone does not establish review acceptance, final acceptance, release, or runtime activation.
-````
-
-A parent project may explicitly require Gaori as its evidence wrapper. That requirement belongs to the parent project's policy; it does not make Gaori itself a test gate or acceptance authority. Customize the fallback sentence above when such a project-owned requirement exists.
 
 ## Work with existing evidence
 
