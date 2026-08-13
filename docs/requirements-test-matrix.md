@@ -60,7 +60,7 @@ This matrix records the primary evidence for every requirement marked complete. 
 | `GAORI-REQ-RQRUL-006` | `TestRuleDetectsOvermatch`; `TestProcessRulesRejectsInvalidRegex`; `TestBinaryRejectsOversizedRuleContext` |
 | `GAORI-REQ-RQRUL-007` | `TestProposeWritesRunLocalProposal`; `TestProposePreservesMeaningfulLineWhitespace` |
 | `GAORI-REQ-RQRUL-008` | `TestLoadApplicableRequiresAllRuleTags`; `TestRunAndSummarizeSelectRulesByAllTags`; `TestBinaryTagsSelectRulesByAllTags` |
-| `GAORI-REQ-RQRUL-009` | `TestRulesProposeFromSummaryStreamsLargeRawLog`; `TestRulesProposeFromSummaryFailsClosedOnUntrustedEvidence`; `TestRulesProposeModesAreMutuallyExclusive`; `TestBinaryProposesRuleFromGeneratedFailureSummary` |
+| `GAORI-REQ-RQRUL-009` | `TestRulesProposeFromSummaryStreamsLargeRawLog`; `TestRulesProposeFromSummaryAcceptsExtractorLineBoundaries`; `TestRulesProposeFromSummaryFailsClosedOnUntrustedEvidence`; `TestRulesProposeModesAreMutuallyExclusive`; `TestBinaryProposesRuleFromGeneratedFailureSummary` |
 | `GAORI-REQ-RQSEC-001` | `TestRedactSummaryCoversSurfacedMetadata`; `TestBinaryJSONRedactsCommandMetadata` |
 | `GAORI-REQ-RQSEC-002` | `TestConfiguredRunRedactsSurfacedMetadata`; `TestBinaryJSONRedactsCommandMetadata` |
 | `GAORI-REQ-RQSEC-003` | `TestExecuteReportsRawLogWriteFailure`; `TestExecuteTimeoutReportsRawLogWriteFailure`; `TestExecuteInterruptedReportsRawLogWriteFailure`; `TestRawLogWriteFailureDoesNotPublishDerivedArtifacts`; `TestProcessRulesRejectsInvalidRegex`; `TestBinaryRejectsUnknownConfigFields`; `TestBinaryRejectsOversizedRuleContext` |

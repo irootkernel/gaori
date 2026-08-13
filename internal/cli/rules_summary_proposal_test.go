@@ -40,6 +40,63 @@ func TestRulesProposeFromSummaryStreamsLargeRawLog(t *testing.T) {
 	}
 }
 
+func TestRulesProposeFromSummaryAcceptsExtractorLineBoundaries(t *testing.T) {
+	t.Parallel()
+	for _, test := range []struct {
+		name            string
+		prefix          []byte
+		failure         []byte
+		trailingNewline bool
+	}{
+		{name: "crlf", prefix: []byte("noise\r\n"), failure: []byte("TypeError: failed\r\n"), trailingNewline: true},
+		{name: "final line without newline", prefix: []byte("noise\n"), failure: []byte("TypeError: failed")},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			repo := t.TempDir()
+			baseDir := filepath.Join(repo, ".gaori", "runs", "standalone", "20260814T010203")
+			if err := os.MkdirAll(baseDir, 0o755); err != nil {
+				t.Fatal(err)
+			}
+			raw := append(append([]byte(nil), test.prefix...), test.failure...)
+			endByte := len(raw)
+			if test.trailingNewline {
+				endByte--
+			}
+			rawPath := filepath.Join(baseDir, "unit.raw.log")
+			if err := os.WriteFile(rawPath, raw, 0o644); err != nil {
+				t.Fatal(err)
+			}
+			line := bytes.Count(test.prefix, []byte{'\n'}) + 1
+			summary := model.Summary{
+				CommandID: "unit", Tags: []string{"unit"}, Parser: "generic",
+				RawLog: filepath.ToSlash(strings.TrimPrefix(rawPath, repo+string(filepath.Separator))), RawLogSHA256: artifacts.SHA256(raw),
+				Failures: []model.Failure{{ID: "F001", RawSpan: model.RawSpan{StartLine: line, EndLine: line, StartByte: len(test.prefix), EndByte: endByte}}},
+			}
+			summaryPath := filepath.Join(baseDir, "unit.summary.json")
+			data, err := json.Marshal(summary)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err := os.WriteFile(summaryPath, data, 0o644); err != nil {
+				t.Fatal(err)
+			}
+
+			var stdout, stderr bytes.Buffer
+			if exitCode := Main([]string{"--repo", repo, "--json", "rules", "propose", "--summary", summaryPath, "--failure", "F001"}, &stdout, &stderr); exitCode != 0 {
+				t.Fatalf("exit=%d stdout=%s stderr=%s", exitCode, stdout.String(), stderr.String())
+			}
+			var proposal model.RuleProposal
+			if err := json.Unmarshal(stdout.Bytes(), &proposal); err != nil {
+				t.Fatal(err)
+			}
+			if proposal.Rule.Match.Start.Regex != "^TypeError: failed$" {
+				t.Fatalf("start regex=%q", proposal.Rule.Match.Start.Regex)
+			}
+		})
+	}
+}
+
 func TestRulesProposeFromSummaryFailsClosedOnUntrustedEvidence(t *testing.T) {
 	t.Parallel()
 	for _, test := range []struct {
@@ -104,6 +161,27 @@ func TestRulesProposeFromSummaryFailsClosedOnUntrustedEvidence(t *testing.T) {
 			name: "line and byte mismatch",
 			mutate: func(t *testing.T, _, summaryPath string) {
 				rewriteProposalSummary(t, summaryPath, func(summary *model.Summary) { summary.Failures[0].RawSpan.StartLine-- })
+			},
+			code: 2,
+		},
+		{
+			name: "start byte inside line",
+			mutate: func(t *testing.T, _, summaryPath string) {
+				rewriteProposalSummary(t, summaryPath, func(summary *model.Summary) { summary.Failures[0].RawSpan.StartByte++ })
+			},
+			code: 2,
+		},
+		{
+			name: "end byte before line end",
+			mutate: func(t *testing.T, _, summaryPath string) {
+				rewriteProposalSummary(t, summaryPath, func(summary *model.Summary) { summary.Failures[0].RawSpan.EndByte-- })
+			},
+			code: 2,
+		},
+		{
+			name: "end byte includes line terminator",
+			mutate: func(t *testing.T, _, summaryPath string) {
+				rewriteProposalSummary(t, summaryPath, func(summary *model.Summary) { summary.Failures[0].RawSpan.EndByte++ })
 			},
 			code: 2,
 		},
@@ -178,7 +256,7 @@ func writeSummaryProposalFixture(t *testing.T, repo string) (string, []byte, mod
 				StartLine: startLine,
 				EndLine:   startLine + 2,
 				StartByte: len(prefix),
-				EndByte:   len(raw),
+				EndByte:   len(raw) - 1,
 			},
 		}},
 	}

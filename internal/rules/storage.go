@@ -224,6 +224,9 @@ func ProposeFromEvidence(repoRoot string, tags []string, parser, rawLogPath, raw
 	if len(lines) > 1 && lines[len(lines)-1] == "" {
 		lines = lines[:len(lines)-1]
 	}
+	for i := range lines {
+		lines[i] = strings.TrimSuffix(lines[i], "\r")
+	}
 	if len(lines) != sourceSpan.EndLine-sourceSpan.StartLine+1 {
 		return model.RuleProposal{}, model.NewGaoriError(model.ExitCodeConfigError, "propose rule", fmt.Errorf("failure span lines do not match selected bytes"))
 	}

@@ -371,6 +371,9 @@ func proposeRuleFromSummary(repoRoot, summaryPath, failureID string) (model.Rule
 	if spanBytes > safety.MaxRegexInputBytes {
 		return model.RuleProposal{}, model.NewGaoriError(model.ExitCodeConfigError, "propose rule from summary", fmt.Errorf("failure byte span is invalid or exceeds %d bytes", safety.MaxRegexInputBytes))
 	}
+	if err := validateFailureSpanBoundaries(rawFile, info.Size(), span); err != nil {
+		return model.RuleProposal{}, err
+	}
 	prefixLines, err := countNewlines(io.NewSectionReader(rawFile, 0, int64(span.StartByte)))
 	if err != nil {
 		return model.RuleProposal{}, model.NewGaoriError(model.ExitCodeArtifactError, "validate summary failure span", err)
@@ -383,6 +386,36 @@ func proposeRuleFromSummary(repoRoot, summaryPath, failureID string) (model.Rule
 		return model.RuleProposal{}, model.NewGaoriError(model.ExitCodeArtifactError, "read summary failure span", err)
 	}
 	return rules.ProposeFromEvidence(repoRoot, summary.Tags, summary.Parser, resolvedRaw, actualSHA, inferSummarySourceRun(filepath.Dir(resolvedSummary)), summary.CommandID, span, segment)
+}
+
+func validateFailureSpanBoundaries(rawFile *os.File, rawSize int64, span model.RawSpan) error {
+	if span.StartByte > 0 {
+		previous := []byte{0}
+		if _, err := rawFile.ReadAt(previous, int64(span.StartByte-1)); err != nil {
+			return model.NewGaoriError(model.ExitCodeArtifactError, "read failure start boundary", err)
+		}
+		if previous[0] != '\n' {
+			return model.NewGaoriError(model.ExitCodeConfigError, "propose rule from summary", fmt.Errorf("failure start byte is not at a line boundary"))
+		}
+	}
+	if int64(span.EndByte) == rawSize {
+		last := []byte{0}
+		if _, err := rawFile.ReadAt(last, rawSize-1); err != nil {
+			return model.NewGaoriError(model.ExitCodeArtifactError, "read failure end boundary", err)
+		}
+		if last[0] == '\n' {
+			return model.NewGaoriError(model.ExitCodeConfigError, "propose rule from summary", fmt.Errorf("failure end byte includes a line terminator"))
+		}
+		return nil
+	}
+	next := []byte{0}
+	if _, err := rawFile.ReadAt(next, int64(span.EndByte)); err != nil {
+		return model.NewGaoriError(model.ExitCodeArtifactError, "read failure end boundary", err)
+	}
+	if next[0] != '\n' {
+		return model.NewGaoriError(model.ExitCodeConfigError, "propose rule from summary", fmt.Errorf("failure end byte is not at a line boundary"))
+	}
+	return nil
 }
 
 func countNewlines(reader io.Reader) (int, error) {
