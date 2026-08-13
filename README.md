@@ -24,7 +24,7 @@ Gaori is not a test gate or verification authority. The parent project decides w
 Install the current release with Go:
 
 ```bash
-go install github.com/irootkernel/gaori@v0.1.10
+go install github.com/irootkernel/gaori@v0.1.11
 gaori --version
 ```
 
@@ -34,10 +34,10 @@ From a source checkout, use:
 make install
 ```
 
-Projects that pin a local Gaori toolchain can install the versioned binary at `~/.local/gaori/toolchains/v0.1.10/bin/`:
+Projects that pin a local Gaori toolchain can install the versioned binary at `~/.local/gaori/toolchains/v0.1.11/bin/`:
 
 ```bash
-VERSION=0.1.10 make install-toolchain
+VERSION=0.1.11 make install-toolchain
 ```
 
 ## Optional: configure an AI coding agent
@@ -70,7 +70,7 @@ Otherwise fetch it. There is no universal skill-discovery path, so set the desti
 ```bash
 set -e
 : "${GAORI_SKILL_DIR:?set to the documented use-gaori skill directory}"
-gaori_skill_ref=main   # replace with the release tag matching your installed binary once one ships skills/
+gaori_skill_ref=v0.1.11
 mkdir -p "$GAORI_SKILL_DIR/references"
 curl -fsSLo "$GAORI_SKILL_DIR/SKILL.md" \
   "https://raw.githubusercontent.com/irootkernel/gaori/$gaori_skill_ref/skills/use-gaori/SKILL.md"
@@ -81,7 +81,7 @@ done
 ls "$GAORI_SKILL_DIR"/SKILL.md "$GAORI_SKILL_DIR"/references/*.md
 ```
 
-The skill is source-distributed: a GitHub source archive includes it only from the first release tag created after `skills/` was added, so fetch from `main` until such a release ships. `go install`, `make install`, and `make install-toolchain` install only the Gaori binary and do not copy or activate the skill.
+The skill is source-distributed in the v0.1.11 GitHub source archive. `go install`, `make install`, and `make install-toolchain` install only the Gaori binary and do not copy or activate the skill.
 
 ## Try it in five minutes
 
