@@ -9,6 +9,8 @@ Use Gaori as an optional deterministic command runner and evidence compressor. L
 
 Global flags (`--json`, `--run-id`, `--repo`, `--config`, `--output-dir`) go before the subcommand; command flags go after it — so `gaori --json run unit`, never `gaori run --json unit`.
 
+Use `gaori --help`, `gaori help <command>`, or `gaori help rules <subcommand>` to discover the installed command surface. Help exits `0`; invalid invocations still exit `2`.
+
 ## Establish current state
 
 1. Confirm availability without installing anything:

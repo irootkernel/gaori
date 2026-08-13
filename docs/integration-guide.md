@@ -60,7 +60,6 @@ These are current boundaries, not hidden partial features:
 - Automatic retention, scheduled cleanup, cleanup of incomplete or scoped runs, and cleanup of caller-selected output directories.
 - Consumer-specific evidence snapshots. Consumers should use or normalize the existing status, summary, and raw-log references.
 - A bundled CI-provider workflow or a cross-platform release matrix. The repository tests platform-neutral behavior plus additional Unix-only install, process-group, and signal behavior.
-- A successful built-in `--help` surface. The current CLI returns config exit code `2` for `--help`; use the [CLI reference](user-interface.md) for command syntax.
 
 No open implementation items are currently recorded in `todo.md`. The boundaries above are not future commitments; a new requirement and roadmap item should be approved before broadening them.
 

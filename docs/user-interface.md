@@ -5,6 +5,8 @@ Scope: CLI-first interface for Gaori v0.1, including schema-v2 tags, explicit pa
 
 This is the complete command reference. First-time users should begin with the repository [README](../README.md); parent-project owners should use the [integration guide](integration-guide.md) for ownership boundaries and adoption steps.
 
+The complete hierarchy has built-in help. `gaori --help`, `gaori help <command>`, `<command> --help`, and `gaori help rules <subcommand>` write plain text to stdout and exit `0`. A `--help` argument after the ad-hoc `--` boundary belongs to the child command.
+
 ## Interface principles
 
 - CLI-first and script-friendly.

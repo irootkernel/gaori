@@ -59,6 +59,13 @@ func Main(args []string, stdout, stderr io.Writer) int {
 }
 
 func Run(args []string, stdout, stderr io.Writer, info BuildInfo) int {
+	if path, ok := helpRequest(args); ok {
+		if err := writeHelp(stdout, path); err != nil {
+			writeLine(stderr, err)
+			return int(model.ExitCodeConfigError)
+		}
+		return 0
+	}
 	opts, remaining, err := parseGlobalOptions(args)
 	if err != nil {
 		writeLine(stderr, err)

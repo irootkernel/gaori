@@ -4,6 +4,16 @@
 
 Gaori is an optional local execution and evidence-compression adapter for long or noisy test commands. It preserves the original output and produces compact failure evidence that is easier for people, coding agents, and automation to consume.
 
+Discover the installed command surface without leaving the terminal:
+
+```bash
+gaori --help
+gaori help run
+gaori help rules propose
+```
+
+Help requests write plain text to stdout and exit `0`. Invalid commands still fail closed with exit code `2`.
+
 ## Why Gaori?
 
 Gaori (가오리) is the Korean word for a ray. Like a ray gliding along the seafloor and searching for food, Gaori scans test logs and surfaces only the failure evidence that matters.
