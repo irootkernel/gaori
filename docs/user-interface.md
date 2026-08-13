@@ -1,7 +1,7 @@
 # Gaori User Interface
 
-Status: Current for `gaori v0.1.11`; complete through `CLEAN-001`
-Scope: CLI-first interface for Gaori v0.1, including schema-v2 tags, explicit parser selection, and operator-directed standalone cleanup
+Status: Current development interface after `gaori v0.1.11`; complete through `MCP-004`
+Scope: CLI and local STDIO MCP interfaces for Gaori v0.1
 
 This is the complete command reference. First-time users should begin with the repository [README](../README.md); parent-project owners should use the [integration guide](integration-guide.md) for ownership boundaries and adoption steps.
 
@@ -28,7 +28,14 @@ gaori summarize [--parser <parser>] [--tag <tag> ...] <raw-log>
 gaori excerpt --summary <summary-path> <failure-id>
 gaori clean (--older-than <Nd> | --all) [--dry-run]
 gaori config check
+gaori mcp
 ```
+
+## MCP server
+
+`gaori [--repo <path>] [--config <path>] [--output-dir <path>] mcp` serves newline-delimited MCP over stdin/stdout. It rejects operands, `--json`, and `--run-id`; it does not open a socket or detach commands.
+
+The server exposes `start_configured_run`, `start_ad_hoc_run`, `get_run`, `wait_run`, `cancel_run`, and `get_excerpt`. Starts return a session-local invocation ID immediately. Snapshots move through `queued`, `executing`, `materializing`, and `finished` with monotonically increasing revisions. `wait_run` accepts a prior revision and waits at most 50 seconds; expiry or cancellation of that wait request never cancels the command. Explicit `cancel_run` and server shutdown cancel active commands. Finished results preserve the normal command status, exit code, extractor quality, and standalone artifact paths. Raw-log contents are never returned through MCP.
 
 ## Rule commands
 

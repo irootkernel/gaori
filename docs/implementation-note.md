@@ -30,6 +30,8 @@ internal/rules/
   rule model, YAML load/save, CRUD, validation, test/propose
 internal/safety/
   identifier validation, rooted path containment, redaction, noise filtering, regex/size bounds
+internal/cli/mcp.go
+  STDIO MCP tools, session-local invocation registry, revision waits, cancellation, shutdown drain
 ```
 
 ## Agent skills
@@ -38,7 +40,7 @@ internal/safety/
 
 Keep skills agent-agnostic and subordinate to the executable and documentation contracts. They may teach safe use of Gaori, but must not add runtime behavior or imply workflow or acceptance authority. They must distinguish portable `.gaori/tester.yaml` and reviewed `.gaori/tester/rules/*.yaml` from local toolchain metadata, proposals, and run evidence. Source archives include the skill only from the first release tag created after `skills/` was added; binary installation and toolchain installation never copy or activate it.
 
-The skill hardcodes the CLI surface (subcommands, flags, the eleven parser labels, exit codes, config schema, cleanup semantics) and is executed against by agents, so treat it as a user-facing document under the [AGENTS.md](../AGENTS.md) rule to update user-facing docs whenever CLI or artifact behavior changes: verify `skills/use-gaori/**` still matches the current surface in the same change.
+The skill hardcodes the CLI and MCP surfaces (subcommands, tools, phases, flags, parser labels, exit codes, config schema, cleanup semantics), so treat it as a user-facing document: verify `skills/use-gaori/**` still matches the current surface whenever either interface changes.
 
 ## Runner guidance
 

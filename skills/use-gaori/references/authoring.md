@@ -63,3 +63,5 @@ Rules only extract evidence. They cannot select commands, change pass or fail, w
 ## Unsupported authoring surfaces
 
 Gaori does not author or execute workflows, policies, manifests, procedures, goals, review plans, or acceptance rules. If a request uses those terms, identify the parent tool that owns the artifact. Do not invent a Gaori file format or encode external lifecycle policy in extraction rules.
+
+The MCP server intentionally exposes execution lifecycle and bounded excerpt tools only. Use the existing CLI for configuration checks, summarize, rule CRUD/proposals, and cleanup; MCP invocation state is not configuration or policy.

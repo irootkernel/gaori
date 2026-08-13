@@ -1,7 +1,7 @@
 # Gaori Architecture
 
-Status: Complete through `CLEAN-001`
-Scope: Standalone Gaori v0.1 architecture, including schema-v2 tags, parser selection, and operator-directed standalone evidence cleanup
+Status: Complete through `MCP-004`
+Scope: Standalone Gaori v0.1 architecture, including session-local STDIO MCP execution
 
 This document defines Gaori's technical and artifact contracts. See the [integration guide](integration-guide.md) for parent-project ownership, supported capability status, and rollout guidance.
 
@@ -30,6 +30,9 @@ Gaori is a deterministic test and log-evidence tool. It should run test commands
 
 ```text
 CLI
+ ├─ MCP Session Registry
+ │   ├─ Revision wait
+ │   └─ Explicit cancellation
  ├─ Config Loader
  ├─ Command Registry
  ├─ Runner
@@ -56,6 +59,10 @@ CLI
      ├─ Rule Test
      └─ Rule Propose
 ```
+
+## MCP lifecycle data flow
+
+`gaori mcp` runs an attached STDIO server. A start tool allocates an in-memory invocation in `queued`, then the shared run pipeline reports `executing` and `materializing` before the registry publishes `finished`. Every change increments a revision and wakes bounded `wait_run` calls. Wait request cancellation is isolated from the run context; only explicit cancellation or server shutdown cancels execution. Final results and excerpts reuse existing redaction, containment, and artifact code, and raw-log bytes never enter MCP responses. The registry is discarded on server exit and is not a workflow ledger.
 
 ## Data flow: configured command
 

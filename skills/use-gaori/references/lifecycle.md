@@ -26,7 +26,7 @@ Gaori has no `init` command. A configured workspace exists only when the selecte
 
 ## Run start and replacement
 
-Gaori has no session or task registry. Start only the concrete command the user or parent project selected:
+Gaori has no durable task registry. When all Gaori MCP tools are connected, start only the concrete command selected by the user or parent project with `start_configured_run` or `start_ad_hoc_run`. Record its session-local invocation ID and revision, then use `wait_run`; `queued`, `executing`, `materializing`, and `finished` are live phases, not command results. Otherwise use the CLI:
 
 ```bash
 gaori --json run unit
@@ -40,13 +40,13 @@ gaori --json --run-id parent-run-001 run unit
 
 Tagged ad-hoc runs time out after 600 seconds unless one `--timeout-sec <1..86400>` is supplied before the child `--` boundary. A timeout is an authoritative `timed_out` result with exit `124`; inspect its partial evidence before deciding whether a retry is safe.
 
-The final `<command-id>.status.json` appears only after execution and extraction finish. Its absence is not a Gaori `running` state. While the process is active, use the parent process handle as the execution authority; do not infer progress from stale artifacts.
+The final `<command-id>.status.json` appears only after execution and extraction finish. Its absence is not a filesystem `running` state. MCP snapshots provide live state only while the same server session exists; CLI callers must still use the parent process handle.
 
 ## Cancellation and service control
 
-Gaori has no cancel command. Sending SIGINT or SIGTERM to a live invocation is an operator cancellation that requires explicit user intent. On Unix, Gaori forwards the signal to the child process group and records `killed` with exit `128 + signal` (`130` for SIGINT, `143` for SIGTERM) when artifact materialization succeeds. A configured timeout records `timed_out` with exit `124`; cancellation of the parent context through an embedding caller may instead record `killed` with exit `137`.
+`cancel_run` is the MCP-only explicit cancellation surface and requires user intent. Cancelling or timing out `wait_run` does not cancel execution. CLI invocations still use SIGINT or SIGTERM. On Unix, Gaori forwards cancellation to the child process group; MCP context cancellation records `killed` with exit `137` when materialization succeeds, while SIGINT/SIGTERM use `130`/`143`. Configured timeout remains `timed_out` with exit `124`.
 
-Gaori has no daemon, resident watcher, or service-control command. Do not translate requests to start, stop, restart, or repair a service into unrelated shell or process operations.
+`gaori mcp` is an attached STDIO server, not a daemon or service controller. Server shutdown cancels active invocations and discards their registry. It cannot restart or recover them.
 
 ## Cleanup, reset, and repair
 

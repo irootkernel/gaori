@@ -44,6 +44,7 @@ The default adoption model is selective: route commands through Gaori when their
 | Original raw evidence | Yes | Raw logs are preserved and intentionally not redacted. |
 | Timeout | Yes | A timed-out command retains partial evidence and uses status `timed_out` with exit code `124`. |
 | Operator interruption | Yes | Unix SIGINT/SIGTERM process-group behavior is covered by built-binary tests; non-Unix builds signal the direct child and have a narrower guarantee. |
+| Local MCP lifecycle | Development | `gaori mcp` provides session-local asynchronous start, revision wait, explicit cancel, and bounded excerpt tools over STDIO. |
 | Deterministic binary selection | Yes | The bundled Python 3 resolver selects an explicit environment, metadata, or versioned toolchain binary and never falls back to `PATH`. |
 
 Global options are position-independent within the Gaori-owned argument prefix. Integrations may use either `gaori --json run unit` or `gaori run unit --json`; arguments after an ad-hoc `--` boundary are never interpreted as Gaori globals.
@@ -55,7 +56,7 @@ These are current boundaries, not hidden partial features:
 - Selection or enforcement of the parent project's required test gates.
 - Test planning, test generation, code review, or acceptance decisions.
 - External orchestration, workflow/session management, or acceptance-state management.
-- A resident watcher daemon, running-state heartbeat, or progress events. Gaori writes final `status.json`; the parent project owns in-flight state, polling, and notification.
+- A resident watcher daemon, filesystem running-state heartbeat, or durable progress service. CLI runs still write only final `status.json`; an attached MCP client may use the ephemeral session-local lifecycle instead of process polling.
 - Automatic issue creation, release, push, install, update, or runtime activation.
 - Automatic generic-parser fallback after a specialized parser misses.
 - Redaction of the original raw log or of literal artifact-reference paths.
@@ -267,6 +268,8 @@ A watcher that suppresses duplicate notifications must hash exactly this ordered
 10. `raw_log_path`
 
 Gaori also writes `status_hash` from these final, redacted surfaced values. A parent watcher owns polling frequency, notification policy, retries, retention, and any transition into an external state store.
+
+An attached coding agent may instead use `gaori mcp`: start a run, pass the returned revision to `wait_run`, and repeat only when the bounded wait reports no change. This avoids OS process polling but does not create durable state. If the MCP server disconnects, reconcile the command and final artifacts before retrying; a new server cannot recover the old invocation ID.
 
 ## 7. Integrate another evidence consumer
 

@@ -1,6 +1,6 @@
 ---
 name: use-gaori
-description: "Run and inspect Gaori, a local CLI (`gaori`) that executes test commands and compresses long or noisy output into bounded failure evidence under `.gaori/`. Use when a repo has `.gaori/tester.yaml` or `gaori` on PATH and you need to run a test command, summarize an existing raw log, read a run's status/summary/excerpt artifacts, or recover from an uncertain Gaori run; also before touching `.gaori/` config, rules, or cleanup. Gaori is not a test gate: it never decides which checks are required, never changes pass/fail, and has no session, workflow, daemon, or reset commands."
+description: "Run and inspect Gaori through its local CLI or STDIO MCP tools, compressing long or noisy test output into bounded evidence under `.gaori/`. Use when Gaori is configured or available and you need to run, wait for, cancel, inspect, or recover a test invocation. Gaori is not a test gate: it never decides required checks, changes pass/fail, or owns durable workflow state."
 ---
 
 # Use Gaori
@@ -42,6 +42,8 @@ Use `gaori --help`, `gaori help <command>`, or `gaori help rules <subcommand>` t
    - for one failure: pass the run or summarize output's `summary_json` field to `gaori --json excerpt --summary <summary_json> <failure-id>`. The `summary_markdown` field is for human review; legacy `summary` remains its alias. Failure IDs (`F001`, ...) come from the structured summary's failure records.
 
 ## Run and report
+
+When the connected tool list contains all six Gaori MCP tools, prefer MCP for a new long-running test: call `start_configured_run` or `start_ad_hoc_run`, then use `get_run` or `wait_run` with the returned invocation ID and revision. A wait may return unchanged after at most 50 seconds; call it again without treating that as a failure. Do not use process polling. Use `cancel_run` only with explicit user intent. When MCP is absent, incomplete, or the installed Gaori version does not provide it, use the CLI workflow below.
 
 1. Perform the real requested external check before recording that it ran. Use `gaori --json run <command-id>` for a configured command, or an explicitly selected tagged ad-hoc invocation:
 
@@ -96,4 +98,4 @@ gaori --json excerpt --summary .gaori/runs/standalone/<UTC-timestamp>/unit.summa
 
 Require explicit user intent before: initializing `.gaori/`, cancelling a live run, cleanup, reusing a fixed `--run-id` with the same command ID (it can replace prior artifacts), deleting a rule, or any repair-like intervention.
 
-Gaori has no session manager, workflow engine, goal ledger, daemon, service controller, reset command, or general repair command. When a request needs one of those, say so and name the tool that owns it; do not simulate it with unrelated shell or process operations.
+Gaori's MCP registry is ephemeral to one attached server process. Gaori still has no durable session manager, workflow engine, goal ledger, daemon, service controller, reset command, or general repair command. Do not represent an MCP invocation ID as durable or retry blindly after disconnect.

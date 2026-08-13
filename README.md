@@ -26,6 +26,7 @@ Use it when you want to:
 - give another tool stable JSON status and evidence paths;
 - summarize a log that was produced outside Gaori;
 - remove completed standalone evidence after an operator-selected retention period.
+- let a local coding agent start, wait for, inspect, and explicitly cancel a long-running test through MCP without polling an operating-system process.
 
 Gaori is not a test gate or verification authority. The parent project decides which checks are required and when they run; reviewers or parent workflows decide acceptance. Gaori may wrap a required command, but it does not make that command required. It also never changes a command result: a failing test command remains failed even when no parser recognizes its output.
 
@@ -92,6 +93,26 @@ ls "$GAORI_SKILL_DIR"/SKILL.md "$GAORI_SKILL_DIR"/references/*.md
 ```
 
 The skill is source-distributed in the v0.1.11 GitHub source archive. `go install`, `make install`, and `make install-toolchain` install only the Gaori binary and do not copy or activate the skill.
+
+## Use the local MCP server
+
+The current source tree adds a STDIO MCP server for local coding agents. It is not part of the published v0.1.11 binary or its source-distributed skill. Build this revision, then register the binary from the repository that should own test artifacts:
+
+```bash
+make build
+codex mcp add gaori -- ./bin/gaori --repo "$PWD" mcp
+```
+
+For project-scoped Codex configuration in a trusted project, use the equivalent `.codex/config.toml` entry:
+
+```toml
+[mcp_servers.gaori]
+command = "/absolute/path/to/gaori"
+args = ["--repo", "/absolute/path/to/project", "mcp"]
+tool_timeout_sec = 60
+```
+
+The tools are `start_configured_run`, `start_ad_hoc_run`, `get_run`, `wait_run`, `cancel_run`, and `get_excerpt`. A start returns immediately. Use the returned `invocation_id` and `revision` with `wait_run`; a 50-second wait expiry does not cancel the test. Only `cancel_run` or MCP server shutdown cancels an active run. The registry exists only for that server process, while completed evidence remains in the normal standalone artifact layout. MCP never returns raw-log contents.
 
 ## Try it in five minutes
 
