@@ -80,7 +80,7 @@ On Unix, the runner starts the command in its own process group. SIGINT and SIGT
 
 ```text
 1. User runs `gaori run --parser go-test --tag go --tag unit -- go test ...`.
-2. CLI validates the single parser value, required tags, explicit `--` boundary, and non-empty child argv before execution or artifact creation.
+2. CLI extracts global options from any position in the Gaori-owned prefix, preserves command-option values, then validates the parser, tags, explicit `--` boundary, and non-empty child argv before execution or artifact creation.
 3. Config loader reads optional project redaction/noise settings and rules; a missing default config is allowed for ad-hoc execution.
 4. Tags are canonicalized, the selected parser remains exact, and applicable rules require the same parser plus all rule tags.
 5. Artifact writer opens the contained raw log, and the runner executes the child argv unchanged with the standard ad-hoc timeout.

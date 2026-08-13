@@ -88,6 +88,8 @@ Recommended global options:
 
 `clean` accepts only the global `--repo` and `--json` options. Config, run-scoped, and caller-selected output options are rejected because cleanup is fixed to completed evidence under the selected repository's `.gaori/runs/standalone/` directory.
 
+Global options may appear before or after a subcommand and its Gaori operands, so `gaori --json run unit` and `gaori run unit --json` are equivalent. For ad-hoc execution, the explicit `--` remains the ownership boundary: every following argument is passed to the child unchanged, including names such as `--json` or `--repo`.
+
 Run IDs, configured command IDs, rule IDs, and tags must match `[A-Za-z0-9][A-Za-z0-9_-]*`. Invalid identifiers fail with config exit code `2`; run identifiers and tags are checked before the test command starts. Tags are sorted and deduplicated before matching or serialization.
 
 Gaori output is plain text and does not emit ANSI color. Historical `--no-color` and `--verbose` placeholders had no executable behavior and are not supported options; either flag now fails closed with config exit code `2`.

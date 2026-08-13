@@ -7,7 +7,7 @@ description: "Run and inspect Gaori, a local CLI (`gaori`) that executes test co
 
 Use Gaori as an optional deterministic command runner and evidence compressor. Let the parent project's documentation decide which checks are required.
 
-Global flags (`--json`, `--run-id`, `--repo`, `--config`, `--output-dir`) go before the subcommand; command flags go after it — so `gaori --json run unit`, never `gaori run --json unit`.
+Global flags (`--json`, `--run-id`, `--repo`, `--config`, `--output-dir`) may appear before or after the subcommand and its Gaori operands. For ad-hoc runs, keep Gaori options before the explicit `--`; everything after that boundary belongs to the child command unchanged.
 
 Use `gaori --help`, `gaori help <command>`, or `gaori help rules <subcommand>` to discover the installed command surface. Help exits `0`; invalid invocations still exit `2`.
 

@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"slices"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -114,18 +115,94 @@ func Run(args []string, stdout, stderr io.Writer, info BuildInfo) int {
 
 func parseGlobalOptions(args []string) (globalOptions, []string, error) {
 	var opts globalOptions
-	fs := flag.NewFlagSet("global", flag.ContinueOnError)
-	fs.SetOutput(io.Discard)
-	fs.StringVar(&opts.ConfigPath, "config", "", "config override")
-	fs.StringVar(&opts.RepoRoot, "repo", "", "repo root")
-	fs.StringVar(&opts.OutputDir, "output-dir", "", "output dir")
-	fs.StringVar(&opts.RunID, "run-id", "", "run id")
-	fs.BoolVar(&opts.JSON, "json", false, "json output")
-	fs.BoolVar(&opts.ShowVersion, "version", false, "show version")
-	if err := fs.Parse(args); err != nil {
-		return opts, nil, err
+	remaining := make([]string, 0, len(args))
+	boundary := slices.Index(args, "--")
+	if boundary < 0 {
+		boundary = len(args)
 	}
-	return opts, fs.Args(), nil
+	for i := 0; i < boundary; i++ {
+		arg := args[i]
+		name, inlineValue, hasInlineValue, known := parseGlobalOptionToken(arg)
+		if !known {
+			remaining = append(remaining, arg)
+			if commandOptionNeedsValue(arg) && i+1 < boundary {
+				i++
+				remaining = append(remaining, args[i])
+			}
+			continue
+		}
+		switch name {
+		case "json", "version":
+			value := true
+			if hasInlineValue {
+				parsed, err := strconv.ParseBool(inlineValue)
+				if err != nil {
+					return opts, nil, fmt.Errorf("invalid value %q for -%s", inlineValue, name)
+				}
+				value = parsed
+			}
+			if name == "json" {
+				opts.JSON = value
+			} else {
+				opts.ShowVersion = value
+			}
+		default:
+			value := inlineValue
+			if !hasInlineValue {
+				if i+1 >= boundary {
+					return opts, nil, fmt.Errorf("flag needs an argument: -%s", name)
+				}
+				i++
+				value = args[i]
+			}
+			switch name {
+			case "config":
+				opts.ConfigPath = value
+			case "repo":
+				opts.RepoRoot = value
+			case "output-dir":
+				opts.OutputDir = value
+			case "run-id":
+				opts.RunID = value
+			}
+		}
+	}
+	remaining = append(remaining, args[boundary:]...)
+	if len(remaining) > 0 && strings.HasPrefix(remaining[0], "-") && remaining[0] != "--" {
+		name := strings.TrimPrefix(strings.TrimPrefix(remaining[0], "-"), "-")
+		if optionName, _, found := strings.Cut(name, "="); found {
+			name = optionName
+		}
+		return opts, nil, fmt.Errorf("flag provided but not defined: -%s", name)
+	}
+	return opts, remaining, nil
+}
+
+func commandOptionNeedsValue(arg string) bool {
+	trimmed := strings.TrimPrefix(strings.TrimPrefix(arg, "-"), "-")
+	if strings.Contains(trimmed, "=") {
+		return false
+	}
+	switch trimmed {
+	case "tag", "parser", "summary", "older-than", "file", "reason", "rule", "log", "expect-span", "raw-log", "span", "timeout-sec":
+		return true
+	default:
+		return false
+	}
+}
+
+func parseGlobalOptionToken(arg string) (name, value string, hasValue, known bool) {
+	if !strings.HasPrefix(arg, "-") || arg == "-" {
+		return "", "", false, false
+	}
+	trimmed := strings.TrimPrefix(strings.TrimPrefix(arg, "-"), "-")
+	name, value, hasValue = strings.Cut(trimmed, "=")
+	switch name {
+	case "config", "repo", "output-dir", "run-id", "json", "version":
+		return name, value, hasValue, true
+	default:
+		return "", "", false, false
+	}
 }
 
 func versionCommand(opts globalOptions, args []string, stdout, stderr io.Writer, info BuildInfo) int {

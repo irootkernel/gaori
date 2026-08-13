@@ -286,7 +286,7 @@ gaori excerpt \
   F001
 ```
 
-Add `--json` when a script needs compact command output. Its `summary_json` field is the structured summary accepted by `excerpt`, while `summary_markdown` is the human review path. The legacy `summary` and `extractor` fields remain aliases for `summary_markdown` and `extractor_status`. Use `--repo`, `--config`, or `--output-dir` to select a different project root, config, or standalone evidence directory.
+Add `--json` when a script needs compact command output. Global options may appear before or after the subcommand and its operands, but options after an ad-hoc `--` boundary always belong to the child command. The `summary_json` field is the structured summary accepted by `excerpt`, while `summary_markdown` is the human review path. The legacy `summary` and `extractor` fields remain aliases for `summary_markdown` and `extractor_status`. Use `--repo`, `--config`, or `--output-dir` to select a different project root, config, or standalone evidence directory.
 
 ## Safe defaults
 

@@ -25,6 +25,7 @@ Implementation note: the original v0.1 roadmap and the recorded `RQHAR` hardenin
 - [x] `GAORI-REQ-RQCLI-008` Provide successful plain-text help for the root command, every primary command, the rules command, and every rules subcommand through `help`, `-h`, and `--help`, without consuming child arguments after the ad-hoc `--` boundary.
 - [x] `GAORI-REQ-RQCLI-009` Expose unambiguous `summary_markdown`, `summary_json`, and `extractor_status` fields in run and summarize console JSON while retaining `summary` and `extractor` as compatibility aliases and leaving artifact and watcher schemas unchanged.
 - [x] `GAORI-REQ-RQCLI-010` Provide `gaori config check` as a side-effect-free human and JSON preflight for the selected schema-v2 config and every stored project rule, without executing commands, resolving executables, or creating runtime artifacts.
+- [x] `GAORI-REQ-RQCLI-011` Accept global options before or after subcommands and operands while preserving command-option values and passing every argument after an ad-hoc `--` boundary to the child unchanged.
 
 ## RQCFG: Project configuration
 

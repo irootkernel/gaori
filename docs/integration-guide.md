@@ -46,6 +46,8 @@ The default adoption model is selective: route commands through Gaori when their
 | Operator interruption | Yes | Unix SIGINT/SIGTERM process-group behavior is covered by built-binary tests; non-Unix builds signal the direct child and have a narrower guarantee. |
 | Deterministic binary selection | Yes | The bundled Python 3 resolver selects an explicit environment, metadata, or versioned toolchain binary and never falls back to `PATH`. |
 
+Global options are position-independent within the Gaori-owned argument prefix. Integrations may use either `gaori --json run unit` or `gaori run unit --json`; arguments after an ad-hoc `--` boundary are never interpreted as Gaori globals.
+
 ## Not provided by Gaori v0.1
 
 These are current boundaries, not hidden partial features:
