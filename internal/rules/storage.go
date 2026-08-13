@@ -183,18 +183,9 @@ func Propose(repoRoot string, tags []string, parser, rawLogPath string, startLin
 }
 
 func proposeAt(repoRoot string, tags []string, parser, rawLogPath string, startLine, endLine int, now time.Time) (model.RuleProposal, error) {
-	canonical, err := tagset.Canonicalize(tags)
+	canonical, err := validateProposalSource(tags, parser, startLine, endLine)
 	if err != nil {
-		return model.RuleProposal{}, model.NewGaoriError(model.ExitCodeConfigError, "propose rule", err)
-	}
-	if strings.TrimSpace(parser) == "" {
-		return model.RuleProposal{}, model.NewGaoriError(model.ExitCodeConfigError, "propose rule", fmt.Errorf("--parser is required"))
-	}
-	if !knownRuleParsers[parser] {
-		return model.RuleProposal{}, model.NewGaoriError(model.ExitCodeConfigError, "propose rule", fmt.Errorf("unsupported parser label %q", parser))
-	}
-	if startLine <= 0 || endLine < startLine {
-		return model.RuleProposal{}, model.NewGaoriError(model.ExitCodeConfigError, "propose rule", fmt.Errorf("invalid span %d:%d", startLine, endLine))
+		return model.RuleProposal{}, err
 	}
 	resolved := rawLogPath
 	if !filepath.IsAbs(resolved) {
@@ -209,6 +200,56 @@ func proposeAt(repoRoot string, tags []string, parser, rawLogPath string, startL
 		return model.RuleProposal{}, model.NewGaoriError(model.ExitCodeConfigError, "propose rule", fmt.Errorf("span end line %d exceeds %d", endLine, len(lines)))
 	}
 	segment := lines[startLine-1 : endLine]
+	return writeProposalAt(repoRoot, canonical, parser, resolved, sha256String(raw), inferSourceRun(resolved), inferSourceCommand(resolved), model.RawSpan{StartLine: startLine, EndLine: endLine}, segment, now)
+}
+
+func ProposeFromEvidence(repoRoot string, tags []string, parser, rawLogPath, rawLogSHA, sourceRun, sourceCommand string, sourceSpan model.RawSpan, segment []byte) (model.RuleProposal, error) {
+	canonical, err := validateProposalSource(tags, parser, sourceSpan.StartLine, sourceSpan.EndLine)
+	if err != nil {
+		return model.RuleProposal{}, err
+	}
+	if sourceSpan.EndLine-sourceSpan.StartLine+1 > safety.MaxBlockLines-2 {
+		return model.RuleProposal{}, model.NewGaoriError(model.ExitCodeConfigError, "propose rule", fmt.Errorf("selected failure span must contain at most %d lines", safety.MaxBlockLines-2))
+	}
+	if len(segment) == 0 || len(segment) > safety.MaxRegexInputBytes {
+		return model.RuleProposal{}, model.NewGaoriError(model.ExitCodeConfigError, "propose rule", fmt.Errorf("selected failure span must contain 1 to %d bytes", safety.MaxRegexInputBytes))
+	}
+	if sourceSpan.StartByte < 0 || sourceSpan.EndByte <= sourceSpan.StartByte || sourceSpan.EndByte-sourceSpan.StartByte != len(segment) {
+		return model.RuleProposal{}, model.NewGaoriError(model.ExitCodeConfigError, "propose rule", fmt.Errorf("failure byte span does not match selected evidence"))
+	}
+	if strings.TrimSpace(rawLogSHA) == "" || strings.TrimSpace(sourceRun) == "" || strings.TrimSpace(sourceCommand) == "" {
+		return model.RuleProposal{}, model.NewGaoriError(model.ExitCodeConfigError, "propose rule", fmt.Errorf("summary evidence is missing provenance metadata"))
+	}
+	lines := strings.Split(strings.ReplaceAll(string(segment), "\r\n", "\n"), "\n")
+	if len(lines) > 1 && lines[len(lines)-1] == "" {
+		lines = lines[:len(lines)-1]
+	}
+	if len(lines) != sourceSpan.EndLine-sourceSpan.StartLine+1 {
+		return model.RuleProposal{}, model.NewGaoriError(model.ExitCodeConfigError, "propose rule", fmt.Errorf("failure span lines do not match selected bytes"))
+	}
+	return writeProposalAt(repoRoot, canonical, parser, rawLogPath, rawLogSHA, sourceRun, sourceCommand, sourceSpan, lines, time.Now().UTC())
+}
+
+func validateProposalSource(tags []string, parser string, startLine, endLine int) ([]string, error) {
+	canonical, err := tagset.Canonicalize(tags)
+	if err != nil {
+		return nil, model.NewGaoriError(model.ExitCodeConfigError, "propose rule", err)
+	}
+	if strings.TrimSpace(parser) == "" {
+		return nil, model.NewGaoriError(model.ExitCodeConfigError, "propose rule", fmt.Errorf("--parser is required"))
+	}
+	if !knownRuleParsers[parser] {
+		return nil, model.NewGaoriError(model.ExitCodeConfigError, "propose rule", fmt.Errorf("unsupported parser label %q", parser))
+	}
+	if startLine <= 0 || endLine < startLine {
+		return nil, model.NewGaoriError(model.ExitCodeConfigError, "propose rule", fmt.Errorf("invalid span %d:%d", startLine, endLine))
+	}
+	return canonical, nil
+}
+
+func writeProposalAt(repoRoot string, canonical []string, parser, resolved, rawLogSHA, sourceRun, sourceCommand string, sourceSpan model.RawSpan, segment []string, now time.Time) (model.RuleProposal, error) {
+	startLine := sourceSpan.StartLine
+	endLine := sourceSpan.EndLine
 	startPattern := quoteFirstMeaningfulLine(segment)
 	if startPattern == "" {
 		return model.RuleProposal{}, model.NewGaoriError(model.ExitCodeConfigError, "propose rule", fmt.Errorf("span %d:%d does not contain a usable start line", startLine, endLine))
@@ -228,14 +269,11 @@ func proposeAt(repoRoot string, tags []string, parser, rawLogPath string, startL
 		Status: model.RuleStatusActive,
 		Provenance: model.RuleProvenance{
 			CreatedBy:       "gaori-rules-propose",
-			SourceRun:       inferSourceRun(resolved),
-			SourceCommand:   inferSourceCommand(resolved),
-			SourceLogSHA256: sha256String(raw),
-			SourceSpan: model.RawSpan{
-				StartLine: startLine,
-				EndLine:   endLine,
-			},
-			Reason: fmt.Sprintf("Proposed from %s lines %d:%d", filepath.Base(resolved), startLine, endLine),
+			SourceRun:       sourceRun,
+			SourceCommand:   sourceCommand,
+			SourceLogSHA256: rawLogSHA,
+			SourceSpan:      sourceSpan,
+			Reason:          fmt.Sprintf("Proposed from %s lines %d:%d", filepath.Base(resolved), startLine, endLine),
 		},
 		Match: model.RuleMatch{
 			Start: model.RuleRegex{Regex: startPattern},

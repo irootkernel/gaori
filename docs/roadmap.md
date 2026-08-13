@@ -1,6 +1,6 @@
 # Gaori Roadmap
 
-Status: Completed through `PORTA-001`, `CLIUX-007`, and `ADHOC-002`
+Status: Completed through `PORTA-001`, `CLIUX-007`, `RULES-004`, and `ADHOC-002`
 Scope: Implementation tracking for the Gaori v0.1 standalone baseline, hardening, tag and parser selection, release readiness, identity migration, operator-directed standalone evidence cleanup, portable project config, and CLI usability improvements
 
 This roadmap is a delivery record, not an operator guide or a promise that out-of-scope capabilities will be added. See the [integration guide](integration-guide.md) for the current supported/unsupported capability boundary and `todo.md` for explicitly accepted open work.
@@ -10,7 +10,7 @@ Task status values: `Planned`, `In Progress`, `Blocked`, `Done`, `Deferred`.
 Existing `Done` entries record completion of the original v0.1 implementation slices. They do not supersede or satisfy the later `HARDE` tasks, which close correctness, safety, verification, and documentation gaps found during repository review.
 
 Current implementation snapshot:
-- `Done`: `SETUP-001` to `SETUP-003`, `RUNNR-001` to `RUNNR-003`, `ARTIF-001` to `ARTIF-003`, `PARSE-001` to `PARSE-004`, `SAFEY-001` to `SAFEY-003`, `CLIUX-001` to `CLIUX-007`, `RULES-001` to `RULES-003`, `DOCUM-001` to `DOCUM-003`, `HARDE-001` to `HARDE-007`, `TAGS-001`, `ADHOC-001`, `ADHOC-002`, `RELRV-001` to `RELRV-009`, `BRAND-001`, `CLEAN-001`, `PORTA-001`
+- `Done`: `SETUP-001` to `SETUP-003`, `RUNNR-001` to `RUNNR-003`, `ARTIF-001` to `ARTIF-003`, `PARSE-001` to `PARSE-004`, `SAFEY-001` to `SAFEY-003`, `CLIUX-001` to `CLIUX-007`, `RULES-001` to `RULES-004`, `DOCUM-001` to `DOCUM-003`, `HARDE-001` to `HARDE-007`, `TAGS-001`, `ADHOC-001`, `ADHOC-002`, `RELRV-001` to `RELRV-009`, `BRAND-001`, `CLEAN-001`, `PORTA-001`
 - `In Progress`: none
 - `Deferred`: none
 - `Planned`: none
@@ -75,6 +75,7 @@ Current implementation snapshot:
 | RULES-001 | Done | Implement rule storage, list/search/show, disabled-rule handling, deletion reason, and project-local rule loading. | `GAORI-REQ-RQRUL-001`, `GAORI-REQ-RQRUL-002`, `GAORI-REQ-RQRUL-004` |
 | RULES-002 | Done | Implement create/update validation with provenance requirements, RE2-safe matching config, and capture group diagnostics. | `GAORI-REQ-RQRUL-003`, `GAORI-REQ-RQRUL-006`, `ADR-0007` |
 | RULES-003 | Done | Implement rule test and rule propose from raw-log span, including run-local proposed rule separation. | `GAORI-REQ-RQRUL-005`, `GAORI-REQ-RQRUL-007`, `GAORI-REQ-RQDOC-003` |
+| RULES-004 | Done | Propose a local rule candidate from one summary failure with matching-artifact validation, streaming raw checksum, bounded span reads, and preserved provenance. | `GAORI-REQ-RQRUL-003`, `GAORI-REQ-RQRUL-009`, `GAORI-REQ-RQSEC-004` |
 
 ## DOCUM: Documentation and release readiness
 

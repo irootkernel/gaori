@@ -40,6 +40,7 @@ gaori rules create --file <rule.yaml>
 gaori rules update <rule-id> --file <rule.yaml>
 gaori rules delete <rule-id> --reason <reason>
 gaori rules test --rule <rule-id> --log <raw-log> --expect-span <start:end>
+gaori rules propose --summary <summary.json> --failure <failure-id>
 gaori rules propose --tag <tag> [--tag <tag> ...] --parser <parser> --raw-log <raw-log> --span <start:end>
 ```
 
@@ -285,7 +286,15 @@ gaori rules delete generic-v1 --reason "superseded by v2"
 
 For project rules, `max_block_lines` counts the matched block including its start line. The matched block plus `include_context.before` and `include_context.after` must not exceed 160 lines; overbroad or overflow-sized values fail closed with config exit code `2`.
 
-Config YAML, stored rule YAML, `rules create/update --file` inputs, and `rules propose --raw-log` inputs may be at most 256 KiB. Larger files fail with config exit code `2` before a command runs or a rule/proposal is created or replaced. This does not change execution and summarize raw-log preservation or the rule-test fixture contract described below.
+The summary form derives parser, tags, command identity, checksum, and the exact line/byte span from one generated failure. It requires the matching regular raw-log file beside the regular summary file, rejects symlinks, stale checksums, duplicate failure IDs, and cross-directory references, and writes nothing on validation failure. It streams the complete raw-log checksum and reads only the selected span, bounded to 256 KiB and 158 lines. Summary mode and the legacy manual metadata/span mode are mutually exclusive.
+
+For an existing generated failure summary:
+
+```bash
+gaori rules propose --summary .gaori/runs/standalone/20260814T010203/unit.summary.json --failure F001
+```
+
+Config YAML, stored rule YAML, `rules create/update --file` inputs, and legacy `rules propose --raw-log` inputs may be at most 256 KiB. Larger files fail with config exit code `2` before a command runs or a rule/proposal is created or replaced. This does not change execution and summarize raw-log preservation or the rule-test fixture contract described below.
 
 Tags are rule selectors, not command selectors or automatic rule generators. The parser must match exactly, and every tag declared by a rule must be present on the run. For a run tagged `[go, unit]`, rules tagged `[go]`, `[unit]`, and `[go, unit]` are applicable, while `[integration]` is not. All applicable active rules inspect the raw log first; the selected parser runs only when those rules produce no failure. `rules propose` writes only a local candidate under `.gaori/rule-proposals/`; an operator must review, test, and explicitly create it before it becomes active under `.gaori/tester/rules/`.
 

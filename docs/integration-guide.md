@@ -34,7 +34,7 @@ The default adoption model is selective: route commands through Gaori when their
 | Existing-log processing | Yes | `summarize [--parser <label>] <raw-log>` copies and summarizes a log without rerunning the command. Its inferred result is not authoritative execution metadata. |
 | Failure excerpt lookup | Yes | `excerpt --summary <path> <failure-id>` validates contained references before reading. |
 | Parsers | Yes | `generic`, `vitest`, `pytest`, `go-test`, `playwright`, `ginkgo`, `godog`, `cargo-test`, `flutter-test`, `bun-test`, and `node-test`. |
-| Project extraction rules | Yes | Strict YAML CRUD, provenance, fixture testing, bounded spans, and run-local proposals. |
+| Project extraction rules | Yes | Strict YAML CRUD, provenance, fixture testing, and local proposals from a verified summary failure or explicit bounded raw span. |
 | Standalone artifacts | Yes | Collision-free `.gaori/runs/standalone/<UTC-timestamp>[-NNN]/` or `<output-dir>/runs/...`. |
 | Parent run artifacts | Yes | `--run-id <id>` writes only under `.gaori/runs/scoped/<id>/artifacts/test/`. |
 | Standalone cleanup | Yes | `clean (--older-than <Nd> \| --all) [--dry-run]` applies an explicit operator policy only to completed default standalone runs. |
@@ -149,7 +149,7 @@ Integration rules:
 - Set `timeout_sec` from `1` to `86400`; invalid config fails before execution.
 - Command IDs, run IDs, rule IDs, and tags must match `[A-Za-z0-9][A-Za-z0-9_-]*`.
 - Config and rule files accept one YAML document, reject unknown fields, and use Go RE2 regex syntax.
-- Config YAML, stored/imported rule YAML, and `rules propose --raw-log` inputs are limited to 256 KiB; oversized inputs fail with config exit code `2` before commands or rule/proposal writes.
+- Config YAML, stored/imported rule YAML, and legacy `rules propose --raw-log` inputs are limited to 256 KiB; oversized inputs fail with config exit code `2` before commands or rule/proposal writes. `rules propose --summary ... --failure ...` may checksum a larger adjacent raw log as a stream but reads only the selected bounded failure span.
 - Tags are sorted and deduplicated. A rule applies when its parser matches and all of its tags are present on the run; multiple active rules may apply to one raw log.
 
 ### Run dynamically selected commands

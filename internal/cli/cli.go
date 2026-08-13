@@ -184,7 +184,7 @@ func commandOptionNeedsValue(arg string) bool {
 		return false
 	}
 	switch trimmed {
-	case "tag", "parser", "summary", "older-than", "file", "reason", "rule", "log", "expect-span", "raw-log", "span", "timeout-sec":
+	case "tag", "parser", "summary", "failure", "older-than", "file", "reason", "rule", "log", "expect-span", "raw-log", "span", "timeout-sec":
 		return true
 	default:
 		return false

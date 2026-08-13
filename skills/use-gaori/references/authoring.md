@@ -40,16 +40,18 @@ gaori --json rules search generic
 gaori --json rules show <existing-rule-id>
 ```
 
-For a custom rule, derive a proposal from real raw evidence and inspect the saved candidate. A proposal is not active and `rules test` accepts only a stored rule ID, so Gaori has no pre-activation rule-test command. After explicit user intent, create a separately reviewed rule YAML, re-read it, and test it immediately. The four commands below are not one pipeline: `rules propose` mints its own candidate ID `<parser>-<log-basename>-<start>-<end>` (here `generic-unit-2-4`) under `.gaori/rule-proposals/`, while `create`/`show`/`test` operate on the separately authored `generic-v1`:
+For a custom rule, derive a proposal from real raw evidence and inspect the saved candidate. Prefer a generated summary and failure ID because that form verifies the adjacent raw log and preserves the run's parser, tags, command identity, checksum, and exact span. Use the legacy manual form only for evidence that has no Gaori summary. The two forms are mutually exclusive. A proposal is not active and `rules test` accepts only a stored rule ID, so Gaori has no pre-activation rule-test command. After explicit user intent, create a separately reviewed rule YAML, re-read it, and test it immediately. The commands below are not one pipeline: `rules propose` mints its own candidate under `.gaori/rule-proposals/`, while `create`/`show`/`test` operate on the separately authored `generic-v1`:
 
 ```bash
+gaori --json rules propose --summary .gaori/runs/standalone/<run>/unit.summary.json --failure F001
+# Legacy evidence without a Gaori summary:
 gaori --json rules propose --tag generic --tag unit --parser generic --raw-log fixtures/unit.raw.log --span 2:4
 gaori --json rules create --file fixtures/generic-v1.yaml
 gaori --json rules show generic-v1
 gaori --json rules test --rule generic-v1 --log fixtures/unit.raw.log --expect-span 2:5
 ```
 
-`rules propose` writes only a local ignored candidate under `.gaori/rule-proposals/`; it does not activate the rule. `rules create` and `rules update` require reviewed YAML and explicit user intent; the resulting `.gaori/tester/rules/*.yaml` may be tracked project policy, but do not stage or commit it without separate explicit user intent. Re-read `rules show` after either mutation. `rules delete` disables a rule with a reason and also requires explicit user intent:
+Summary-based proposal fails closed when redaction or malformed evidence leaves invalid selector metadata; do not guess replacements. It also rejects a missing, stale, symlinked, or non-adjacent raw log. `rules propose` writes only a local ignored candidate under `.gaori/rule-proposals/`; it does not activate the rule. `rules create` and `rules update` require reviewed YAML and explicit user intent; the resulting `.gaori/tester/rules/*.yaml` may be tracked project policy, but do not stage or commit it without separate explicit user intent. Re-read `rules show` after either mutation. `rules delete` disables a rule with a reason and also requires explicit user intent:
 
 ```bash
 gaori --json rules delete generic-v1 --reason "superseded by v2"

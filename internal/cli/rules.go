@@ -1,10 +1,14 @@
 package cli
 
 import (
+	"bytes"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"flag"
 	"fmt"
 	"io"
+	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -233,21 +237,39 @@ func rulesProposeCommand(opts globalOptions, args []string, stdout, stderr io.Wr
 	fs := flag.NewFlagSet("rules propose", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
 	var tags stringList
-	var parser, rawLogPath, span string
+	var parser, rawLogPath, span, summaryPath, failureID string
 	fs.Var(&tags, "tag", "tag (repeatable)")
 	fs.StringVar(&parser, "parser", "", "parser")
 	fs.StringVar(&rawLogPath, "raw-log", "", "raw log path")
 	fs.StringVar(&span, "span", "", "source span start:end")
+	fs.StringVar(&summaryPath, "summary", "", "summary json path")
+	fs.StringVar(&failureID, "failure", "", "failure id")
 	if err := fs.Parse(args); err != nil {
 		writeLine(stderr, err)
 		return int(model.ExitCodeConfigError)
 	}
-	start, end, err := parseSpan(span)
-	if err != nil || len(tags) == 0 || parser == "" || rawLogPath == "" {
-		writeLine(stderr, "usage: gaori rules propose --tag <tag> [--tag <tag> ...] --parser <parser> --raw-log <raw-log> --span <start:end>")
+	legacyMode := len(tags) > 0 || parser != "" || rawLogPath != "" || span != ""
+	summaryMode := summaryPath != "" || failureID != ""
+	if legacyMode == summaryMode {
+		writeLine(stderr, rulesProposeUsage)
 		return int(model.ExitCodeConfigError)
 	}
-	proposal, err := rules.Propose(opts.RepoRoot, tags, parser, rawLogPath, start, end)
+	var proposal model.RuleProposal
+	var err error
+	if summaryMode {
+		if summaryPath == "" || failureID == "" {
+			writeLine(stderr, rulesProposeUsage)
+			return int(model.ExitCodeConfigError)
+		}
+		proposal, err = proposeRuleFromSummary(opts.RepoRoot, summaryPath, failureID)
+	} else {
+		start, end, spanErr := parseSpan(span)
+		if spanErr != nil || len(tags) == 0 || parser == "" || rawLogPath == "" {
+			writeLine(stderr, rulesProposeUsage)
+			return int(model.ExitCodeConfigError)
+		}
+		proposal, err = rules.Propose(opts.RepoRoot, tags, parser, rawLogPath, start, end)
+	}
 	if err != nil {
 		writeLine(stderr, err)
 		return model.ExitCodeFor(err)
@@ -260,6 +282,147 @@ func rulesProposeCommand(opts globalOptions, args []string, stdout, stderr io.Wr
 	writef(stdout, "Proposed rule: %s\n", proposal.Rule.ID)
 	writef(stdout, "Saved to: %s\n", filepath.ToSlash(proposal.Path))
 	return 0
+}
+
+const rulesProposeUsage = "usage: gaori rules propose (--summary <summary.json> --failure <failure-id> | --tag <tag> [--tag <tag> ...] --parser <parser> --raw-log <raw-log> --span <start:end>)"
+
+func proposeRuleFromSummary(repoRoot, summaryPath, failureID string) (model.RuleProposal, error) {
+	if err := safety.ValidateArtifactIdentifier("failure id", failureID); err != nil {
+		return model.RuleProposal{}, model.NewGaoriError(model.ExitCodeConfigError, "propose rule from summary", err)
+	}
+	resolvedSummary := summaryPath
+	if !filepath.IsAbs(resolvedSummary) {
+		resolvedSummary = filepath.Join(repoRoot, summaryPath)
+	}
+	resolvedSummary, err := filepath.Abs(resolvedSummary)
+	if err != nil {
+		return model.RuleProposal{}, model.NewGaoriError(model.ExitCodeConfigError, "resolve summary", err)
+	}
+	if err := requireRegularProposalFile(resolvedSummary, "summary"); err != nil {
+		return model.RuleProposal{}, err
+	}
+	if !strings.HasSuffix(filepath.Base(resolvedSummary), ".summary.json") {
+		return model.RuleProposal{}, model.NewGaoriError(model.ExitCodeConfigError, "propose rule from summary", fmt.Errorf("summary path must end in .summary.json"))
+	}
+	data, err := safety.ReadFileWithinLimit(filepath.Dir(resolvedSummary), resolvedSummary)
+	if err != nil {
+		return model.RuleProposal{}, model.NewGaoriError(model.ExitCodeConfigError, "read summary", err)
+	}
+	var summary model.Summary
+	if err := json.Unmarshal(data, &summary); err != nil {
+		return model.RuleProposal{}, model.NewGaoriError(model.ExitCodeConfigError, "parse summary", err)
+	}
+
+	resolvedRaw := summary.RawLog
+	if !filepath.IsAbs(resolvedRaw) {
+		resolvedRaw = filepath.Join(repoRoot, filepath.FromSlash(resolvedRaw))
+	}
+	resolvedRaw, err = filepath.Abs(resolvedRaw)
+	if err != nil {
+		return model.RuleProposal{}, model.NewGaoriError(model.ExitCodeArtifactError, "resolve summary raw log", err)
+	}
+	expectedRawName := strings.TrimSuffix(filepath.Base(resolvedSummary), ".summary.json") + ".raw.log"
+	if filepath.Dir(resolvedRaw) != filepath.Dir(resolvedSummary) || filepath.Base(resolvedRaw) != expectedRawName {
+		return model.RuleProposal{}, model.NewGaoriError(model.ExitCodeArtifactError, "validate summary raw log", fmt.Errorf("raw log must be the matching file beside the summary"))
+	}
+	if err := requireRegularProposalFile(resolvedRaw, "raw log"); err != nil {
+		return model.RuleProposal{}, err
+	}
+
+	rawFile, err := safety.OpenFileWithin(filepath.Dir(resolvedSummary), resolvedRaw, os.O_RDONLY, 0)
+	if err != nil {
+		return model.RuleProposal{}, model.NewGaoriError(model.ExitCodeArtifactError, "open summary raw log", err)
+	}
+	defer func() { _ = rawFile.Close() }()
+	hash := sha256.New()
+	if _, err := io.Copy(hash, rawFile); err != nil {
+		return model.RuleProposal{}, model.NewGaoriError(model.ExitCodeArtifactError, "hash summary raw log", err)
+	}
+	actualSHA := "sha256:" + hex.EncodeToString(hash.Sum(nil))
+	if summary.RawLogSHA256 == "" || actualSHA != summary.RawLogSHA256 {
+		return model.RuleProposal{}, model.NewGaoriError(model.ExitCodeArtifactError, "validate summary raw log", fmt.Errorf("raw log checksum does not match summary"))
+	}
+
+	var selected *model.Failure
+	for i := range summary.Failures {
+		if summary.Failures[i].ID == failureID {
+			if selected != nil {
+				return model.RuleProposal{}, model.NewGaoriError(model.ExitCodeConfigError, "propose rule from summary", fmt.Errorf("failure id %q is duplicated in summary", failureID))
+			}
+			selected = &summary.Failures[i]
+		}
+	}
+	if selected == nil {
+		return model.RuleProposal{}, model.NewGaoriError(model.ExitCodeConfigError, "propose rule from summary", fmt.Errorf("failure id %q not found in summary", failureID))
+	}
+	span := selected.RawSpan
+	maxLines := safety.MaxBlockLines - 2
+	if span.StartLine <= 0 || span.EndLine < span.StartLine || span.EndLine-span.StartLine+1 > maxLines {
+		return model.RuleProposal{}, model.NewGaoriError(model.ExitCodeConfigError, "propose rule from summary", fmt.Errorf("failure line span must contain at most %d lines", maxLines))
+	}
+	info, err := rawFile.Stat()
+	if err != nil {
+		return model.RuleProposal{}, model.NewGaoriError(model.ExitCodeArtifactError, "stat summary raw log", err)
+	}
+	if span.StartByte < 0 || span.EndByte <= span.StartByte || int64(span.EndByte) > info.Size() {
+		return model.RuleProposal{}, model.NewGaoriError(model.ExitCodeConfigError, "propose rule from summary", fmt.Errorf("failure byte span is invalid or exceeds %d bytes", safety.MaxRegexInputBytes))
+	}
+	spanBytes := span.EndByte - span.StartByte
+	if spanBytes > safety.MaxRegexInputBytes {
+		return model.RuleProposal{}, model.NewGaoriError(model.ExitCodeConfigError, "propose rule from summary", fmt.Errorf("failure byte span is invalid or exceeds %d bytes", safety.MaxRegexInputBytes))
+	}
+	prefixLines, err := countNewlines(io.NewSectionReader(rawFile, 0, int64(span.StartByte)))
+	if err != nil {
+		return model.RuleProposal{}, model.NewGaoriError(model.ExitCodeArtifactError, "validate summary failure span", err)
+	}
+	if prefixLines+1 != span.StartLine {
+		return model.RuleProposal{}, model.NewGaoriError(model.ExitCodeConfigError, "propose rule from summary", fmt.Errorf("failure start line does not match byte span"))
+	}
+	segment := make([]byte, spanBytes)
+	if _, err := io.ReadFull(io.NewSectionReader(rawFile, int64(span.StartByte), int64(spanBytes)), segment); err != nil {
+		return model.RuleProposal{}, model.NewGaoriError(model.ExitCodeArtifactError, "read summary failure span", err)
+	}
+	return rules.ProposeFromEvidence(repoRoot, summary.Tags, summary.Parser, resolvedRaw, actualSHA, inferSummarySourceRun(filepath.Dir(resolvedSummary)), summary.CommandID, span, segment)
+}
+
+func countNewlines(reader io.Reader) (int, error) {
+	buffer := make([]byte, 32*1024)
+	count := 0
+	for {
+		n, err := reader.Read(buffer)
+		count += bytes.Count(buffer[:n], []byte{'\n'})
+		if err == io.EOF {
+			return count, nil
+		}
+		if err != nil {
+			return 0, err
+		}
+	}
+}
+
+func requireRegularProposalFile(path, label string) error {
+	info, err := os.Lstat(path)
+	if err != nil {
+		return model.NewGaoriError(model.ExitCodeArtifactError, "validate "+label, err)
+	}
+	if !info.Mode().IsRegular() {
+		return model.NewGaoriError(model.ExitCodeArtifactError, "validate "+label, fmt.Errorf("%s is not a regular file", label))
+	}
+	return nil
+}
+
+func inferSummarySourceRun(summaryDir string) string {
+	parts := strings.Split(filepath.ToSlash(filepath.Clean(summaryDir)), "/")
+	for i := len(parts) - 2; i >= 0; i-- {
+		if (parts[i] == "standalone" || parts[i] == "scoped") && i+1 < len(parts) {
+			return parts[i+1]
+		}
+	}
+	base := filepath.Base(summaryDir)
+	if base == "" || base == "." || base == string(filepath.Separator) {
+		return "local-summary"
+	}
+	return base
 }
 
 func readRuleInput(path string) (model.Rule, error) {

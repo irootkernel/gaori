@@ -130,5 +130,5 @@ Use "gaori help rules <command>" for command details.
 	"rules update":  "Usage: gaori rules update <rule-id> --file <rule.yaml>\n",
 	"rules delete":  "Usage: gaori rules delete <rule-id> --reason <reason>\n",
 	"rules test":    "Usage: gaori rules test --rule <rule-id> --log <raw-log> --expect-span <start:end>\n",
-	"rules propose": "Usage: gaori rules propose --tag <tag> [--tag <tag> ...] --parser <parser> --raw-log <raw-log> --span <start:end>\n",
+	"rules propose": "Usage: gaori rules propose (--summary <summary.json> --failure <failure-id> | --tag <tag> [--tag <tag> ...] --parser <parser> --raw-log <raw-log> --span <start:end>)\n",
 }

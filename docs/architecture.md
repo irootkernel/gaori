@@ -298,7 +298,8 @@ Command execution status is authoritative. Parser quality only affects evidence 
 - A bounded-tail scan always reports `extractor_status: degraded`, even when it finds useful evidence, because earlier evidence may have been omitted.
 - Failure or warning record truncation always reports `extractor_status: degraded`; command status and exit code remain authoritative.
 - Rule fixture testing still rejects inputs larger than 256 KiB because an incomplete scan cannot prove that a rule did not miss or overmatch evidence.
-- Config YAML, project rule YAML, `rules create/update --file` YAML, and `rules propose --raw-log` inputs are read through a 256 KiB preflight bound. Oversized inputs fail with config exit code `2` before YAML decoding, command execution, or rule/proposal writes.
+- Config YAML, project rule YAML, `rules create/update --file` YAML, and legacy `rules propose --raw-log` inputs are read through a 256 KiB preflight bound. Oversized inputs fail with config exit code `2` before YAML decoding, command execution, or rule/proposal writes.
+- Summary-based rule proposal requires a regular `.summary.json` and its matching adjacent regular `.raw.log`. It rejects symlinks, cross-directory locators, stale checksums, duplicate failure IDs, and inconsistent line/byte spans before writing. The full raw log is checksum-streamed; only the selected failure span is read into memory, with the regex-input and rule-line budgets enforced.
 - Parser or rule matches and misses never convert an authoritative non-pass result into pass.
 - Project rules run before the selected parser. When no rule matches, a specialized parser uses only its own patterns and never retries generic extraction.
 - Tagged ad-hoc runs may select that parser explicitly; configured runs continue to use only their configured parser.
@@ -331,6 +332,6 @@ When extraction fails internally, Gaori preserves the raw log and writes empty f
 
 - Project-local YAML extraction rules.
 - Parser registry entries for specialized runners.
-- Rule proposal from raw-log spans.
+- Rule proposal from a generated summary failure or an explicit raw-log span.
 - Optional fixed run-scoped output layout when a run ID is supplied.
 - Future shared parser promotion after repeated cross-project evidence.
