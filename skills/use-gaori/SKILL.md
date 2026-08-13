@@ -20,7 +20,7 @@ Global flags (`--json`, `--run-id`, `--repo`, `--config`, `--output-dir`) go bef
 
    If `gaori` is missing, or its reported version does not match the version the project pins, run the project's own documented test command instead and report that Gaori evidence compression was unavailable and why. Never install Gaori or change toolchain state to make it available.
 
-2. Discover local integration from the current repository rather than conversation memory. Inspect `.gaori/tester.yaml`, optional `.gaori/toolchain.yaml`, `.gaori/tester/rules/`, and relevant `.gaori/runs/` artifacts when they exist. Treat all `.gaori/` content as local-only and keep it out of Git.
+2. Discover integration from the current repository rather than conversation memory. Inspect `.gaori/tester.yaml`, optional `.gaori/toolchain.yaml`, `.gaori/tester/rules/`, and relevant `.gaori/runs/` artifacts when they exist. The parent project may track portable `.gaori/tester.yaml` and reviewed `.gaori/tester/rules/*.yaml`; treat toolchain metadata, proposals, runs, and every other `.gaori/` path as local-only. Do not stage or commit any file without explicit user intent.
 
 3. Know the artifact layout. Every run or summarize writes, per command ID:
 

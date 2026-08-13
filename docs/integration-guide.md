@@ -64,15 +64,23 @@ These are current boundaries, not hidden partial features:
 
 No open implementation items are currently recorded in `todo.md`. The boundaries above are not future commitments; a new requirement and roadmap item should be approved before broadening them.
 
-## Local-only Gaori state
+## Portable config and local state
 
-Ignore the entire `.gaori/` directory. Gaori config, reviewed local rules, toolchain metadata, proposals, and evidence are machine-local development state rather than portable source inputs:
+Keep Gaori runtime state ignored while allowing Git to track portable project config and reviewed active rules. Replace a blanket `.gaori/` entry with:
 
 ```gitignore
-.gaori/
+.gaori/*
+!.gaori/tester.yaml
+!.gaori/tester/
+.gaori/tester/*
+!.gaori/tester/rules/
+.gaori/tester/rules/*
+!.gaori/tester/rules/*.yaml
 ```
 
-Projects that need shared automation must generate or provision their local Gaori state through their own bootstrap process. Gaori does not distribute `.gaori/` content. Never commit an absolute `gaori.binary_path` that is meaningful only on one machine.
+This exposes only `.gaori/tester.yaml` and direct `.yaml` files in `.gaori/tester/rules/` for source control. Commit them when they describe portable project commands and reviewed extraction policy. Keep `.gaori/toolchain.yaml`, `.gaori/rule-proposals/`, `.gaori/runs/`, and all other `.gaori/` content local. Never commit secrets, machine-specific command arguments, or an absolute `gaori.binary_path`.
+
+Gaori does not create this ignore policy, distribute config, or stage files. The parent project owns review and source-control decisions. Use an external `--config` path or a tagged ad-hoc run for machine-specific commands instead of adding local values to shared config.
 
 ## 1. Select and verify the binary
 
@@ -274,8 +282,8 @@ Gaori remains standalone and imposes no evidence-consumer runtime dependency.
 
 - [ ] Identify the long or noisy commands that benefit from Gaori; do not turn this list into an additional test gate.
 - [ ] Pin and verify one Gaori version.
-- [ ] Ignore the entire `.gaori/` directory.
-- [ ] Provision local `.gaori/tester.yaml` and any reviewed active rules on each development machine that needs them.
+- [ ] Ignore `.gaori/` runtime state and re-include only `.gaori/tester.yaml` and reviewed `.gaori/tester/rules/*.yaml`.
+- [ ] Commit portable project config and active rules after confirming they contain no secrets, absolute paths, or machine-specific arguments.
 - [ ] Exercise one passing and one failing command through Gaori.
 - [ ] Exercise one dynamically selected tagged command with its explicit parser, including a child `--parser` passthrough probe when the parent tool uses that argument.
 - [ ] Exercise timeout handling for at least one long-running command.

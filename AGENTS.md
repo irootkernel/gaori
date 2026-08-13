@@ -111,10 +111,10 @@ Preserve these invariants:
 
 Do not claim review acceptance, waiver, final acceptance, install, release, push, or runtime activation from Gaori evidence alone.
 
-Local runtime, evidence, and tool state must stay out of source commits:
+Local runtime, evidence, and tool state must stay out of source commits. `.gaori/tester.yaml` and reviewed `.gaori/tester/rules/*.yaml` are the only Gaori exceptions when the project adopts the portable-config policy documented in `README.md`:
 
 ```text
-.gaori/
+.gaori/* except tester.yaml and reviewed tester/rules/*.yaml
 .mulgae/
 .codegraph/
 .omx/

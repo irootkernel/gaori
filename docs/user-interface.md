@@ -127,7 +127,7 @@ gaori:
   binary_path: "/absolute/path/to/gaori"
 ```
 
-If `.gaori/toolchain.yaml` omits the `gaori` block, set `GAORI_BIN` or add explicit local Gaori metadata. The entire `.gaori/` directory, including config, rules, toolchain metadata, proposals, and evidence, is local-only state and should be ignored by Git.
+If `.gaori/toolchain.yaml` omits the `gaori` block, set `GAORI_BIN` or add explicit local Gaori metadata. Toolchain metadata is machine-specific and should remain ignored. Parent projects may commit portable `.gaori/tester.yaml` and reviewed `.gaori/tester/rules/*.yaml`; proposals, runs, and every other `.gaori/` path remain local-only. See the [integration guide](integration-guide.md#portable-config-and-local-state) for the exact Git ignore pattern.
 
 ## Tested setup fixture
 

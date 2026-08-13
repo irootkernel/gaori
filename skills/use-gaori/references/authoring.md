@@ -16,7 +16,7 @@ commands:
     timeout_sec: 600
 ```
 
-Do not create or change this local-only file without explicit user intent. Prefer a configured command when it already represents the requested check. Use a tagged ad-hoc run when the command is intentionally selected at runtime; tags select eligible rules, while `--parser` selects the built-in parser.
+Do not create or change this file without explicit user intent. It may be portable project config, so preserve the parent repository's tracked state and never add secrets, absolute paths, or machine-specific arguments. Prefer a configured command when it already represents the requested check. Use a tagged ad-hoc run when the command is intentionally selected at runtime; tags select eligible rules, while `--parser` selects the built-in parser.
 
 Implemented parser labels are `generic`, `vitest`, `pytest`, `go-test`, `playwright`, `ginkgo`, `godog`, `cargo-test`, `flutter-test`, `bun-test`, and `node-test`. Unknown labels, schema version 1, and removed `lane` fields fail closed.
 
@@ -39,7 +39,7 @@ gaori --json rules show generic-v1
 gaori --json rules test --rule generic-v1 --log fixtures/unit.raw.log --expect-span 2:5
 ```
 
-`rules propose` writes only a local candidate under `.gaori/rule-proposals/`; it does not activate the rule. `rules create` and `rules update` require reviewed YAML and explicit user intent. Re-read `rules show` after either mutation. `rules delete` disables a rule with a reason and also requires explicit user intent:
+`rules propose` writes only a local ignored candidate under `.gaori/rule-proposals/`; it does not activate the rule. `rules create` and `rules update` require reviewed YAML and explicit user intent; the resulting `.gaori/tester/rules/*.yaml` may be tracked project policy, but do not stage or commit it without separate explicit user intent. Re-read `rules show` after either mutation. `rules delete` disables a rule with a reason and also requires explicit user intent:
 
 ```bash
 gaori --json rules delete generic-v1 --reason "superseded by v2"

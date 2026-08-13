@@ -52,7 +52,7 @@ Before pasting the block below, replace `<expected-version>` and `<command-id>` 
 - The project's own documentation determines which checks are required. Gaori is an optional execution and evidence-compression adapter, not a test gate or acceptance authority. Route a command through Gaori only when its output is long or noisy enough that bounded evidence helps.
 - Confirm `gaori` is available and reports `<expected-version>`; do not install it or initialize `.gaori/` automatically. If it is missing or the version differs, run the project's normal documented command instead and report that Gaori evidence compression was unavailable. Use configured commands only when `.gaori/tester.yaml` exists; otherwise use an explicitly chosen tagged ad-hoc run.
 - Treat the executed command's exit code as authoritative. Tags select extraction rules, not parsers; a specialized parser that misses never falls back to `generic` and never changes pass/fail. Read `<command-id>.status.json` or structured command output for the result and `extractor_status`, then inspect `<command-id>.summary.md` (or `.summary.json`) and bounded excerpts before opening the potentially unredacted raw log; on a pass, do not open logs at all.
-- Keep `.gaori/` out of Git. Record only claims supported by the current command result and artifacts; Gaori evidence does not establish review acceptance, release, installation, or runtime activation.
+- Keep Gaori runtime state out of Git. Projects may commit `.gaori/tester.yaml` and reviewed `.gaori/tester/rules/*.yaml` so contributors use the same commands and extraction rules; keep toolchain metadata, proposals, run artifacts, and every other `.gaori/` path ignored. Record only claims supported by the current command result and artifacts; Gaori evidence does not establish review acceptance, release, installation, or runtime activation.
 - Require explicit user intent before cleanup, cancellation, rule deletion, or reuse of a fixed `--run-id` and command ID that can replace earlier artifacts.
 - In the final report, include the Gaori command, process exit code, artifact `status` and `extractor_status`, relevant summary and raw-log paths when opened, and any skipped checks.
 ````
@@ -129,9 +129,9 @@ sed -n '1,120p' "$latest_run/demo.summary.md"
 
 The summary contains `token=<redacted>`. The corresponding `demo.raw.log` intentionally retains the original `token=secret` value, so treat raw logs as sensitive local evidence.
 
-## Configure your local project
+## Configure your project
 
-Create `.gaori/tester.yaml` with the commands you want to expose locally. The entire `.gaori/` directory is local state and should be ignored by Git. Commands are argv arrays, so no shell quoting is added implicitly.
+Create `.gaori/tester.yaml` with the commands you want to expose to every contributor. Commands are argv arrays, so no shell quoting is added implicitly. Commit this file when the command definitions, tags, parsers, timeouts, redaction, and noise filters are portable project policy; do not put secrets, absolute paths, or machine-specific arguments in shared config.
 
 ```yaml
 version: 2
@@ -147,6 +147,20 @@ commands:
     parser: vitest
     timeout_sec: 600
 ```
+
+Ignore `.gaori/` by default, then re-include only the portable config and reviewed active rules. Replace a blanket `.gaori/` entry in the parent project's `.gitignore` with:
+
+```gitignore
+.gaori/*
+!.gaori/tester.yaml
+!.gaori/tester/
+.gaori/tester/*
+!.gaori/tester/rules/
+.gaori/tester/rules/*
+!.gaori/tester/rules/*.yaml
+```
+
+This allows Git to track `.gaori/tester.yaml` and direct `.yaml` files under `.gaori/tester/rules/`. It keeps `.gaori/toolchain.yaml`, `.gaori/rule-proposals/`, `.gaori/runs/`, and any other Gaori state ignored. Review active rules before committing them: unlike proposals, they participate in extraction whenever their parser and tags match.
 
 Choose the parser that matches the command output:
 
@@ -263,7 +277,7 @@ Add `--json` when a script needs compact command output. Use `--repo`, `--config
 - Redaction applies to surfaced summaries, excerpts, status, and console metadata, not to raw logs or literal artifact paths.
 - Cleanup has no implicit default: it requires an explicit age or `--all`, supports dry-run, and never treats incomplete or unrecognized entries as safe deletion targets.
 - Do not put secrets in run IDs, command IDs, output directories, or filenames.
-- Ignore the entire `.gaori/` directory. Config, rules, toolchain metadata, proposals, and evidence are local-only state.
+- Ignore `.gaori/` runtime state while re-including portable `.gaori/tester.yaml` and reviewed `.gaori/tester/rules/*.yaml`. Keep toolchain metadata, proposals, run artifacts, secrets, absolute paths, and machine-specific settings out of source control.
 
 ## Learn more
 

@@ -22,7 +22,7 @@ Report an absent binary, resolver failure, or version mismatch. Do not run `go i
 
 ## Workspace initialization
 
-Gaori has no `init` command. A configured workspace exists only when the selected config, normally `.gaori/tester.yaml`, exists and validates. Creating `.gaori/`, config, toolchain metadata, or rules is initialization and requires explicit user intent. A tagged ad-hoc run can operate without `.gaori/tester.yaml`; only that file's redaction and noise filters are then unavailable. Project extraction rules live in `.gaori/tester/rules/` and still apply whenever their parser and all their tags match the run.
+Gaori has no `init` command. A configured workspace exists only when the selected config, normally `.gaori/tester.yaml`, exists and validates. Creating `.gaori/`, config, toolchain metadata, or rules is initialization and requires explicit user intent. The parent project may already track portable config and reviewed active rules; preserve their tracked state, and never stage or commit changes without separate explicit user intent. A tagged ad-hoc run can operate without `.gaori/tester.yaml`; only that file's redaction and noise filters are then unavailable. Project extraction rules live in `.gaori/tester/rules/` and still apply whenever their parser and all their tags match the run.
 
 ## Run start and replacement
 

@@ -86,7 +86,7 @@ Different repositories use different test commands and log formats. Gaori needs 
 
 ### Decision
 
-Gaori reads local-only `.gaori/tester.yaml` schema v2 by default. Command entries define argv arrays, canonical tags, parser, and timeout. Rule files may live under `.gaori/tester/rules/*.yaml`. The entire `.gaori/` directory is ignored local state rather than a portable source contract.
+Gaori reads `.gaori/tester.yaml` schema v2 by default. Command entries define argv arrays, canonical tags, parser, and timeout. Rule files may live under `.gaori/tester/rules/*.yaml`. ADR-0011 supersedes this ADR's original decision that the entire `.gaori/` directory is local-only.
 
 ### Consequences
 
@@ -185,14 +185,14 @@ A single execution grouping cannot express independent dimensions such as langua
 
 ### Decision
 
-Config schema v2 replaces the single grouping field with non-empty tags. Tags use safe identifier syntax, are sorted and deduplicated, and are surfaced as JSON arrays. A rule applies only when its parser matches exactly and all of its tags are present on the run; multiple active rules may inspect the same raw log. The entire `.gaori/` tree is local-only and ignored by Git.
+Config schema v2 replaces the single grouping field with non-empty tags. Tags use safe identifier syntax, are sorted and deduplicated, and are surfaced as JSON arrays. A rule applies only when its parser matches exactly and all of its tags are present on the run; multiple active rules may inspect the same raw log. ADR-0011 supersedes this ADR's original decision that active rules are always local-only.
 
 ### Consequences
 
 - Config schema v1 and the removed CLI flag fail closed without a compatibility alias.
 - Broad rules can be shared while more specific tag combinations limit false positives.
 - Tags affect evidence selection and watcher hashes but never authoritative command pass/fail.
-- Local config and rules must be provisioned independently on each machine that uses them.
+- Parent projects may share reviewed config and active rules according to ADR-0011.
 
 ## ADR-0010: Cleanup applies only explicit operator retention policy
 
@@ -216,6 +216,28 @@ Raw-log preservation remains mandatory while Gaori creates evidence. An explicit
 - Completed standalone evidence can be removed without deleting `.gaori/` configuration state.
 - Incomplete or unrecognized entries require separate operator inspection and are not silently treated as safe cleanup targets.
 - Cleanup remains a bounded standalone filesystem operation rather than a watcher, daemon, or workflow state service.
+
+## ADR-0011: Portable project config is the only Git-tracked Gaori state
+
+Status: Accepted
+Date: 2026-08-13
+
+### Context
+
+When every contributor provisions Gaori commands and extraction rules independently, project test behavior can drift across machines. The config and reviewed active rules are portable project policy, while raw logs, derived evidence, proposals, and toolchain paths are local state that may contain secrets or machine-specific values.
+
+### Decision
+
+Parent projects may commit `.gaori/tester.yaml` and reviewed direct `.yaml` files under `.gaori/tester/rules/`. They should ignore `.gaori/` by default and re-include only those paths. `.gaori/toolchain.yaml`, `.gaori/rule-proposals/`, `.gaori/runs/`, and every other `.gaori/` path remain local-only and ignored.
+
+Shared config and rules must not contain secrets, absolute paths, or machine-specific arguments. Rule proposals remain local until an operator reviews and explicitly creates the active rule that may then be committed.
+
+### Consequences
+
+- Contributors can run the same configured commands and extraction rules after checkout.
+- Runtime evidence and machine-specific toolchain selection stay out of source commits.
+- Projects that need local overrides use an explicit external `--config` path or tagged ad-hoc runs rather than committing machine-specific values.
+- Gaori still does not initialize, distribute, stage, or commit project configuration automatically.
 
 ## Future ADR candidates
 

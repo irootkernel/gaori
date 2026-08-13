@@ -25,7 +25,7 @@ Implementation note: the original v0.1 roadmap and the recorded `RQHAR` hardenin
 
 ## RQCFG: Project configuration
 
-- [x] `GAORI-REQ-RQCFG-001` Read default project config from `.gaori/tester.yaml`.
+- [x] `GAORI-REQ-RQCFG-001` Read default project config from `.gaori/tester.yaml`; allow parent projects to commit portable config while keeping runtime and machine-specific `.gaori/` state ignored.
 - [x] `GAORI-REQ-RQCFG-002` Allow explicit config override with a CLI flag.
 - [x] `GAORI-REQ-RQCFG-003` Define schema-v2 command entries with `command` argv arrays, non-empty `tags`, `parser`, and `timeout_sec`.
 - [x] `GAORI-REQ-RQCFG-004` Define noise filters that remove low-value lines from summaries without removing raw-log content.
@@ -72,7 +72,7 @@ Implementation note: the original v0.1 roadmap and the recorded `RQHAR` hardenin
 ## RQRUL: Rule lifecycle and CRUD
 
 - [x] `GAORI-REQ-RQRUL-001` Provide `rules list`, `rules search`, `rules show`, `rules create`, `rules update`, `rules delete`, `rules test`, and `rules propose` command surfaces.
-- [x] `GAORI-REQ-RQRUL-002` Store project-local rules in `.gaori/tester/rules/*.yaml`.
+- [x] `GAORI-REQ-RQRUL-002` Store project rules in `.gaori/tester/rules/*.yaml`; allow reviewed active rules to be committed as portable project policy.
 - [x] `GAORI-REQ-RQRUL-003` Preserve rule provenance: source run, command, raw-log checksum, source span, reason, creator, and status.
 - [x] `GAORI-REQ-RQRUL-004` Support disabled rules and deletion reasons.
 - [x] `GAORI-REQ-RQRUL-005` Test rules against raw-log fixtures and expected spans.
