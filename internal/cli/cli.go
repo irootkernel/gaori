@@ -79,7 +79,7 @@ func Run(args []string, stdout, stderr io.Writer, info BuildInfo) int {
 		return 0
 	}
 	if len(remaining) == 0 {
-		writeLine(stderr, "usage: gaori [global options] <version|run|excerpt|summarize|clean|rules>")
+		writeLine(stderr, "usage: gaori [global options] <version|run|excerpt|summarize|clean|config|rules>")
 		return int(model.ExitCodeConfigError)
 	}
 	if remaining[0] == "version" {
@@ -102,6 +102,8 @@ func Run(args []string, stdout, stderr io.Writer, info BuildInfo) int {
 		return summarizeCommand(opts, remaining[1:], stdout, stderr)
 	case "clean":
 		return cleanCommand(opts, remaining[1:], stdout, stderr, time.Now().UTC())
+	case "config":
+		return configCommand(opts, remaining[1:], stdout, stderr)
 	case "rules":
 		return rulesCommand(opts, remaining[1:], stdout, stderr)
 	default:

@@ -143,6 +143,15 @@ The summary contains `token=<redacted>`. The corresponding `demo.raw.log` intent
 
 Create `.gaori/tester.yaml` with the commands you want to expose to every contributor. Commands are argv arrays, so no shell quoting is added implicitly. Commit this file when the command definitions, tags, parsers, timeouts, redaction, and noise filters are portable project policy; do not put secrets, absolute paths, or machine-specific arguments in shared config.
 
+Validate the complete config and every stored rule without running a command or creating evidence:
+
+```bash
+gaori config check
+gaori --json config check
+```
+
+The result reports safe command metadata and rule counts; it deliberately omits argv and redaction definitions. It does not verify that configured executables exist or that commands pass.
+
 ```yaml
 version: 2
 commands:

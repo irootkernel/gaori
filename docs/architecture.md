@@ -163,6 +163,8 @@ Default config path:
 .gaori/tester.yaml
 ```
 
+`config check` reuses strict config loading and full stored-rule validation as a read-only preflight. It does not resolve command executables or enter the runner/artifact pipeline. Its surfaced command IDs and tags pass through configured redaction, while argv and redaction definitions are not returned.
+
 Minimal shape:
 
 ```yaml

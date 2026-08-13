@@ -24,6 +24,7 @@ Implementation note: the original v0.1 roadmap and the recorded `RQHAR` hardenin
 - [x] `GAORI-REQ-RQCLI-007` Allow a tagged ad-hoc run to select one implemented parser explicitly with `gaori run --parser <label> --tag <tag> [--tag <tag> ...] -- <command...>`; default omitted parser selection to `generic`, reject invalid selection or configured-command overrides before execution or artifact creation, and preserve the child argv after `--` unchanged.
 - [x] `GAORI-REQ-RQCLI-008` Provide successful plain-text help for the root command, every primary command, the rules command, and every rules subcommand through `help`, `-h`, and `--help`, without consuming child arguments after the ad-hoc `--` boundary.
 - [x] `GAORI-REQ-RQCLI-009` Expose unambiguous `summary_markdown`, `summary_json`, and `extractor_status` fields in run and summarize console JSON while retaining `summary` and `extractor` as compatibility aliases and leaving artifact and watcher schemas unchanged.
+- [x] `GAORI-REQ-RQCLI-010` Provide `gaori config check` as a side-effect-free human and JSON preflight for the selected schema-v2 config and every stored project rule, without executing commands, resolving executables, or creating runtime artifacts.
 
 ## RQCFG: Project configuration
 
@@ -33,6 +34,7 @@ Implementation note: the original v0.1 roadmap and the recorded `RQHAR` hardenin
 - [x] `GAORI-REQ-RQCFG-004` Define noise filters that remove low-value lines from summaries without removing raw-log content.
 - [x] `GAORI-REQ-RQCFG-005` Define redaction rules that apply to summary, status, and excerpt outputs.
 - [x] `GAORI-REQ-RQCFG-006` Validate config before execution and fail closed on unsupported schema versions, invalid command IDs, missing or unsafe tags, unsafe timeout values, malformed redaction rules, unsupported parser labels, or invalid rule files.
+- [x] `GAORI-REQ-RQCFG-007` Surface deterministic config-check metadata containing the selected config path, schema version, safe sorted command metadata, and active/disabled rule counts while omitting argv and redaction definitions.
 
 ## RQRUN: Deterministic command runner
 

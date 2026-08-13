@@ -16,6 +16,7 @@ func TestHelpSurfacesExitSuccessfully(t *testing.T) {
 		{args: []string{"help"}, want: "Commands:"},
 		{args: []string{"help", "run"}, want: "gaori run <command-id>"},
 		{args: []string{"run", "--help"}, want: "Arguments after -- belong to the child"},
+		{args: []string{"config", "check", "--help"}, want: "gaori config check"},
 		{args: []string{"rules", "-h"}, want: "gaori rules <command>"},
 		{args: []string{"help", "rules", "propose"}, want: "--raw-log <raw-log>"},
 		{args: []string{"rules", "propose", "--help"}, want: "--span <start:end>"},

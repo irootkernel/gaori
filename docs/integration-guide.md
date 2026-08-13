@@ -29,6 +29,7 @@ The default adoption model is selective: route commands through Gaori when their
 | Area | Supported in v0.1.11 | Integration note |
 |---|---|---|
 | Configured execution | Yes | `run <command-id>` reads `.gaori/tester.yaml`. |
+| Configuration preflight | Yes | `config check` validates config and all stored rules without execution or artifacts. |
 | Ad-hoc execution | Yes | `run [--parser <label>] --tag <tag> [--tag <tag> ...] -- <argv...>` can run without configured commands. |
 | Existing-log processing | Yes | `summarize [--parser <label>] <raw-log>` copies and summarizes a log without rerunning the command. Its inferred result is not authoritative execution metadata. |
 | Failure excerpt lookup | Yes | `excerpt --summary <path> <failure-id>` validates contained references before reading. |

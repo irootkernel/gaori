@@ -18,6 +18,14 @@ commands:
 
 Do not create or change this file without explicit user intent. It may be portable project config, so preserve the parent repository's tracked state and never add secrets, absolute paths, or machine-specific arguments. Prefer a configured command when it already represents the requested check. Use a tagged ad-hoc run when the command is intentionally selected at runtime; tags select eligible rules, while `--parser` selects the built-in parser.
 
+After inspecting or changing config or stored rules, validate them without executing a command:
+
+```bash
+gaori --json config check
+```
+
+This checks the schema and every stored rule but does not verify executable availability or command success. Its output intentionally omits command argv and redaction definitions.
+
 Implemented parser labels are `generic`, `vitest`, `pytest`, `go-test`, `playwright`, `ginkgo`, `godog`, `cargo-test`, `flutter-test`, `bun-test`, and `node-test`. Unknown labels, schema version 1, and removed `lane` fields fail closed.
 
 ## Project extraction rules

@@ -7,7 +7,7 @@ import (
 	"strings"
 )
 
-var topLevelCommands = []string{"version", "run", "excerpt", "summarize", "clean", "rules"}
+var topLevelCommands = []string{"version", "run", "excerpt", "summarize", "clean", "config", "rules"}
 var ruleCommands = []string{"list", "search", "show", "create", "update", "delete", "test", "propose"}
 
 func helpRequest(args []string) ([]string, bool) {
@@ -40,6 +40,9 @@ func helpCommandPath(args []string) []string {
 		if len(path) == 1 && path[0] == "rules" && slices.Contains(ruleCommands, arg) {
 			path = append(path, arg)
 		}
+		if len(path) == 1 && path[0] == "config" && arg == "check" {
+			path = append(path, arg)
+		}
 	}
 	return path
 }
@@ -63,6 +66,7 @@ Commands:
   summarize   Create evidence artifacts from an existing raw log
   excerpt     Read one bounded failure excerpt
   clean       Remove explicitly selected standalone evidence
+  config      Validate project configuration and rules
   rules       Inspect and manage project extraction rules
 
 Global options:
@@ -99,6 +103,11 @@ Read one bounded excerpt referenced by a Gaori summary JSON artifact.
 
 Remove explicitly selected completed standalone evidence. Use --dry-run first.
 `,
+	"config": `Usage: gaori config check
+
+Validate project configuration and stored rules without running commands or creating artifacts.
+`,
+	"config check": "Usage: gaori config check\n",
 	"rules": `Usage: gaori rules <command>
 
 Commands:

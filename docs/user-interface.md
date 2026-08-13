@@ -27,6 +27,7 @@ gaori run --parser <parser> --tag <tag> [--tag <tag> ...] -- <command...>
 gaori summarize [--parser <parser>] [--tag <tag> ...] <raw-log>
 gaori excerpt --summary <summary-path> <failure-id>
 gaori clean (--older-than <Nd> | --all) [--dry-run]
+gaori config check
 ```
 
 ## Rule commands
@@ -41,6 +42,10 @@ gaori rules delete <rule-id> --reason <reason>
 gaori rules test --rule <rule-id> --log <raw-log> --expect-span <start:end>
 gaori rules propose --tag <tag> [--tag <tag> ...] --parser <parser> --raw-log <raw-log> --span <start:end>
 ```
+
+## Configuration preflight
+
+`gaori config check` loads and validates the selected schema-v2 config plus every stored project rule. It writes no runtime artifacts and does not execute commands or resolve executables. Human output reports the selected config, schema, safe sorted command metadata, and active/disabled rule counts. `--json` provides the same data structurally; argv and redaction definitions are intentionally omitted. Missing or invalid config/rules fail with exit code `2`.
 
 ## Supported parser labels
 

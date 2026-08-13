@@ -16,12 +16,14 @@ This matrix records the primary evidence for every requirement marked complete. 
 | `GAORI-REQ-RQCLI-007` | `TestFrameworkParsersFromCapturedStream`; `TestAdHocParserMissPreservesCommandResult`; `TestAdHocParserAndTagsSelectRules`; `TestAdHocParserOptionValidationPreventsExecution`; `TestAdHocChildParserArgumentIsPreserved`; `TestBinaryAdHocParserContract`; `TestBinaryAdHocParserValidationFailsBeforeExecution` |
 | `GAORI-REQ-RQCLI-008` | `TestHelpSurfacesExitSuccessfully`; `TestHelpDoesNotConsumeChildArguments`; `TestUnknownHelpTopicFailsClosed`; `TestBinaryHelpHierarchy` |
 | `GAORI-REQ-RQCLI-009` | `TestConfiguredRunRedactsSurfacedMetadata`; `TestSummarizeRawLogUsesConfigRedaction`; `TestBinaryJSONRedactsCommandMetadata` |
+| `GAORI-REQ-RQCLI-010` | `TestConfigCheckReportsSafeDeterministicMetadataWithoutArtifacts`; `TestConfigCheckFailsClosedOnInvalidStoredRule`; `TestBinaryConfigCheckIsReadOnly` |
 | `GAORI-REQ-RQCFG-001` | `TestConfiguredRunAndExcerpt`; `TestAdHocRunWithoutConfig`; portable Git policy in `README.md` and `ADR-0011` |
 | `GAORI-REQ-RQCFG-002` | `TestDocumentedCLIWorkflowAgainstFreshFixture` |
 | `GAORI-REQ-RQCFG-003` | `TestValidateAcceptsImplementedParsers`; `TestLoadCanonicalizesTags`; `TestValidateRejectsMissingAndUnsafeTags`; `TestBinaryTagsSelectRulesByAllTags` |
 | `GAORI-REQ-RQCFG-004` | `TestSummarizeRawLogUsesConfigRedaction` |
 | `GAORI-REQ-RQCFG-005` | `TestConfiguredRunRedactsSurfacedMetadata`; `TestBinaryJSONRedactsCommandMetadata` |
 | `GAORI-REQ-RQCFG-006` | `TestLoadRejectsUnknownFieldsAndMultipleDocuments`; `TestBinaryRejectsUnknownConfigFields`; `TestBinaryTagInterfacesFailBeforeExecution` |
+| `GAORI-REQ-RQCFG-007` | `TestConfigCheckReportsSafeDeterministicMetadataWithoutArtifacts`; `TestDisplayConfigPathKeepsExternalOverrideAbsolute`; `TestBinaryConfigCheckIsReadOnly` |
 | `GAORI-REQ-RQRUN-001` | `TestConfiguredRunAndExcerpt`; `TestAdHocRunWithoutConfig` |
 | `GAORI-REQ-RQRUN-002` | `TestConfiguredRunAndExcerpt`; `TestBinaryConfiguredRunAndExcerpt` |
 | `GAORI-REQ-RQRUN-003` | `TestConfiguredRunRedactsSurfacedMetadata`; `TestBinaryJSONRedactsCommandMetadata` |
