@@ -52,6 +52,13 @@ type materializationSource uint8
 
 type extractionProcessor func([]byte, model.RunOutput, []model.Rule) (model.RunOutput, error)
 type commandExecutor func(context.Context, string, string, []string, string, []string, int, io.Writer) (model.RunOutput, error)
+type executionPhase string
+type executionObserver func(executionPhase)
+
+const (
+	executionPhaseExecuting     executionPhase = "executing"
+	executionPhaseMaterializing executionPhase = "materializing"
+)
 
 const (
 	materializationExecutedCommand materializationSource = iota
@@ -344,6 +351,10 @@ func summarizeCommand(opts globalOptions, args []string, stdout, stderr io.Write
 }
 
 func executeRun(req model.RunRequest, execute commandExecutor) (runResult, int, error) {
+	return executeRunContext(context.Background(), req, execute, nil)
+}
+
+func executeRunContext(ctx context.Context, req model.RunRequest, execute commandExecutor, observe executionObserver) (runResult, int, error) {
 	if req.Mode == model.RunModeConfigured && req.Parser != "" {
 		return runResult{}, 0, model.NewGaoriError(model.ExitCodeConfigError, "validate parser", fmt.Errorf("--parser is valid only for ad-hoc runs"))
 	}
@@ -406,7 +417,10 @@ func executeRun(req model.RunRequest, execute commandExecutor) (runResult, int, 
 	if err != nil {
 		return runResult{}, 0, err
 	}
-	runOutput, runErr := execute(context.Background(), req.RepoRoot, commandID, tags, parser, argv, timeoutSec, rawFile)
+	if observe != nil {
+		observe(executionPhaseExecuting)
+	}
+	runOutput, runErr := execute(ctx, req.RepoRoot, commandID, tags, parser, argv, timeoutSec, rawFile)
 	closeErr := rawFile.Close()
 	if closeErr != nil {
 		return runResult{}, 0, model.NewGaoriError(model.ExitCodeArtifactError, "close raw log", closeErr)
@@ -416,6 +430,9 @@ func executeRun(req model.RunRequest, execute commandExecutor) (runResult, int, 
 	}
 	if err := artifacts.ValidateRawLog(paths); err != nil {
 		return runResult{}, 0, err
+	}
+	if observe != nil {
+		observe(executionPhaseMaterializing)
 	}
 	rawSHA := artifacts.SHA256(runOutput.RawLogBytes)
 	relRaw := artifacts.Rel(req.RepoRoot, paths.RawLogPath)

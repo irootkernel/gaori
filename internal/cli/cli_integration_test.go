@@ -13,6 +13,7 @@ import (
 	"slices"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/irootkernel/gaori/internal/artifacts"
 	"github.com/irootkernel/gaori/internal/model"
@@ -412,6 +413,41 @@ func TestRawLogOpenFailurePreventsCommandExecution(t *testing.T) {
 	}
 	if string(data) != "unchanged\n" {
 		t.Fatalf("external raw target changed: %q", data)
+	}
+}
+
+func TestExecuteRunContextReportsLifecycleAndPassesCallerContext(t *testing.T) {
+	t.Parallel()
+	repo := t.TempDir()
+	writeMarkerCommandConfig(t, repo, "unit")
+	type contextKey struct{}
+	ctx := context.WithValue(context.Background(), contextKey{}, "caller")
+	var phases []executionPhase
+	execute := func(got context.Context, _, commandID string, tags []string, parser string, argv []string, _ int, raw io.Writer) (model.RunOutput, error) {
+		if got.Value(contextKey{}) != "caller" {
+			t.Fatal("executor did not receive caller context")
+		}
+		payload := []byte("ok\n")
+		if _, err := raw.Write(payload); err != nil {
+			return model.RunOutput{}, err
+		}
+		now := time.Now().UTC()
+		return model.RunOutput{
+			Metadata: model.RunMetadata{CommandID: commandID, Tags: tags, Parser: parser, CommandArgv: argv, StartedAt: now, EndedAt: now},
+			Status:   model.RunStatusPassed, RawLogBytes: payload,
+		}, nil
+	}
+	req := model.RunRequest{RepoRoot: repo, RunID: "context-run", Mode: model.RunModeConfigured, CommandID: "unit"}
+	result, exitCode, err := executeRunContext(ctx, req, execute, func(phase executionPhase) { phases = append(phases, phase) })
+	if err != nil {
+		t.Fatal(err)
+	}
+	if exitCode != 0 || result.Status != model.RunStatusPassed {
+		t.Fatalf("unexpected result: exit=%d result=%+v", exitCode, result)
+	}
+	want := []executionPhase{executionPhaseExecuting, executionPhaseMaterializing}
+	if !slices.Equal(phases, want) {
+		t.Fatalf("phases = %v, want %v", phases, want)
 	}
 }
 
