@@ -87,7 +87,7 @@ func Run(args []string, stdout, stderr io.Writer, info BuildInfo) int {
 		return 0
 	}
 	if len(remaining) == 0 {
-		writeLine(stderr, "usage: gaori [global options] <version|run|excerpt|summarize|clean|config|rules>")
+		writeLine(stderr, "usage: gaori [global options] <version|run|excerpt|summarize|clean|config|rules|mcp>")
 		return int(model.ExitCodeConfigError)
 	}
 	if remaining[0] == "version" {
@@ -114,6 +114,8 @@ func Run(args []string, stdout, stderr io.Writer, info BuildInfo) int {
 		return configCommand(opts, remaining[1:], stdout, stderr)
 	case "rules":
 		return rulesCommand(opts, remaining[1:], stdout, stderr)
+	case "mcp":
+		return mcpCommand(opts, remaining[1:], stderr, info)
 	default:
 		writef(stderr, "unknown command %q\n", remaining[0])
 		return int(model.ExitCodeConfigError)

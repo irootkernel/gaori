@@ -66,6 +66,7 @@ Commands:
   clean       Remove explicitly selected standalone evidence
   config      Validate project configuration and rules
   rules       Inspect and manage project extraction rules
+  mcp         Serve asynchronous Gaori tools over STDIO MCP
 
 Global options:
   --config <path>      Override .gaori/tester.yaml
@@ -107,6 +108,10 @@ Remove explicitly selected completed standalone evidence. Use --dry-run first.
 Validate project configuration and stored rules without running commands or creating artifacts.
 `,
 	"config check": "Usage: gaori config check\n",
+	"mcp": `Usage: gaori [--repo <path>] [--config <path>] [--output-dir <path>] mcp
+
+Serve session-local asynchronous Gaori run, wait, cancel, and excerpt tools over STDIO MCP.
+`,
 	"rules": `Usage: gaori rules <command>
 
 Commands:
