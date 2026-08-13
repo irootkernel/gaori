@@ -1,7 +1,7 @@
 # Gaori Roadmap
 
 Status: Completed through `PORTA-001`, `CLIUX-007`, `RULES-004`, and `ADHOC-002`
-Scope: Implementation tracking for the Gaori v0.1 standalone baseline, hardening, tag and parser selection, release readiness, identity migration, operator-directed standalone evidence cleanup, portable project config, and CLI usability improvements
+Scope: Implementation tracking for the Gaori v0.1 standalone baseline, hardening, tag and parser selection, release readiness, identity migration, operator-directed standalone evidence cleanup, portable project config, CLI usability improvements, and session-local MCP execution
 
 This roadmap is a delivery record, not an operator guide or a promise that out-of-scope capabilities will be added. See the [integration guide](integration-guide.md) for the current supported/unsupported capability boundary and `todo.md` for explicitly accepted open work.
 
@@ -13,7 +13,7 @@ Current implementation snapshot:
 - `Done`: `SETUP-001` to `SETUP-003`, `RUNNR-001` to `RUNNR-003`, `ARTIF-001` to `ARTIF-003`, `PARSE-001` to `PARSE-004`, `SAFEY-001` to `SAFEY-003`, `CLIUX-001` to `CLIUX-007`, `RULES-001` to `RULES-004`, `DOCUM-001` to `DOCUM-003`, `HARDE-001` to `HARDE-007`, `TAGS-001`, `ADHOC-001`, `ADHOC-002`, `RELRV-001` to `RELRV-009`, `BRAND-001`, `CLEAN-001`, `PORTA-001`
 - `In Progress`: none
 - `Deferred`: none
-- `Planned`: none
+- `Planned`: `MCP-002` to `MCP-005`
 
 ## SETUP: Project foundation
 
@@ -145,3 +145,13 @@ Completed release-readiness findings are retained here; remaining accepted findi
 | Task ID | Status | Goal | Verification | Reference |
 |---|---|---|---|---|
 | PORTA-001 | Done | Define a shared Git policy for portable `.gaori/tester.yaml` and reviewed active rules while keeping toolchain metadata, proposals, and run evidence local. | Verify the documented ignore pattern in a disposable Git repository, review synchronized user and agent guidance, and pass `git diff --check`. | `GAORI-REQ-RQCFG-001`, `GAORI-REQ-RQRUL-002`, `ADR-0011` |
+
+## MCP: Session-local asynchronous execution
+
+| Task ID | Status | Goal | Verification | Reference |
+|---|---|---|---|---|
+| MCP-001 | Done | Define the approved session-local MCP boundary without changing final artifact or watcher contracts. | Review authoritative requirements and ADR consistency; pass `git diff --check`. | `GAORI-REQ-RQMCP-001` to `GAORI-REQ-RQMCP-006`, `ADR-0012` |
+| MCP-002 | Planned | Make execution context-aware and report lifecycle transitions while preserving CLI behavior. | Focused runner and CLI timeout, interruption, and artifact tests. | `GAORI-REQ-RQMCP-002`, `GAORI-REQ-RQMCP-004` |
+| MCP-003 | Planned | Add the asynchronous STDIO MCP server and its six bounded tools. | Lifecycle concurrency, MCP protocol, schema, and CLI integration tests. | `GAORI-REQ-RQMCP-001` to `GAORI-REQ-RQMCP-006` |
+| MCP-004 | Planned | Synchronize user documentation and the source-distributed `use-gaori` skill. | Documentation readback, stale-contract search, link checks, and `git diff --check`. | `GAORI-REQ-RQMCP-001` to `GAORI-REQ-RQMCP-006`, `ADR-0012` |
+| MCP-005 | Planned | Harden the built-binary MCP lifecycle and complete requirement traceability. | Full unit, integration, E2E, repository, and diff gates. | `GAORI-REQ-RQMCP-001` to `GAORI-REQ-RQMCP-006` |

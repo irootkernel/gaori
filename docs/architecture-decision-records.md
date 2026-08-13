@@ -239,6 +239,28 @@ Shared config and rules must not contain secrets, absolute paths, or machine-spe
 - Projects that need local overrides use an explicit external `--config` path or tagged ad-hoc runs rather than committing machine-specific values.
 - Gaori still does not initialize, distribute, stage, or commit project configuration automatically.
 
+## ADR-0012: MCP live state is session-local and asynchronous
+
+Status: Accepted
+Date: 2026-08-14
+
+### Context
+
+The final `status.json` boundary in ADR-0005 is deterministic for no-agent watchers, but it cannot distinguish a running invocation from a pre-materialization failure without polling the parent process. Local coding agents need a structured way to start, observe, wait for, and explicitly cancel long-running Gaori commands. Codex supports local STDIO MCP servers, while its default MCP tool timeout makes one blocking tool call unsuitable for commands that may run for minutes or hours.
+
+### Decision
+
+Gaori will expose a STDIO-only MCP server with an in-memory invocation registry. A start operation returns immediately; get and revision-based wait operations expose `queued`, `executing`, `materializing`, and `finished` phases; explicit cancel and server shutdown cancel active child process groups. Wait expiry and cancellation affect only the wait request. Completed results reuse the existing command, extraction, redaction, and artifact contracts, and raw-log contents are never returned through MCP.
+
+This live channel is scoped to one MCP server process. It does not persist running state, recover invocations after restart, detach commands, listen on a network socket, or own workflow and acceptance state. ADR-0005 remains the compatibility boundary for final filesystem watchers.
+
+### Consequences
+
+- Coding agents can avoid operating-system process polling while retaining final status artifacts.
+- MCP clients must keep the server session alive for active runs and reconcile final artifacts after a disconnect.
+- Invocation revisions and phases form a new public interface, but status JSON and watcher hashes remain unchanged.
+- A test failure is a successful MCP exchange containing a non-pass command result, not a protocol failure.
+
 ## Future ADR candidates
 
 - Built-in parser module boundary after specialized parsers exist.
