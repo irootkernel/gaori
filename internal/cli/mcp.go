@@ -123,7 +123,12 @@ func (m *mcpManager) start(req model.RunRequest) mcpSnapshot {
 	id := fmt.Sprintf("run-%06d", m.nextID)
 	ctx, cancel := context.WithCancel(context.Background())
 	now := time.Now().UTC()
-	inv := &mcpInvocation{snapshot: mcpSnapshot{InvocationID: id, Revision: 1, Phase: mcpPhaseQueued, CreatedAt: now, UpdatedAt: now, Changed: true}, changed: make(chan struct{}), cancel: cancel, done: make(chan struct{})}
+	inv := &mcpInvocation{
+		snapshot: mcpSnapshot{InvocationID: id, Revision: 1, Phase: mcpPhaseQueued, CreatedAt: now, UpdatedAt: now},
+		changed:  make(chan struct{}),
+		cancel:   cancel,
+		done:     make(chan struct{}),
+	}
 	m.invocations[id] = inv
 	m.mu.Unlock()
 

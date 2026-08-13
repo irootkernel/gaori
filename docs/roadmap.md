@@ -1,6 +1,6 @@
 # Gaori Roadmap
 
-Status: Completed through `PORTA-001`, `CLIUX-007`, `RULES-004`, and `ADHOC-002`
+Status: Completed through `MCP-005`
 Scope: Implementation tracking for the Gaori v0.1 standalone baseline, hardening, tag and parser selection, release readiness, identity migration, operator-directed standalone evidence cleanup, portable project config, CLI usability improvements, and session-local MCP execution
 
 This roadmap is a delivery record, not an operator guide or a promise that out-of-scope capabilities will be added. See the [integration guide](integration-guide.md) for the current supported/unsupported capability boundary and `todo.md` for explicitly accepted open work.
@@ -10,10 +10,10 @@ Task status values: `Planned`, `In Progress`, `Blocked`, `Done`, `Deferred`.
 Existing `Done` entries record completion of the original v0.1 implementation slices. They do not supersede or satisfy the later `HARDE` tasks, which close correctness, safety, verification, and documentation gaps found during repository review.
 
 Current implementation snapshot:
-- `Done`: `SETUP-001` to `SETUP-003`, `RUNNR-001` to `RUNNR-003`, `ARTIF-001` to `ARTIF-003`, `PARSE-001` to `PARSE-004`, `SAFEY-001` to `SAFEY-003`, `CLIUX-001` to `CLIUX-007`, `RULES-001` to `RULES-004`, `DOCUM-001` to `DOCUM-003`, `HARDE-001` to `HARDE-007`, `TAGS-001`, `ADHOC-001`, `ADHOC-002`, `RELRV-001` to `RELRV-009`, `BRAND-001`, `CLEAN-001`, `PORTA-001`, `MCP-001` to `MCP-004`
+- `Done`: `SETUP-001` to `SETUP-003`, `RUNNR-001` to `RUNNR-003`, `ARTIF-001` to `ARTIF-003`, `PARSE-001` to `PARSE-004`, `SAFEY-001` to `SAFEY-003`, `CLIUX-001` to `CLIUX-007`, `RULES-001` to `RULES-004`, `DOCUM-001` to `DOCUM-003`, `HARDE-001` to `HARDE-007`, `TAGS-001`, `ADHOC-001`, `ADHOC-002`, `RELRV-001` to `RELRV-009`, `BRAND-001`, `CLEAN-001`, `PORTA-001`, `MCP-001` to `MCP-005`
 - `In Progress`: none
 - `Deferred`: none
-- `Planned`: `MCP-005`
+- `Planned`: none
 
 ## SETUP: Project foundation
 
@@ -154,4 +154,4 @@ Completed release-readiness findings are retained here; remaining accepted findi
 | MCP-002 | Done | Make execution context-aware and report lifecycle transitions while preserving CLI behavior. | Focused runner and CLI timeout, interruption, and artifact tests. | `GAORI-REQ-RQMCP-002`, `GAORI-REQ-RQMCP-004` |
 | MCP-003 | Done | Add the asynchronous STDIO MCP server and its six bounded tools. | Lifecycle concurrency, MCP protocol, schema, and CLI integration tests. | `GAORI-REQ-RQMCP-001` to `GAORI-REQ-RQMCP-006` |
 | MCP-004 | Done | Synchronize user documentation and the source-distributed `use-gaori` skill. | Documentation readback, stale-contract search, link checks, and `git diff --check`. | `GAORI-REQ-RQMCP-001` to `GAORI-REQ-RQMCP-006`, `ADR-0012` |
-| MCP-005 | Planned | Harden the built-binary MCP lifecycle and complete requirement traceability. | Full unit, integration, E2E, repository, and diff gates. | `GAORI-REQ-RQMCP-001` to `GAORI-REQ-RQMCP-006` |
+| MCP-005 | Done | Harden the built-binary MCP lifecycle and complete requirement traceability. | Full unit, integration, E2E, repository, and diff gates. | `GAORI-REQ-RQMCP-001` to `GAORI-REQ-RQMCP-006` |

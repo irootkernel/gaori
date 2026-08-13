@@ -30,7 +30,7 @@ For Gaori maintainers:
 
 The standalone v0.1 baseline and the post-v0.1.11 session-local STDIO MCP interface are implemented. Current surfaces include configured and tagged ad-hoc execution, read-only config/rule preflight, summarization, bounded excerpts, eleven parsers, rule lifecycle commands, redacted derived evidence, final status JSON, explicit cleanup, and asynchronous MCP start/wait/get/cancel/excerpt tools. MCP state is ephemeral; completed artifacts retain the existing standalone layout and authority. Parent projects may commit `.gaori/tester.yaml` and reviewed `.gaori/tester/rules/*.yaml`; all other `.gaori/` content remains local-only.
 
-MCP hardening and traceability remain active in `todo.md`. The delivery statement above is intentionally narrower than “Gaori provides every testing or orchestration capability.”
+There are currently no open implementation items in `todo.md`. The delivery statement above is intentionally narrower than “Gaori provides every testing or orchestration capability.”
 
 ## Document catalog
 

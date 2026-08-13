@@ -1,6 +1,6 @@
 # Gaori Todo
 
-Status: MCP implementation in progress
+Status: No open implementation items
 Scope: Documentation and implementation follow-up notes
 
 ## Todo status legend
@@ -15,7 +15,7 @@ Tag and publish `v0.1.11` only from a clean commit after the authorized release 
 
 ## Active items
 
-- `MCP-001` through `MCP-005`: implement, document, and harden the approved session-local asynchronous MCP execution surface in roadmap order.
+None.
 
 ## Out-of-scope reminder
 

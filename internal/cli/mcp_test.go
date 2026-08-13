@@ -23,12 +23,20 @@ func TestMCPServerAdvertisesExpectedTools(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer serverSession.Close()
+	defer func() {
+		if err := serverSession.Close(); err != nil {
+			t.Errorf("close server session: %v", err)
+		}
+	}()
 	clientSession, err := client.Connect(context.Background(), clientTransport, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer clientSession.Close()
+	defer func() {
+		if err := clientSession.Close(); err != nil {
+			t.Errorf("close client session: %v", err)
+		}
+	}()
 	listed, err := clientSession.ListTools(context.Background(), nil)
 	if err != nil {
 		t.Fatal(err)
@@ -107,6 +115,29 @@ func TestMCPWaitRejectsFutureRevision(t *testing.T) {
 		t.Fatal("expected future revision to fail")
 	}
 	manager.close()
+}
+
+func TestMCPManagerCloseCancelsActiveRun(t *testing.T) {
+	if os.PathSeparator == '\\' {
+		t.Skip("shell process-group behavior is Unix-specific")
+	}
+	manager := newMCPManager(globalOptions{RepoRoot: t.TempDir()})
+	snapshot := manager.start(model.RunRequest{
+		Mode: model.RunModeAdHoc, Tags: []string{"unit"}, CommandArgv: []string{"sh", "-c", "echo started; sleep 30"}, TimeoutSec: 30,
+	})
+	executing, err := manager.wait(context.Background(), snapshot.InvocationID, snapshot.Revision, 5*time.Second)
+	if err != nil || executing.Phase != mcpPhaseExecuting {
+		t.Fatalf("wait for executing: snapshot=%+v err=%v", executing, err)
+	}
+	manager.close()
+	inv, err := manager.lookup(snapshot.InvocationID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	finished := inv.read()
+	if finished.Phase != mcpPhaseFinished || !finished.CancellationRequested || finished.Result == nil || finished.Result.Status != model.RunStatusKilled {
+		t.Fatalf("shutdown snapshot = %+v", finished)
+	}
 }
 
 func TestMCPCommandRejectsArgumentsAndIncompatibleGlobals(t *testing.T) {

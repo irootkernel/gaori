@@ -269,7 +269,7 @@ A watcher that suppresses duplicate notifications must hash exactly this ordered
 
 Gaori also writes `status_hash` from these final, redacted surfaced values. A parent watcher owns polling frequency, notification policy, retries, retention, and any transition into an external state store.
 
-An attached coding agent may instead use `gaori mcp`: start a run, pass the returned revision to `wait_run`, and repeat only when the bounded wait reports no change. This avoids OS process polling but does not create durable state. If the MCP server disconnects, reconcile the command and final artifacts before retrying; a new server cannot recover the old invocation ID.
+An attached coding agent may instead use `gaori mcp`: start a run, pass the returned revision to `wait_run`, and repeat only when the bounded wait reports no change. Use `cancel_run` only for explicit cancellation. This avoids OS process polling but does not create durable state. If the MCP server disconnects, reconcile the command and final artifacts before retrying; a new server cannot recover the old invocation ID.
 
 ## 7. Integrate another evidence consumer
 

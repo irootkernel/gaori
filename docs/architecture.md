@@ -62,7 +62,7 @@ CLI
 
 ## MCP lifecycle data flow
 
-`gaori mcp` runs an attached STDIO server. A start tool allocates an in-memory invocation in `queued`, then the shared run pipeline reports `executing` and `materializing` before the registry publishes `finished`. Every change increments a revision and wakes bounded `wait_run` calls. Wait request cancellation is isolated from the run context; only explicit cancellation or server shutdown cancels execution. Final results and excerpts reuse existing redaction, containment, and artifact code, and raw-log bytes never enter MCP responses. The registry is discarded on server exit and is not a workflow ledger.
+`gaori mcp` runs an attached STDIO server. A start tool allocates an in-memory invocation in `queued`, then the shared run pipeline reports `executing` and `materializing` before the registry publishes `finished`. Every change increments a revision and wakes bounded `wait_run` calls. Wait request cancellation is isolated from the run context; only `cancel_run` or server shutdown cancels execution. Final results and excerpts reuse existing redaction, containment, and artifact code, and raw-log bytes never enter MCP responses. The registry is discarded on server exit and is not a workflow ledger.
 
 ## Data flow: configured command
 

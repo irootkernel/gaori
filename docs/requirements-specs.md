@@ -104,12 +104,12 @@ Implementation note: the original v0.1 roadmap and the recorded `RQHAR` hardenin
 
 ## RQMCP: Session-local MCP execution
 
-- [ ] `GAORI-REQ-RQMCP-001` Provide a local STDIO MCP server through `gaori mcp` without adding a network listener, resident daemon, or detached execution.
-- [ ] `GAORI-REQ-RQMCP-002` Start configured and tagged ad-hoc runs asynchronously and expose session-local `queued`, `executing`, `materializing`, and `finished` phases with a monotonically increasing revision.
-- [ ] `GAORI-REQ-RQMCP-003` Provide bounded `get` and revision-based `wait` operations that report live state without treating a wait timeout or cancelled wait request as cancellation of the test command.
-- [ ] `GAORI-REQ-RQMCP-004` Cancel an active MCP run only through an explicit cancellation operation or server shutdown, forward cancellation to the child process group, and preserve the existing killed and partial-evidence contracts when materialization succeeds.
-- [ ] `GAORI-REQ-RQMCP-005` Return authoritative command status and exit code independently from extractor quality, expose only redacted bounded derived evidence, and never return raw-log contents through MCP.
-- [ ] `GAORI-REQ-RQMCP-006` Keep MCP invocation state ephemeral to one server process; do not provide restart recovery, a durable job ledger, acceptance state, or workflow orchestration.
+- [x] `GAORI-REQ-RQMCP-001` Provide a local STDIO MCP server through `gaori mcp` without adding a network listener, resident daemon, or detached execution.
+- [x] `GAORI-REQ-RQMCP-002` Start configured and tagged ad-hoc runs asynchronously and expose session-local `queued`, `executing`, `materializing`, and `finished` phases with a monotonically increasing revision.
+- [x] `GAORI-REQ-RQMCP-003` Provide bounded `get` and revision-based `wait` operations that report live state without treating a wait timeout or cancelled wait request as cancellation of the test command.
+- [x] `GAORI-REQ-RQMCP-004` Cancel an active MCP run only through an explicit cancellation operation or server shutdown, forward cancellation to the child process group, and preserve the existing killed and partial-evidence contracts when materialization succeeds.
+- [x] `GAORI-REQ-RQMCP-005` Return authoritative command status and exit code independently from extractor quality, expose only redacted bounded derived evidence, and never return raw-log contents through MCP.
+- [x] `GAORI-REQ-RQMCP-006` Keep MCP invocation state ephemeral to one server process; do not provide restart recovery, a durable job ledger, acceptance state, or workflow orchestration.
 
 ## RQDOC: Documentation and operator guidance
 
