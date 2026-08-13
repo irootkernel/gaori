@@ -18,6 +18,8 @@ commands:
 
 Do not create or change this file without explicit user intent. It may be portable project config, so preserve the parent repository's tracked state and never add secrets, absolute paths, or machine-specific arguments. Prefer a configured command when it already represents the requested check. Use a tagged ad-hoc run when the command is intentionally selected at runtime; tags select eligible rules, while `--parser` selects the built-in parser.
 
+Configured commands own their `timeout_sec`. An ad-hoc run defaults to 600 seconds and may select one `--timeout-sec` integer from 1 through 86400 before the child boundary; this option cannot override configured policy.
+
 After inspecting or changing config or stored rules, validate them without executing a command:
 
 ```bash

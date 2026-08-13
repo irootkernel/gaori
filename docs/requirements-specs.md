@@ -26,6 +26,7 @@ Implementation note: the original v0.1 roadmap and the recorded `RQHAR` hardenin
 - [x] `GAORI-REQ-RQCLI-009` Expose unambiguous `summary_markdown`, `summary_json`, and `extractor_status` fields in run and summarize console JSON while retaining `summary` and `extractor` as compatibility aliases and leaving artifact and watcher schemas unchanged.
 - [x] `GAORI-REQ-RQCLI-010` Provide `gaori config check` as a side-effect-free human and JSON preflight for the selected schema-v2 config and every stored project rule, without executing commands, resolving executables, or creating runtime artifacts.
 - [x] `GAORI-REQ-RQCLI-011` Accept global options before or after subcommands and operands while preserving command-option values and passing every argument after an ad-hoc `--` boundary to the child unchanged.
+- [x] `GAORI-REQ-RQCLI-012` Allow tagged ad-hoc runs to select one `--timeout-sec` value from 1 through 86400 before the explicit child boundary, default to 600 seconds, reject configured-run use before side effects, and preserve child-side timeout arguments.
 
 ## RQCFG: Project configuration
 
@@ -45,6 +46,7 @@ Implementation note: the original v0.1 roadmap and the recorded `RQHAR` hardenin
 - [x] `GAORI-REQ-RQRUN-004` Record exit code, start time, end time, duration, command argv, command ID, canonical tags, and parser.
 - [x] `GAORI-REQ-RQRUN-005` Enforce per-command timeout and report `timed_out` status without claiming pass.
 - [x] `GAORI-REQ-RQRUN-006` Handle interrupted/killed runs with explicit status and partial raw-log preservation.
+- [x] `GAORI-REQ-RQRUN-007` Apply the validated ad-hoc timeout through the existing `timed_out`, exit `124`, and partial raw-evidence contract without changing configured command timeouts.
 
 ## RQART: Artifact outputs
 

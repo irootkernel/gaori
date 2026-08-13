@@ -38,6 +38,8 @@ Standalone runs allocate a new collision-free directory. A fixed `--run-id` plus
 gaori --json --run-id parent-run-001 run unit
 ```
 
+Tagged ad-hoc runs time out after 600 seconds unless one `--timeout-sec <1..86400>` is supplied before the child `--` boundary. A timeout is an authoritative `timed_out` result with exit `124`; inspect its partial evidence before deciding whether a retry is safe.
+
 The final `<command-id>.status.json` appears only after execution and extraction finish. Its absence is not a Gaori `running` state. While the process is active, use the parent process handle as the execution authority; do not infer progress from stale artifacts.
 
 ## Cancellation and service control

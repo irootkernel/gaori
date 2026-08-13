@@ -18,6 +18,7 @@ This matrix records the primary evidence for every requirement marked complete. 
 | `GAORI-REQ-RQCLI-009` | `TestConfiguredRunRedactsSurfacedMetadata`; `TestSummarizeRawLogUsesConfigRedaction`; `TestBinaryJSONRedactsCommandMetadata` |
 | `GAORI-REQ-RQCLI-010` | `TestConfigCheckReportsSafeDeterministicMetadataWithoutArtifacts`; `TestConfigCheckFailsClosedOnInvalidStoredRule`; `TestBinaryConfigCheckIsReadOnly` |
 | `GAORI-REQ-RQCLI-011` | `TestParseGlobalOptionsAcceptsFlexiblePositions`; `TestParseGlobalOptionsPreservesCommandValuesAndChildBoundary`; `TestParseGlobalOptionsRejectsInvalidValues`; `TestBinaryGlobalOptionsArePositionIndependentBeforeChildBoundary` |
+| `GAORI-REQ-RQCLI-012` | `TestAdHocTimeoutSelection`; `TestAdHocParserOptionValidationPreventsExecution`; `TestAdHocChildTimeoutArgumentIsPreserved`; `TestBinaryAdHocTimeoutContract` |
 | `GAORI-REQ-RQCFG-001` | `TestConfiguredRunAndExcerpt`; `TestAdHocRunWithoutConfig`; portable Git policy in `README.md` and `ADR-0011` |
 | `GAORI-REQ-RQCFG-002` | `TestDocumentedCLIWorkflowAgainstFreshFixture` |
 | `GAORI-REQ-RQCFG-003` | `TestValidateAcceptsImplementedParsers`; `TestLoadCanonicalizesTags`; `TestValidateRejectsMissingAndUnsafeTags`; `TestBinaryTagsSelectRulesByAllTags` |
@@ -31,6 +32,7 @@ This matrix records the primary evidence for every requirement marked complete. 
 | `GAORI-REQ-RQRUN-004` | `TestConfiguredRunAndExcerpt`; `TestBinaryConfiguredRunAndExcerpt` |
 | `GAORI-REQ-RQRUN-005` | `TestExecuteTimeout`; `TestExecuteTimeoutReportsRawLogWriteFailure`; `TestTimeoutPreservesPartialArtifacts` |
 | `GAORI-REQ-RQRUN-006` | `TestExecuteForwardsTerminationAndNormalizesResult`; `TestExecuteInterruptedReportsRawLogWriteFailure`; `TestBinaryPreservesInterruptedEvidence` |
+| `GAORI-REQ-RQRUN-007` | `TestAdHocTimeoutSelection`; `TestBinaryAdHocTimeoutContract`; `TestTimeoutPreservesPartialArtifacts` |
 | `GAORI-REQ-RQART-001` | `TestRunIDArtifactLayout`; `TestBinaryArtifactContainment` |
 | `GAORI-REQ-RQART-002` | `TestArtifactOutputDirectories`; `TestBinaryStandaloneCollisionResistance` |
 | `GAORI-REQ-RQART-003` | `TestConfiguredRunAndExcerpt`; `TestOversizedSummarizeUsesBoundedExtraction`; `TestNoisyRunsWriteBoundedTerminalArtifacts`; `TestWriteSummaryJSONIncludesFalseTruncationFields`; `TestArchitectureJSONContractExamplesMatchFreshRunArtifacts` |

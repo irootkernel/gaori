@@ -23,7 +23,7 @@ The complete hierarchy has built-in help. `gaori --help`, `gaori help <command>`
 ```bash
 gaori run <command-id>
 gaori run --tag <tag> [--tag <tag> ...] -- <command...>
-gaori run --parser <parser> --tag <tag> [--tag <tag> ...] -- <command...>
+gaori run [--parser <parser>] [--timeout-sec <seconds>] --tag <tag> [--tag <tag> ...] -- <command...>
 gaori summarize [--parser <parser>] [--tag <tag> ...] <raw-log>
 gaori excerpt --summary <summary-path> <failure-id>
 gaori clean (--older-than <Nd> | --all) [--dry-run]
@@ -66,6 +66,8 @@ Implemented parser labels:
 Applicable project rules are evaluated first. The selected parser is a fallback and runs only when no rule produces a failure. The `generic` label uses generic extraction patterns; specialized labels use only their own parser patterns and never retry generic extraction. A specialized-parser miss reports `no_match` after a pass and `degraded` after a non-pass result.
 
 Configured runs always use the parser stored in `.gaori/tester.yaml`. Tagged ad-hoc runs default to `generic`; add exactly one `--parser <label>` or `--parser=<label>` before the `--` command boundary to select a specialized parser. At least one tag and a non-empty child command remain required. Tags select project rules and never select a parser. The selected parser is recorded in `summary.json`; the existing human console, console JSON, summary Markdown, status JSON, and watcher-hash shapes do not add a parser field.
+
+Tagged ad-hoc runs default to a 600-second timeout. `--timeout-sec <seconds>` accepts one integer from 1 through 86400 before the explicit `--` boundary. Missing, empty, repeated, non-integer, out-of-range, tagless, boundary-less, or configured-run use fails with exit code `2` before config/rule loading, artifact creation, or execution. A child-side `--timeout-sec` after the boundary is passed through unchanged. Timeouts retain partial raw evidence and use `status: timed_out` with exit code `124`.
 
 Existing-log summarization also defaults to `generic`; add exactly one `--parser <label>` to select the output format that produced the raw log. The selected parser controls failure inference and extraction, and exact-parser project rules remain eligible when all of their tags match. Unknown, empty, or repeated summarize parser values fail with config exit code `2` before artifact creation.
 

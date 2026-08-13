@@ -1,6 +1,6 @@
 # Gaori Roadmap
 
-Status: Completed through `PORTA-001` and `CLIUX-007`
+Status: Completed through `PORTA-001`, `CLIUX-007`, and `ADHOC-002`
 Scope: Implementation tracking for the Gaori v0.1 standalone baseline, hardening, tag and parser selection, release readiness, identity migration, operator-directed standalone evidence cleanup, portable project config, and CLI usability improvements
 
 This roadmap is a delivery record, not an operator guide or a promise that out-of-scope capabilities will be added. See the [integration guide](integration-guide.md) for the current supported/unsupported capability boundary and `todo.md` for explicitly accepted open work.
@@ -10,7 +10,7 @@ Task status values: `Planned`, `In Progress`, `Blocked`, `Done`, `Deferred`.
 Existing `Done` entries record completion of the original v0.1 implementation slices. They do not supersede or satisfy the later `HARDE` tasks, which close correctness, safety, verification, and documentation gaps found during repository review.
 
 Current implementation snapshot:
-- `Done`: `SETUP-001` to `SETUP-003`, `RUNNR-001` to `RUNNR-003`, `ARTIF-001` to `ARTIF-003`, `PARSE-001` to `PARSE-004`, `SAFEY-001` to `SAFEY-003`, `CLIUX-001` to `CLIUX-007`, `RULES-001` to `RULES-003`, `DOCUM-001` to `DOCUM-003`, `HARDE-001` to `HARDE-007`, `TAGS-001`, `ADHOC-001`, `RELRV-001` to `RELRV-009`, `BRAND-001`, `CLEAN-001`, `PORTA-001`
+- `Done`: `SETUP-001` to `SETUP-003`, `RUNNR-001` to `RUNNR-003`, `ARTIF-001` to `ARTIF-003`, `PARSE-001` to `PARSE-004`, `SAFEY-001` to `SAFEY-003`, `CLIUX-001` to `CLIUX-007`, `RULES-001` to `RULES-003`, `DOCUM-001` to `DOCUM-003`, `HARDE-001` to `HARDE-007`, `TAGS-001`, `ADHOC-001`, `ADHOC-002`, `RELRV-001` to `RELRV-009`, `BRAND-001`, `CLEAN-001`, `PORTA-001`
 - `In Progress`: none
 - `Deferred`: none
 - `Planned`: none
@@ -109,6 +109,7 @@ These tasks were implemented as separate, reviewable units in numerical order. A
 | Task ID | Status | Goal | Verification | Reference |
 |---|---|---|---|---|
 | ADHOC-001 | Done | Allow tagged ad-hoc runs to select an existing parser explicitly without changing configured commands, parser fallback, or command-result authority. | Cover all implemented parsers, misses, exact parser-and-tag rule selection, CLI boundary handling, child argv passthrough, and pre-execution sentinel failures; pass focused CLI/E2E tests and the full test suite. | `GAORI-REQ-RQCLI-007`, `GAORI-REQ-RQEXT-002`, `GAORI-REQ-RQEXT-007`, `GAORI-REQ-RQRUL-008`, `GAORI-REQ-RQSEC-003`, `GAORI-REQ-RQSEC-005` |
+| ADHOC-002 | Done | Add an explicit bounded ad-hoc timeout while preserving configured timeout ownership, child argv, and authoritative timeout evidence. | Cover default/explicit values, invalid and configured-run rejection before side effects, child passthrough, and built-binary timeout artifacts; pass the full test suite. | `GAORI-REQ-RQCLI-012`, `GAORI-REQ-RQRUN-007` |
 
 ## RELRV: v0.1.4 release-readiness follow-up
 

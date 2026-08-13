@@ -225,6 +225,13 @@ gaori run --parser playwright --tag web --tag e2e -- \
   pnpm playwright test tests/login.spec.ts
 ```
 
+Ad-hoc runs time out after 600 seconds by default. Override that execution only with a whole-second value from 1 through 86400:
+
+```bash
+gaori run --timeout-sec 1800 --parser go-test --tag go --tag integration -- \
+  go test ./internal/integration/...
+```
+
 For `run`, `--parser` applies only to the tagged ad-hoc `-- <command...>` form; it does not override a configured command. `summarize` also accepts one explicit parser and otherwise defaults to `generic`. Tags select which local extraction rules may inspect a raw log; they do not select the parser or change pass/fail. A rule applies only when its parser matches and all of its tags are present on the run. This lets a `tags: [go]` rule apply to both Go unit and integration runs while a `tags: [go, unit]` rule remains unit-specific. Multiple applicable rules may run against the same log. Specialized parsers use only their own patterns and do not retry generic extraction after a miss.
 
 ## Work with existing evidence

@@ -252,6 +252,15 @@ func TestAdHocParserOptionValidationPreventsExecution(t *testing.T) {
 		{name: "missing command", args: []string{"--parser", "go-test", "--tag", "go", "--"}},
 		{name: "configured override", args: []string{"--parser", "generic", "unit"}},
 		{name: "missing boundary", args: []string{"--parser", "generic", "--tag", "go", "true"}},
+		{name: "timeout missing value", args: []string{"--timeout-sec", "--tag", "go", "--", "true"}},
+		{name: "timeout empty", args: []string{"--timeout-sec=", "--tag", "go", "--", "true"}},
+		{name: "timeout non-integer", args: []string{"--timeout-sec", "1.5", "--tag", "go", "--", "true"}},
+		{name: "timeout zero", args: []string{"--timeout-sec", "0", "--tag", "go", "--", "true"}},
+		{name: "timeout too large", args: []string{"--timeout-sec", "86401", "--tag", "go", "--", "true"}},
+		{name: "timeout duplicate", args: []string{"--timeout-sec", "10", "--timeout-sec", "20", "--tag", "go", "--", "true"}},
+		{name: "timeout configured", args: []string{"--timeout-sec", "10", "unit"}},
+		{name: "timeout missing tag", args: []string{"--timeout-sec", "10", "--", "true"}},
+		{name: "timeout missing boundary", args: []string{"--timeout-sec", "10", "--tag", "go", "true"}},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
@@ -271,6 +280,38 @@ func TestAdHocParserOptionValidationPreventsExecution(t *testing.T) {
 			}
 			if _, err := os.Stat(filepath.Join(repo, ".gaori", "runs")); !os.IsNotExist(err) {
 				t.Fatalf("invalid input created run artifacts: %v", err)
+			}
+		})
+	}
+}
+
+func TestAdHocTimeoutSelection(t *testing.T) {
+	t.Parallel()
+	for _, test := range []struct {
+		name        string
+		args        []string
+		wantTimeout int
+	}{
+		{name: "default", args: []string{"--tag", "unit", "--", "true"}, wantTimeout: 600},
+		{name: "explicit", args: []string{"--timeout-sec", "1800", "--tag", "unit", "--", "true"}, wantTimeout: 1800},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			repo := t.TempDir()
+			gotTimeout := 0
+			execute := func(_ context.Context, _, commandID string, tags []string, parser string, argv []string, timeout int, _ io.Writer) (model.RunOutput, error) {
+				gotTimeout = timeout
+				return model.RunOutput{
+					Metadata: model.RunMetadata{CommandID: commandID, Tags: tags, Parser: parser, CommandArgv: argv},
+					Status:   model.RunStatusPassed,
+				}, nil
+			}
+			var stdout, stderr bytes.Buffer
+			if exitCode := runCommand(globalOptions{RepoRoot: repo, JSON: true}, test.args, &stdout, &stderr, execute); exitCode != 0 {
+				t.Fatalf("exit=%d stdout=%s stderr=%s", exitCode, stdout.String(), stderr.String())
+			}
+			if gotTimeout != test.wantTimeout {
+				t.Fatalf("timeout=%d want=%d", gotTimeout, test.wantTimeout)
 			}
 		})
 	}
@@ -343,6 +384,21 @@ func TestAdHocChildParserArgumentIsPreserved(t *testing.T) {
 		t.Fatal(err)
 	}
 	if string(raw) != "--parser\nchild-value\n" {
+		t.Fatalf("unexpected child argv: %q", raw)
+	}
+}
+
+func TestAdHocChildTimeoutArgumentIsPreserved(t *testing.T) {
+	t.Parallel()
+	repo := t.TempDir()
+	result := runAdHocJSONWithExit(t, repo, 0,
+		"run", "--timeout-sec", "30", "--tag", "cli", "--",
+		"sh", "-c", "printf '%s\\n' \"$1\" \"$2\"", "child", "--timeout-sec", "child-value")
+	raw, err := os.ReadFile(filepath.Join(repo, filepath.FromSlash(result.RawLog)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(raw) != "--timeout-sec\nchild-value\n" {
 		t.Fatalf("unexpected child argv: %q", raw)
 	}
 }

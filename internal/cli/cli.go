@@ -242,6 +242,16 @@ func runCommand(opts globalOptions, args []string, stdout, stderr io.Writer, exe
 			return int(model.ExitCodeConfigError)
 		}
 	}
+	if parsed.Timeout.set {
+		if !parsed.HasBoundary {
+			writeLine(stderr, "--timeout-sec is valid only for the ad-hoc -- <command...> form")
+			return int(model.ExitCodeConfigError)
+		}
+		if len(parsed.Tags) == 0 {
+			writeLine(stderr, "--timeout-sec requires at least one --tag for an ad-hoc run")
+			return int(model.ExitCodeConfigError)
+		}
+	}
 	req := model.RunRequest{
 		RepoRoot:   opts.RepoRoot,
 		ConfigPath: opts.ConfigPath,
@@ -249,6 +259,7 @@ func runCommand(opts globalOptions, args []string, stdout, stderr io.Writer, exe
 		RunID:      opts.RunID,
 		JSON:       opts.JSON,
 		Parser:     parsed.Parser.value,
+		TimeoutSec: parsed.Timeout.value,
 	}
 	if len(parsed.Tags) > 0 {
 		req.Mode = model.RunModeAdHoc
@@ -336,6 +347,9 @@ func executeRun(req model.RunRequest, execute commandExecutor) (runResult, int, 
 	if req.Mode == model.RunModeConfigured && req.Parser != "" {
 		return runResult{}, 0, model.NewGaoriError(model.ExitCodeConfigError, "validate parser", fmt.Errorf("--parser is valid only for ad-hoc runs"))
 	}
+	if req.Mode == model.RunModeConfigured && req.TimeoutSec != 0 {
+		return runResult{}, 0, model.NewGaoriError(model.ExitCodeConfigError, "validate timeout", fmt.Errorf("--timeout-sec is valid only for ad-hoc runs"))
+	}
 	allowMissing := req.Mode == model.RunModeAdHoc
 	cfg, _, err := config.Load(req.RepoRoot, req.ConfigPath, allowMissing)
 	if err != nil {
@@ -368,7 +382,13 @@ func executeRun(req model.RunRequest, execute commandExecutor) (runResult, int, 
 			parser = "generic"
 		}
 		argv = append([]string(nil), req.CommandArgv...)
-		timeoutSec = 600
+		timeoutSec = req.TimeoutSec
+		if timeoutSec == 0 {
+			timeoutSec = 600
+		}
+		if timeoutSec < 1 || timeoutSec > 86400 {
+			return runResult{}, 0, model.NewGaoriError(model.ExitCodeConfigError, "validate timeout", fmt.Errorf("--timeout-sec must be between 1 and 86400"))
+		}
 	}
 	if err := config.ValidateParserLabel(parser); err != nil {
 		return runResult{}, 0, err
@@ -841,6 +861,31 @@ type singleRunParser struct {
 	set   bool
 }
 
+type singleRunTimeout struct {
+	value int
+	set   bool
+}
+
+func (timeout *singleRunTimeout) String() string {
+	if !timeout.set {
+		return ""
+	}
+	return strconv.Itoa(timeout.value)
+}
+
+func (timeout *singleRunTimeout) Set(value string) error {
+	if timeout.set {
+		return fmt.Errorf("--timeout-sec may be specified only once")
+	}
+	parsed, err := strconv.Atoi(value)
+	if err != nil || parsed < 1 || parsed > 86400 {
+		return fmt.Errorf("--timeout-sec must be an integer between 1 and 86400")
+	}
+	timeout.value = parsed
+	timeout.set = true
+	return nil
+}
+
 func (parser *singleRunParser) String() string {
 	return parser.value
 }
@@ -860,6 +905,7 @@ func (parser *singleRunParser) Set(value string) error {
 type parsedRunArguments struct {
 	Tags        stringList
 	Parser      singleRunParser
+	Timeout     singleRunTimeout
 	Rest        []string
 	HasBoundary bool
 }
@@ -885,6 +931,7 @@ func parseRunFlags(args []string) (parsedRunArguments, error) {
 	fs.SetOutput(io.Discard)
 	fs.Var(&parsed.Tags, "tag", "tag (repeatable)")
 	fs.Var(&parsed.Parser, "parser", "parser")
+	fs.Var(&parsed.Timeout, "timeout-sec", "ad-hoc timeout in seconds")
 	if err := fs.Parse(args); err != nil {
 		return parsedRunArguments{}, err
 	}

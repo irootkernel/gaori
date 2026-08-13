@@ -95,6 +95,7 @@ type RunRequest struct {
 	CommandID   string
 	Tags        []string
 	Parser      string
+	TimeoutSec  int
 	CommandArgv []string
 }
 

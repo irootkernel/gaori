@@ -49,6 +49,8 @@ Use `gaori --help`, `gaori help <command>`, or `gaori help rules <subcommand>` t
    gaori --json run --parser go-test --tag go --tag unit -- go test ./internal/...
    ```
 
+   Ad-hoc runs default to 600 seconds. When the selected check legitimately needs longer, add one `--timeout-sec <1..86400>` before the child `--` boundary. Do not use it to override a configured command's project-owned timeout.
+
    For a log that already exists, do not rerun its command — summarize it in place:
 
    ```bash

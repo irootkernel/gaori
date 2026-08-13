@@ -86,10 +86,11 @@ Show the selected Gaori binary name and semantic version.
 `,
 	"run": `Usage:
   gaori run <command-id>
-  gaori run [--parser <label>] --tag <tag> [--tag <tag> ...] -- <command...>
+  gaori run [--parser <label>] [--timeout-sec <seconds>] --tag <tag> [--tag <tag> ...] -- <command...>
 
 Run a configured command or an explicitly tagged ad-hoc argv. The child
 command exit code remains authoritative. Arguments after -- belong to the child.
+Ad-hoc timeout defaults to 600 seconds; --timeout-sec accepts 1 through 86400.
 `,
 	"summarize": `Usage: gaori summarize [--parser <label>] [--tag <tag> ...] <raw-log>
 
