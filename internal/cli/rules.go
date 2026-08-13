@@ -399,13 +399,6 @@ func validateFailureSpanBoundaries(rawFile *os.File, rawSize int64, span model.R
 		}
 	}
 	if int64(span.EndByte) == rawSize {
-		last := []byte{0}
-		if _, err := rawFile.ReadAt(last, rawSize-1); err != nil {
-			return model.NewGaoriError(model.ExitCodeArtifactError, "read failure end boundary", err)
-		}
-		if last[0] == '\n' {
-			return model.NewGaoriError(model.ExitCodeConfigError, "propose rule from summary", fmt.Errorf("failure end byte includes a line terminator"))
-		}
 		return nil
 	}
 	next := []byte{0}

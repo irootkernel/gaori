@@ -221,9 +221,6 @@ func ProposeFromEvidence(repoRoot string, tags []string, parser, rawLogPath, raw
 		return model.RuleProposal{}, model.NewGaoriError(model.ExitCodeConfigError, "propose rule", fmt.Errorf("summary evidence is missing provenance metadata"))
 	}
 	lines := strings.Split(strings.ReplaceAll(string(segment), "\r\n", "\n"), "\n")
-	if len(lines) > 1 && lines[len(lines)-1] == "" {
-		lines = lines[:len(lines)-1]
-	}
 	for i := range lines {
 		lines[i] = strings.TrimSuffix(lines[i], "\r")
 	}

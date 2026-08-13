@@ -47,3 +47,40 @@ func TestBinaryProposesRuleFromGeneratedFailureSummary(t *testing.T) {
 		t.Fatalf("proposal path escaped local proposal directory: %q", proposal.Path)
 	}
 }
+
+func TestBinaryProposesRuleFromGeneratedLFTerminalFailureSummary(t *testing.T) {
+	t.Parallel()
+	root := projectRoot(t)
+	bin := buildBinary(t, root)
+	repo := t.TempDir()
+
+	run, stderr := runBinaryJSONWithExit(t, bin, repo, 1,
+		"run", "--parser", "generic", "--tag", "unit", "--",
+		"sh", "-c", "printf 'TypeError: boom\\n'; exit 1")
+	if stderr != "" {
+		t.Fatalf("unexpected run diagnostic: %s", stderr)
+	}
+	summary, _, raw := loadBinaryRunArtifacts(t, repo, run)
+	if len(summary.Failures) != 1 {
+		t.Fatalf("generated failures=%d want=1: %+v", len(summary.Failures), summary.Failures)
+	}
+	span := summary.Failures[0].RawSpan
+	if span.EndLine != span.StartLine+1 || span.EndByte != len(raw) || raw[len(raw)-1] != '\n' {
+		t.Fatalf("fixture did not produce terminal virtual-line span: span=%+v raw=%q", span, raw)
+	}
+
+	cmd := exec.Command(bin, "--repo", repo, "--json", "rules", "propose",
+		"--summary", run.SummaryJSON, "--failure", summary.Failures[0].ID)
+	cmd.Dir = repo
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		t.Fatalf("LF-terminal summary proposal failed: %v output=%s", err, output)
+	}
+	var proposal model.RuleProposal
+	if err := json.Unmarshal(output, &proposal); err != nil {
+		t.Fatalf("decode proposal %q: %v", output, err)
+	}
+	if proposal.Rule.Match.Start.Regex != "^TypeError: boom$" || proposal.Rule.Provenance.SourceSpan != span {
+		t.Fatalf("proposal lost terminal failure evidence: %+v", proposal.Rule)
+	}
+}
