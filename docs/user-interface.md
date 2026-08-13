@@ -253,6 +253,8 @@ Compact JSON output for scripts:
 gaori --output-dir evidence --json summarize fixtures/unit.raw.log
 ```
 
+Run and summarize JSON expose `summary_markdown`, `summary_json`, `status_json`, `raw_log`, and `extractor_status`. Use `summary_json` with `excerpt --summary`. The legacy `summary` and `extractor` fields remain aliases for `summary_markdown` and `extractor_status`; artifact JSON and watcher-hash inputs are unchanged.
+
 Preview completed standalone evidence cleanup:
 
 ```bash

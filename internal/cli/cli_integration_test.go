@@ -186,7 +186,13 @@ func TestConfiguredRunRedactsSurfacedMetadata(t *testing.T) {
 	if result.Command != "command_<redacted>" {
 		t.Fatalf("expected redacted result command, got %q", result.Command)
 	}
-	for _, path := range []string{result.Summary, result.StatusJSON, result.RawLog} {
+	if result.Summary != result.SummaryMarkdown || result.Extractor != result.ExtractorStatus {
+		t.Fatalf("legacy JSON aliases diverged: %+v", result)
+	}
+	if !strings.HasSuffix(result.SummaryJSON, ".summary.json") {
+		t.Fatalf("summary_json = %q", result.SummaryJSON)
+	}
+	for _, path := range []string{result.Summary, result.SummaryMarkdown, result.SummaryJSON, result.StatusJSON, result.RawLog} {
 		if !strings.Contains(path, "command_secret_id") {
 			t.Fatalf("expected literal artifact reference, got %q", path)
 		}
@@ -720,7 +726,10 @@ func TestSummarizeRawLogUsesConfigRedaction(t *testing.T) {
 	if result.Command != "unit_<redacted>" {
 		t.Fatalf("expected redacted summarize JSON command, got %q", result.Command)
 	}
-	for _, path := range []string{result.Summary, result.StatusJSON, result.RawLog} {
+	if result.Summary != result.SummaryMarkdown || result.Extractor != result.ExtractorStatus {
+		t.Fatalf("summarize JSON aliases diverged: %+v", result)
+	}
+	for _, path := range []string{result.Summary, result.SummaryMarkdown, result.SummaryJSON, result.StatusJSON, result.RawLog} {
 		if !strings.Contains(path, "unit_secret_id") {
 			t.Fatalf("expected literal summarize artifact reference, got %q", path)
 		}

@@ -15,6 +15,7 @@ This matrix records the primary evidence for every requirement marked complete. 
 | `GAORI-REQ-RQCLI-006` | `TestTimeoutPreservesPartialArtifacts`; `TestBinaryExtractionContracts` |
 | `GAORI-REQ-RQCLI-007` | `TestFrameworkParsersFromCapturedStream`; `TestAdHocParserMissPreservesCommandResult`; `TestAdHocParserAndTagsSelectRules`; `TestAdHocParserOptionValidationPreventsExecution`; `TestAdHocChildParserArgumentIsPreserved`; `TestBinaryAdHocParserContract`; `TestBinaryAdHocParserValidationFailsBeforeExecution` |
 | `GAORI-REQ-RQCLI-008` | `TestHelpSurfacesExitSuccessfully`; `TestHelpDoesNotConsumeChildArguments`; `TestUnknownHelpTopicFailsClosed`; `TestBinaryHelpHierarchy` |
+| `GAORI-REQ-RQCLI-009` | `TestConfiguredRunRedactsSurfacedMetadata`; `TestSummarizeRawLogUsesConfigRedaction`; `TestBinaryJSONRedactsCommandMetadata` |
 | `GAORI-REQ-RQCFG-001` | `TestConfiguredRunAndExcerpt`; `TestAdHocRunWithoutConfig`; portable Git policy in `README.md` and `ADR-0011` |
 | `GAORI-REQ-RQCFG-002` | `TestDocumentedCLIWorkflowAgainstFreshFixture` |
 | `GAORI-REQ-RQCFG-003` | `TestValidateAcceptsImplementedParsers`; `TestLoadCanonicalizesTags`; `TestValidateRejectsMissingAndUnsafeTags`; `TestBinaryTagsSelectRulesByAllTags` |

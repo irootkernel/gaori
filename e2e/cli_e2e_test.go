@@ -18,14 +18,17 @@ import (
 )
 
 type binaryRunResult struct {
-	Command    string          `json:"command"`
-	Status     model.RunStatus `json:"status"`
-	ExitCode   int             `json:"exit_code"`
-	Summary    string          `json:"summary"`
-	StatusJSON string          `json:"status_json"`
-	RawLog     string          `json:"raw_log"`
-	Failures   int             `json:"failures"`
-	Extractor  string          `json:"extractor"`
+	Command         string          `json:"command"`
+	Status          model.RunStatus `json:"status"`
+	ExitCode        int             `json:"exit_code"`
+	Summary         string          `json:"summary"`
+	SummaryMarkdown string          `json:"summary_markdown"`
+	SummaryJSON     string          `json:"summary_json"`
+	StatusJSON      string          `json:"status_json"`
+	RawLog          string          `json:"raw_log"`
+	Failures        int             `json:"failures"`
+	Extractor       string          `json:"extractor"`
+	ExtractorStatus string          `json:"extractor_status"`
 }
 
 type binaryCommandOutput struct {
@@ -279,7 +282,10 @@ func TestBinaryJSONRedactsCommandMetadata(t *testing.T) {
 	if result.Command != "json_<redacted>" {
 		t.Fatalf("expected redacted binary JSON command, got %q", result.Command)
 	}
-	for _, path := range []string{result.Summary, result.StatusJSON, result.RawLog} {
+	if result.Summary != result.SummaryMarkdown || result.Extractor != result.ExtractorStatus {
+		t.Fatalf("legacy binary JSON aliases diverged: %+v", result)
+	}
+	for _, path := range []string{result.Summary, result.SummaryMarkdown, result.SummaryJSON, result.StatusJSON, result.RawLog} {
 		if !strings.Contains(path, "json_secret_id") {
 			t.Fatalf("expected literal binary JSON artifact reference, got %q", path)
 		}

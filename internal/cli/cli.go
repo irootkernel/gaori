@@ -32,16 +32,19 @@ type globalOptions struct {
 }
 
 type runResult struct {
-	Command    string          `json:"command"`
-	Status     model.RunStatus `json:"status"`
-	ExitCode   int             `json:"exit_code"`
-	DurationMS int64           `json:"duration_ms"`
-	Summary    string          `json:"summary"`
-	StatusJSON string          `json:"status_json"`
-	RawLog     string          `json:"raw_log,omitempty"`
-	Failures   int             `json:"failures"`
-	Extractor  string          `json:"extractor"`
-	diagnostic string
+	Command         string          `json:"command"`
+	Status          model.RunStatus `json:"status"`
+	ExitCode        int             `json:"exit_code"`
+	DurationMS      int64           `json:"duration_ms"`
+	Summary         string          `json:"summary"`
+	SummaryMarkdown string          `json:"summary_markdown"`
+	SummaryJSON     string          `json:"summary_json"`
+	StatusJSON      string          `json:"status_json"`
+	RawLog          string          `json:"raw_log,omitempty"`
+	Failures        int             `json:"failures"`
+	Extractor       string          `json:"extractor"`
+	ExtractorStatus string          `json:"extractor_status"`
+	diagnostic      string
 }
 
 type materializationSource uint8
@@ -464,15 +467,18 @@ func materializeArtifactsWithExtractor(req model.RunRequest, cfg model.Config, p
 	}
 
 	result := runResult{
-		Command:    summary.CommandID,
-		Status:     runOutput.Status,
-		ExitCode:   metadata.ExitCode,
-		DurationMS: metadata.DurationMS,
-		Summary:    artifacts.Rel(req.RepoRoot, paths.SummaryMD),
-		StatusJSON: artifacts.Rel(req.RepoRoot, paths.StatusJSON),
-		RawLog:     relRaw,
-		Failures:   len(summary.Failures),
-		Extractor:  string(summary.ExtractorStatus),
+		Command:         summary.CommandID,
+		Status:          runOutput.Status,
+		ExitCode:        metadata.ExitCode,
+		DurationMS:      metadata.DurationMS,
+		Summary:         artifacts.Rel(req.RepoRoot, paths.SummaryMD),
+		SummaryMarkdown: artifacts.Rel(req.RepoRoot, paths.SummaryMD),
+		SummaryJSON:     artifacts.Rel(req.RepoRoot, paths.SummaryJSON),
+		StatusJSON:      artifacts.Rel(req.RepoRoot, paths.StatusJSON),
+		RawLog:          relRaw,
+		Failures:        len(summary.Failures),
+		Extractor:       string(summary.ExtractorStatus),
+		ExtractorStatus: string(summary.ExtractorStatus),
 	}
 	if extractionErr != nil {
 		result.diagnostic = safety.BoundBytes(redactor.Apply(extractionErr.Error()), safety.MaxExcerptBytes)

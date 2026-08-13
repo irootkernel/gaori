@@ -1,7 +1,7 @@
 # Gaori Roadmap
 
-Status: Completed through `PORTA-001` and `CLIUX-004`
-Scope: Implementation tracking for the Gaori v0.1 standalone baseline, hardening, tag and parser selection, release readiness, identity migration, operator-directed standalone evidence cleanup, portable project config, and successful built-in help
+Status: Completed through `PORTA-001` and `CLIUX-005`
+Scope: Implementation tracking for the Gaori v0.1 standalone baseline, hardening, tag and parser selection, release readiness, identity migration, operator-directed standalone evidence cleanup, portable project config, and CLI usability improvements
 
 This roadmap is a delivery record, not an operator guide or a promise that out-of-scope capabilities will be added. See the [integration guide](integration-guide.md) for the current supported/unsupported capability boundary and `todo.md` for explicitly accepted open work.
 
@@ -10,7 +10,7 @@ Task status values: `Planned`, `In Progress`, `Blocked`, `Done`, `Deferred`.
 Existing `Done` entries record completion of the original v0.1 implementation slices. They do not supersede or satisfy the later `HARDE` tasks, which close correctness, safety, verification, and documentation gaps found during repository review.
 
 Current implementation snapshot:
-- `Done`: `SETUP-001` to `SETUP-003`, `RUNNR-001` to `RUNNR-003`, `ARTIF-001` to `ARTIF-003`, `PARSE-001` to `PARSE-004`, `SAFEY-001` to `SAFEY-003`, `CLIUX-001` to `CLIUX-004`, `RULES-001` to `RULES-003`, `DOCUM-001` to `DOCUM-003`, `HARDE-001` to `HARDE-007`, `TAGS-001`, `ADHOC-001`, `RELRV-001` to `RELRV-009`, `BRAND-001`, `CLEAN-001`, `PORTA-001`
+- `Done`: `SETUP-001` to `SETUP-003`, `RUNNR-001` to `RUNNR-003`, `ARTIF-001` to `ARTIF-003`, `PARSE-001` to `PARSE-004`, `SAFEY-001` to `SAFEY-003`, `CLIUX-001` to `CLIUX-005`, `RULES-001` to `RULES-003`, `DOCUM-001` to `DOCUM-003`, `HARDE-001` to `HARDE-007`, `TAGS-001`, `ADHOC-001`, `RELRV-001` to `RELRV-009`, `BRAND-001`, `CLEAN-001`, `PORTA-001`
 - `In Progress`: none
 - `Deferred`: none
 - `Planned`: none
@@ -64,6 +64,7 @@ Current implementation snapshot:
 | CLIUX-002 | Done | Implement deterministic excerpt retrieval with `excerpt --summary <summary-path> <failure-id>`. | `GAORI-REQ-RQCLI-005`, `ADR-0002` |
 | CLIUX-003 | Done | Allow existing-log summarization to select one implemented parser explicitly while preserving generic default behavior and fail-closed validation. | `GAORI-REQ-RQCLI-004`, `GAORI-REQ-RQEXT-002`, `GAORI-REQ-RQSEC-003` |
 | CLIUX-004 | Done | Provide successful built-in help across the complete command hierarchy while preserving fail-closed invalid input and ad-hoc child argv. | `GAORI-REQ-RQCLI-008` |
+| CLIUX-005 | Done | Make console JSON artifact paths and extractor status self-describing while retaining the existing compatibility fields. | `GAORI-REQ-RQCLI-009`, `GAORI-REQ-RQWAT-002` |
 
 ## RULES: Rule management
 

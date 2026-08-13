@@ -239,6 +239,10 @@ warnings:
 
 `failure_count` and `warning_count` are the lengths of the retained arrays. After redaction and noise filtering, Gaori keeps the first 50 records of each kind. If either rendered summary file would exceed 64 KiB, including the final JSON newline, Gaori retains the largest fitting failure prefix first and uses the remaining budget for the largest warning prefix. The corresponding truncation field becomes `true`, `extractor_status` becomes `degraded`, and only retained failures receive excerpt files. A truncation field of `false` means no records of that kind were omitted by these summary budgets.
 
+## Console JSON contract
+
+`run` and `summarize` return compact invocation results through `--json`. `summary_markdown` and `summary_json` distinguish the human and structured artifacts, and `extractor_status` names the evidence-quality value consistently with artifact schemas. The pre-existing `summary` and `extractor` keys remain compatibility aliases. These additions do not alter summary JSON, status JSON, or watcher-hash inputs.
+
 ## Status JSON contract
 
 Status JSON is for no-agent polling and should be compact:

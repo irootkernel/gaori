@@ -39,7 +39,7 @@ Use `gaori --help`, `gaori help <command>`, or `gaori help rules <subcommand>` t
 4. Read the most authoritative machine-readable surface available:
    - before a run: verified version, project config, and `gaori --json rules list` when rules matter;
    - after a run: the process exit plus `<command-id>.status.json` and `<command-id>.summary.json`;
-   - for one failure: `gaori --json excerpt --summary <command-id>.summary.json <failure-id>`. `excerpt` parses `--summary` as JSON, so pass the `.summary.json` path — not the `--json` run output's `summary` field, which is the `.summary.md` path and fails with exit `2`. Failure IDs (`F001`, ...) come from the summary's failure records.
+   - for one failure: pass the run or summarize output's `summary_json` field to `gaori --json excerpt --summary <summary_json> <failure-id>`. The `summary_markdown` field is for human review; legacy `summary` remains its alias. Failure IDs (`F001`, ...) come from the structured summary's failure records.
 
 ## Run and report
 
@@ -81,7 +81,7 @@ gaori --json run unit
 # process exits 1 (failed); output's status_json / summary / raw_log point into
 # .gaori/runs/standalone/<UTC-timestamp>/ ; summary.json lists one failure, F001
 gaori --json excerpt --summary .gaori/runs/standalone/<UTC-timestamp>/unit.summary.json F001
-# report: `gaori --json run unit` | exit 1 (failed) | extractor precise | unit.summary.md path
+# report: `gaori --json run unit` | exit 1 (failed) | extractor precise | summary_markdown path
 ```
 
 ## Escalate specialized work

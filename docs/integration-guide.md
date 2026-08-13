@@ -38,7 +38,7 @@ The default adoption model is selective: route commands through Gaori when their
 | Parent run artifacts | Yes | `--run-id <id>` writes only under `.gaori/runs/scoped/<id>/artifacts/test/`. |
 | Standalone cleanup | Yes | `clean (--older-than <Nd> \| --all) [--dry-run]` applies an explicit operator policy only to completed default standalone runs. |
 | Human output | Yes | Compact console output, Markdown summary, and bounded excerpts. |
-| Machine output | Yes | `--json`, summary JSON, and deterministic status JSON. |
+| Machine output | Yes | `--json` with explicit Markdown/JSON artifact paths, summary JSON, and deterministic status JSON. |
 | Redacted derived evidence | Yes | Configured redaction covers surfaced metadata, summaries, status, warnings, failures, and excerpts. |
 | Original raw evidence | Yes | Raw logs are preserved and intentionally not redacted. |
 | Timeout | Yes | A timed-out command retains partial evidence and uses status `timed_out` with exit code `124`. |
