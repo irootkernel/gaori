@@ -142,6 +142,9 @@ func parseGlobalOptions(args []string) (globalOptions, []string, error) {
 		arg := args[i]
 		name, inlineValue, hasInlineValue, known := parseGlobalOptionToken(arg)
 		if !known {
+			if removedName, removed := removedGlobalOptionName(arg); removed {
+				return opts, nil, fmt.Errorf("flag provided but not defined: -%s", removedName)
+			}
 			remaining = append(remaining, arg)
 			if commandOptionNeedsValue(arg) && i+1 < boundary {
 				i++
@@ -194,6 +197,22 @@ func parseGlobalOptions(args []string) (globalOptions, []string, error) {
 		return opts, nil, fmt.Errorf("flag provided but not defined: -%s", name)
 	}
 	return opts, remaining, nil
+}
+
+func removedGlobalOptionName(arg string) (string, bool) {
+	if !strings.HasPrefix(arg, "-") || arg == "-" {
+		return "", false
+	}
+	name := strings.TrimPrefix(strings.TrimPrefix(arg, "-"), "-")
+	if optionName, _, found := strings.Cut(name, "="); found {
+		name = optionName
+	}
+	switch name {
+	case "verbose", "no-color", "lane":
+		return name, true
+	default:
+		return "", false
+	}
 }
 
 func commandOptionNeedsValue(arg string) bool {

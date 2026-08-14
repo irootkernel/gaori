@@ -47,12 +47,20 @@ func TestVersionJSONOutput(t *testing.T) {
 }
 
 func TestUnsupportedGlobalOptionsFailClosed(t *testing.T) {
-	for _, option := range []string{"--verbose", "--no-color"} {
-		t.Run(option, func(t *testing.T) {
+	for _, test := range []struct {
+		name string
+		args []string
+	}{
+		{name: "verbose before command", args: []string{"--verbose", "--version"}},
+		{name: "verbose after command", args: []string{"run", "--verbose", "unit", "--version"}},
+		{name: "no-color after operand", args: []string{"run", "unit", "--no-color", "--version"}},
+		{name: "lane after command", args: []string{"run", "--lane", "unit", "--version"}},
+	} {
+		t.Run(test.name, func(t *testing.T) {
 			var stdout bytes.Buffer
 			var stderr bytes.Buffer
 
-			exitCode := Main([]string{option, "--version"}, &stdout, &stderr)
+			exitCode := Main(test.args, &stdout, &stderr)
 			if exitCode != 2 {
 				t.Fatalf("exitCode = %d, want 2", exitCode)
 			}

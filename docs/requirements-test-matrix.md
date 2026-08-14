@@ -17,7 +17,7 @@ This matrix records the primary evidence for every requirement marked complete. 
 | `GAORI-REQ-RQCLI-008` | `TestHelpSurfacesExitSuccessfully`; `TestHelpDoesNotConsumeChildArguments`; `TestUnknownHelpTopicFailsClosed`; `TestBinaryHelpHierarchy` |
 | `GAORI-REQ-RQCLI-009` | `TestConfiguredRunRedactsSurfacedMetadata`; `TestSummarizeRawLogUsesConfigRedaction`; `TestBinaryJSONRedactsCommandMetadata` |
 | `GAORI-REQ-RQCLI-010` | `TestConfigCheckReportsSafeDeterministicMetadataWithoutArtifacts`; `TestConfigCheckFailsClosedOnInvalidStoredRule`; `TestBinaryConfigCheckIsReadOnly` |
-| `GAORI-REQ-RQCLI-011` | `TestParseGlobalOptionsAcceptsFlexiblePositions`; `TestParseGlobalOptionsPreservesCommandValuesAndChildBoundary`; `TestParseGlobalOptionsRejectsInvalidValues`; `TestBinaryGlobalOptionsArePositionIndependentBeforeChildBoundary` |
+| `GAORI-REQ-RQCLI-011` | `TestParseGlobalOptionsAcceptsFlexiblePositions`; `TestParseGlobalOptionsPreservesCommandValuesAndChildBoundary`; `TestParseGlobalOptionsRejectsInvalidValues`; `TestBinaryGlobalOptionsArePositionIndependentBeforeChildBoundary`; `TestBinaryRemovedOptionsFailBeforeVersionDispatch` |
 | `GAORI-REQ-RQCLI-012` | `TestAdHocTimeoutSelection`; `TestAdHocParserOptionValidationPreventsExecution`; `TestAdHocChildTimeoutArgumentIsPreserved`; `TestBinaryAdHocTimeoutContract` |
 | `GAORI-REQ-RQCFG-001` | `TestConfiguredRunAndExcerpt`; `TestAdHocRunWithoutConfig`; portable Git policy in `README.md` and `ADR-0011` |
 | `GAORI-REQ-RQCFG-002` | `TestDocumentedCLIWorkflowAgainstFreshFixture` |

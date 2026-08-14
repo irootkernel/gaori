@@ -1,12 +1,45 @@
 package e2e
 
 import (
+	"bytes"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
 )
+
+func TestBinaryRemovedOptionsFailBeforeVersionDispatch(t *testing.T) {
+	t.Parallel()
+	bin := buildBinary(t, projectRoot(t))
+	for _, test := range []struct {
+		name string
+		args []string
+	}{
+		{name: "verbose", args: []string{"run", "--verbose", "unit", "--version"}},
+		{name: "no-color", args: []string{"run", "unit", "--no-color", "--version"}},
+		{name: "lane", args: []string{"run", "--lane", "unit", "--version"}},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			var stdout, stderr bytes.Buffer
+			cmd := exec.Command(bin, test.args...)
+			cmd.Stdout = &stdout
+			cmd.Stderr = &stderr
+			err := cmd.Run()
+			exitErr, ok := err.(*exec.ExitError)
+			if !ok || exitErr.ExitCode() != 2 {
+				t.Fatalf("err=%v stdout=%q stderr=%q, want exit 2", err, stdout.String(), stderr.String())
+			}
+			if stdout.Len() != 0 {
+				t.Fatalf("stdout=%q, want empty", stdout.String())
+			}
+			if !strings.Contains(stderr.String(), "flag provided but not defined") {
+				t.Fatalf("stderr=%q, want unsupported-option diagnostic", stderr.String())
+			}
+		})
+	}
+}
 
 func TestBinaryGlobalOptionsArePositionIndependentBeforeChildBoundary(t *testing.T) {
 	t.Parallel()

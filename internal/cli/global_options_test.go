@@ -36,21 +36,39 @@ func TestParseGlobalOptionsPreservesCommandValuesAndChildBoundary(t *testing.T) 
 		t.Fatalf("remaining=%q", remaining)
 	}
 
-	opts, remaining, err = parseGlobalOptions([]string{"run", "--json", "--tag", "unit", "--", "tool", "--json", "--repo", "child"})
+	opts, remaining, err = parseGlobalOptions([]string{"rules", "delete", "rule-1", "--reason", "--verbose", "--version"})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !opts.JSON || opts.RepoRoot != "" {
+	if !opts.ShowVersion {
+		t.Fatalf("unexpected value options: %+v", opts)
+	}
+	if !slices.Equal(remaining, []string{"rules", "delete", "rule-1", "--reason", "--verbose"}) {
+		t.Fatalf("value remaining=%q", remaining)
+	}
+
+	opts, remaining, err = parseGlobalOptions([]string{"run", "--json", "--tag", "unit", "--", "tool", "--json", "--repo", "child", "--verbose", "--lane", "--version"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !opts.JSON || opts.RepoRoot != "" || opts.ShowVersion {
 		t.Fatalf("unexpected boundary options: %+v", opts)
 	}
-	if !slices.Equal(remaining, []string{"run", "--tag", "unit", "--", "tool", "--json", "--repo", "child"}) {
+	if !slices.Equal(remaining, []string{"run", "--tag", "unit", "--", "tool", "--json", "--repo", "child", "--verbose", "--lane", "--version"}) {
 		t.Fatalf("boundary remaining=%q", remaining)
 	}
 }
 
 func TestParseGlobalOptionsRejectsInvalidValues(t *testing.T) {
 	t.Parallel()
-	for _, args := range [][]string{{"run", "unit", "--repo"}, {"run", "unit", "--json=maybe"}, {"--verbose", "--version"}} {
+	for _, args := range [][]string{
+		{"run", "unit", "--repo"},
+		{"run", "unit", "--json=maybe"},
+		{"--verbose", "--version"},
+		{"run", "--verbose", "unit", "--version"},
+		{"run", "unit", "--no-color=false", "--version"},
+		{"run", "--lane", "unit", "--version"},
+	} {
 		if _, _, err := parseGlobalOptions(args); err == nil {
 			t.Fatalf("expected %q to fail", args)
 		}
