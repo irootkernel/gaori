@@ -11,7 +11,7 @@ Scope: Documentation and implementation follow-up notes
 
 ## Release gate
 
-Tag and publish `v0.1.11` only from a clean commit after the authorized release verification passes. The standard release-readiness checklist remains the default when the user does not explicitly narrow verification.
+Tag and publish `v0.1.12` only from a clean commit after the authorized release verification passes. The standard release-readiness checklist remains the default when the user does not explicitly narrow verification.
 
 ## Active items
 

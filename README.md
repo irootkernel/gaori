@@ -35,7 +35,7 @@ Gaori is not a test gate or verification authority. The parent project decides w
 Install the current release with Go:
 
 ```bash
-go install github.com/irootkernel/gaori@v0.1.11
+go install github.com/irootkernel/gaori@v0.1.12
 gaori --version
 ```
 
@@ -47,10 +47,10 @@ From a source checkout, use:
 make install
 ```
 
-Projects that pin a local Gaori toolchain can install the versioned binary at `~/.local/gaori/toolchains/v0.1.11/bin/`:
+Projects that pin a local Gaori toolchain can install the versioned binary at `~/.local/gaori/toolchains/v0.1.12/bin/`:
 
 ```bash
-VERSION=0.1.11 make install-toolchain
+VERSION=0.1.12 make install-toolchain
 ```
 
 ## Optional: configure an AI coding agent
@@ -83,7 +83,7 @@ Otherwise fetch it. There is no universal skill-discovery path, so set the desti
 ```bash
 set -e
 : "${GAORI_SKILL_DIR:?set to the documented use-gaori skill directory}"
-gaori_skill_ref=v0.1.11
+gaori_skill_ref=v0.1.12
 mkdir -p "$GAORI_SKILL_DIR/references"
 curl -fsSLo "$GAORI_SKILL_DIR/SKILL.md" \
   "https://raw.githubusercontent.com/irootkernel/gaori/$gaori_skill_ref/skills/use-gaori/SKILL.md"
@@ -94,11 +94,11 @@ done
 ls "$GAORI_SKILL_DIR"/SKILL.md "$GAORI_SKILL_DIR"/references/*.md
 ```
 
-The skill is source-distributed in the v0.1.11 GitHub source archive. `go install`, `make install`, and `make install-toolchain` install only the Gaori binary and do not copy or activate the skill.
+The skill is source-distributed in the v0.1.12 GitHub source archive. `go install`, `make install`, and `make install-toolchain` install only the Gaori binary and do not copy or activate the skill.
 
 ## Use the local MCP server
 
-The current source tree adds a STDIO MCP server for local coding agents. It is not part of the published v0.1.11 binary or its source-distributed skill. Build this revision, then register the binary from the repository that should own test artifacts:
+Gaori v0.1.12 adds a STDIO MCP server for local coding agents. Register the selected v0.1.12 binary from the repository that should own test artifacts:
 
 ```bash
 make build

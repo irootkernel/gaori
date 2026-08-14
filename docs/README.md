@@ -1,6 +1,6 @@
 # Gaori Documentation
 
-Status: Current for `gaori v0.1.11`
+Status: Current for `gaori v0.1.12`
 
 This directory contains Gaori's integration contracts, technical design, delivery history, and maintainer guidance. Start with the document that matches your role instead of reading the directory in filename order.
 
@@ -24,11 +24,11 @@ For Gaori maintainers:
 3. Use the [requirements-to-test matrix](requirements-test-matrix.md) to find executable evidence.
 4. Read the [implementation note](implementation-note.md) before changing runner, parser, artifact, redaction, or rule behavior.
 5. Use the [roadmap](roadmap.md) and [todo](todo.md) for recorded delivery and open-work state.
-6. Use the [v0.1.11 release notes](releases/v0.1.11.md) when publishing the GitHub Release.
+6. Use the [v0.1.12 release notes](releases/v0.1.12.md) when publishing the GitHub Release.
 
 ## Current delivery state
 
-The standalone v0.1 baseline and the post-v0.1.11 session-local STDIO MCP interface are implemented. Current surfaces include configured and tagged ad-hoc execution, read-only config/rule preflight, summarization, bounded excerpts, eleven parsers, rule lifecycle commands, redacted derived evidence, final status JSON, explicit cleanup, and asynchronous MCP start/wait/get/cancel/excerpt tools. MCP state is ephemeral; completed artifacts retain the existing standalone layout and authority. Parent projects may commit `.gaori/tester.yaml` and reviewed `.gaori/tester/rules/*.yaml`; all other `.gaori/` content remains local-only.
+The standalone v0.1 baseline and the v0.1.12 session-local STDIO MCP interface are implemented. Current surfaces include configured and tagged ad-hoc execution, read-only config/rule preflight, summarization, bounded excerpts, eleven parsers, rule lifecycle commands, redacted derived evidence, final status JSON, explicit cleanup, and asynchronous MCP start/wait/get/cancel/excerpt tools. MCP state is ephemeral; completed artifacts retain the existing standalone layout and authority. Parent projects may commit `.gaori/tester.yaml` and reviewed `.gaori/tester/rules/*.yaml`; all other `.gaori/` content remains local-only.
 
 There are currently no open implementation items in `todo.md`. The delivery statement above is intentionally narrower than “Gaori provides every testing or orchestration capability.”
 
@@ -52,7 +52,8 @@ There are currently no open implementation items in `todo.md`. The delivery stat
 | [v0.1.8 release notes](releases/v0.1.8.md) | Users and maintainers | Previous ad-hoc parser selection, compatibility notes, and known limitations |
 | [v0.1.9 release notes](releases/v0.1.9.md) | Users and maintainers | Previous framework parser support, summarize parser selection, and known limitations |
 | [v0.1.10 release notes](releases/v0.1.10.md) | Users and maintainers | Previous standalone evidence cleanup, safety boundaries, and known limitations |
-| [v0.1.11 release notes](releases/v0.1.11.md) | Users and maintainers | Current optional AI-agent guidance, source-distributed skill, and known limitations |
+| [v0.1.11 release notes](releases/v0.1.11.md) | Users and maintainers | Previous optional AI-agent guidance, source-distributed skill, and known limitations |
+| [v0.1.12 release notes](releases/v0.1.12.md) | Users and maintainers | Current CLI usability, portable config, rule proposal, MCP, and hardening changes |
 
 ## Source-of-truth order
 
