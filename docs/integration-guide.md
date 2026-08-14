@@ -32,7 +32,7 @@ The default adoption model is selective: route commands through Gaori when their
 | Configuration preflight | Yes | `config check` validates config and all stored rules without execution or artifacts. |
 | Ad-hoc execution | Yes | `run [--parser <label>] [--timeout-sec <seconds>] --tag <tag> [--tag <tag> ...] -- <argv...>` can run without configured commands. |
 | Existing-log processing | Yes | `summarize [--parser <label>] <raw-log>` copies and summarizes a log without rerunning the command. Its inferred result is not authoritative execution metadata. |
-| Failure excerpt lookup | Yes | `excerpt --summary <path> <failure-id>` validates contained references before reading. |
+| Failure excerpt lookup | Yes | `excerpt --summary <path> <failure-id>` validates contained references and the 16 KiB bound before reading; MCP additionally binds excerpts to the finalized invocation checksum. |
 | Parsers | Yes | `generic`, `vitest`, `pytest`, `go-test`, `playwright`, `ginkgo`, `godog`, `cargo-test`, `flutter-test`, `bun-test`, and `node-test`. |
 | Project extraction rules | Yes | Strict YAML CRUD, provenance, fixture testing, and local proposals from a verified summary failure or explicit bounded raw span. |
 | Standalone artifacts | Yes | Collision-free `.gaori/runs/standalone/<UTC-timestamp>[-NNN]/` or `<output-dir>/runs/...`. |

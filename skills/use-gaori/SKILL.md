@@ -39,7 +39,7 @@ Use `gaori --help`, `gaori help <command>`, or `gaori help rules <subcommand>` t
 4. Read the most authoritative machine-readable surface available:
    - before a run or after config/rule edits: `gaori --json config check` for a read-only validation of the selected config and every stored rule;
    - after a run: the process exit plus `<command-id>.status.json` and `<command-id>.summary.json`;
-   - for one failure: pass the run or summarize output's `summary_json` field to `gaori --json excerpt --summary <summary_json> <failure-id>`. The `summary_markdown` field is for human review; legacy `summary` remains its alias. Failure IDs (`F001`, ...) come from the structured summary's failure records.
+   - for one failure: pass the run or summarize output's `summary_json` field to `gaori --json excerpt --summary <summary_json> <failure-id>`. The `summary_markdown` field is for human review; legacy `summary` remains its alias. Failure IDs (`F001`, ...) come from the structured summary's failure records. When using MCP, retrieve the same evidence through `get_excerpt`; treat its fail-closed error as stale, replaced, relocated, or oversized evidence rather than opening the raw log automatically.
 
 ## Run and report
 

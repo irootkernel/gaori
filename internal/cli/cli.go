@@ -46,6 +46,12 @@ type runResult struct {
 	Extractor       string          `json:"extractor"`
 	ExtractorStatus string          `json:"extractor_status"`
 	diagnostic      string
+	excerpts        map[string]excerptManifestEntry
+}
+
+type excerptManifestEntry struct {
+	Reference string
+	SHA256    string
 }
 
 type materializationSource uint8
@@ -565,7 +571,8 @@ func materializeArtifactsWithExtractor(req model.RunRequest, cfg model.Config, p
 	if err != nil {
 		return runResult{}, err
 	}
-	if err := writeExcerpts(redactor, cfg.NoiseFilters, paths, runOutput.RawLogBytes, summary.Failures); err != nil {
+	excerpts, err := writeExcerpts(redactor, cfg.NoiseFilters, paths, runOutput.RawLogBytes, summary.Failures)
+	if err != nil {
 		return runResult{}, err
 	}
 	summarySHA, err := artifacts.WriteSummaryJSON(paths, summary)
@@ -607,6 +614,7 @@ func materializeArtifactsWithExtractor(req model.RunRequest, cfg model.Config, p
 		Failures:        len(summary.Failures),
 		Extractor:       string(summary.ExtractorStatus),
 		ExtractorStatus: string(summary.ExtractorStatus),
+		excerpts:        excerpts,
 	}
 	if extractionErr != nil {
 		result.diagnostic = safety.BoundBytes(redactor.Apply(extractionErr.Error()), safety.MaxExcerptBytes)
@@ -640,21 +648,23 @@ func assignExcerptReferences(summary *model.Summary) {
 	}
 }
 
-func writeExcerpts(redactor safety.Redactor, noiseFilters []string, paths model.ArtifactPaths, raw []byte, failures []model.Failure) error {
+func writeExcerpts(redactor safety.Redactor, noiseFilters []string, paths model.ArtifactPaths, raw []byte, failures []model.Failure) (map[string]excerptManifestEntry, error) {
 	text := string(raw)
+	manifest := make(map[string]excerptManifestEntry, len(failures))
 	for _, failure := range failures {
 		content := excerptContent(text, failure.RawSpan)
 		redacted := safety.FilterNoise(redactor.Apply(content), noiseFilters)
 		redacted = safety.BoundBytes(redacted, safety.MaxExcerptBytes)
 		if err := safety.ValidateArtifactIdentifier("failure id", failure.ID); err != nil {
-			return model.NewGaoriError(model.ExitCodeArtifactError, "write excerpt", err)
+			return nil, model.NewGaoriError(model.ExitCodeArtifactError, "write excerpt", err)
 		}
 		excerptPath := filepath.Join(paths.ExcerptsDir, failure.ID+".log")
 		if err := artifacts.WriteExcerpt(paths, excerptPath, redacted); err != nil {
-			return err
+			return nil, err
 		}
+		manifest[failure.ID] = excerptManifestEntry{Reference: failure.Excerpt, SHA256: artifacts.SHA256([]byte(redacted))}
 	}
-	return nil
+	return manifest, nil
 }
 
 func redactSummary(summary *model.Summary, redactor safety.Redactor, noiseFilters []string) {
@@ -811,7 +821,7 @@ func excerptCommand(opts globalOptions, args []string, stdout, stderr io.Writer)
 			return int(model.ExitCodeArtifactError)
 		}
 		excerptPath := filepath.Join(summaryDir, filepath.FromSlash(reference))
-		content, err := safety.ReadFileWithin(excerptsDir, excerptPath)
+		content, err := safety.ReadFileWithinBytes(excerptsDir, excerptPath, safety.MaxExcerptBytes)
 		if err != nil {
 			writeLine(stderr, err)
 			return int(model.ExitCodeArtifactError)

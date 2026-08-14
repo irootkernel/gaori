@@ -1,17 +1,17 @@
 package cli
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
 	"io"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"sync"
 	"sync/atomic"
 	"time"
 
+	"github.com/irootkernel/gaori/internal/artifacts"
 	"github.com/irootkernel/gaori/internal/model"
 	"github.com/irootkernel/gaori/internal/runner"
 	"github.com/irootkernel/gaori/internal/safety"
@@ -56,6 +56,7 @@ type mcpInvocation struct {
 	changed  chan struct{}
 	cancel   context.CancelFunc
 	done     chan struct{}
+	redactor *safety.Redactor
 }
 
 func (i *mcpInvocation) read() mcpSnapshot {
@@ -81,6 +82,7 @@ func (i *mcpInvocation) finish(result *runResult, err error, redactor *safety.Re
 	defer i.mu.Unlock()
 	i.snapshot.Phase = mcpPhaseFinished
 	i.snapshot.Result = result
+	i.redactor = redactor
 	if err != nil {
 		i.snapshot.Error = &mcpRunError{ExitCode: model.ExitCodeFor(err), Message: safeMCPErrorMessage(err, redactor)}
 	}
@@ -321,22 +323,48 @@ func newMCPServer(manager *mcpManager, info BuildInfo) *mcp.Server {
 		if err != nil {
 			return nil, excerptOutput{}, err
 		}
-		snapshot := inv.read()
-		if snapshot.Phase != mcpPhaseFinished || snapshot.Result == nil {
-			return nil, excerptOutput{}, fmt.Errorf("invocation %q has no completed result", in.InvocationID)
-		}
-		var stdout, stderr bytes.Buffer
-		exit := excerptCommand(globalOptions{RepoRoot: manager.repoRoot, JSON: true}, []string{"--summary", snapshot.Result.SummaryJSON, in.FailureID}, &stdout, &stderr)
-		if exit != 0 {
-			return nil, excerptOutput{}, fmt.Errorf("get excerpt: %s", stderr.String())
-		}
-		var out excerptOutput
-		if err := json.Unmarshal(bytes.TrimSpace(stdout.Bytes()), &out); err != nil {
-			return nil, excerptOutput{}, err
+		out, err := inv.excerpt(manager.repoRoot, in.FailureID)
+		if err != nil {
+			return nil, excerptOutput{}, fmt.Errorf("get excerpt: evidence unavailable")
 		}
 		return nil, out, nil
 	})
 	return server
+}
+
+func (i *mcpInvocation) excerpt(repoRoot, failureID string) (excerptOutput, error) {
+	i.mu.Lock()
+	defer i.mu.Unlock()
+	if i.snapshot.Phase != mcpPhaseFinished || i.snapshot.Result == nil || i.redactor == nil {
+		return excerptOutput{}, fmt.Errorf("invocation has no completed evidence")
+	}
+	entry, ok := i.snapshot.Result.excerpts[failureID]
+	if !ok || !isSafeExcerptReference(entry.Reference) {
+		return excerptOutput{}, fmt.Errorf("excerpt is not in the finalized manifest")
+	}
+	summaryPath := i.snapshot.Result.SummaryJSON
+	if !filepath.IsAbs(summaryPath) {
+		summaryPath = filepath.Join(repoRoot, summaryPath)
+	}
+	canonicalSummary, err := filepath.EvalSymlinks(summaryPath)
+	if err != nil {
+		return excerptOutput{}, err
+	}
+	summaryDir := filepath.Dir(canonicalSummary)
+	excerptsDir := filepath.Join(summaryDir, "excerpts")
+	if err := safety.ValidateExistingPathWithin(summaryDir, excerptsDir); err != nil {
+		return excerptOutput{}, err
+	}
+	excerptPath := filepath.Join(summaryDir, filepath.FromSlash(entry.Reference))
+	content, err := safety.ReadFileWithinBytes(excerptsDir, excerptPath, safety.MaxExcerptBytes)
+	if err != nil {
+		return excerptOutput{}, err
+	}
+	if artifacts.SHA256(content) != entry.SHA256 {
+		return excerptOutput{}, fmt.Errorf("excerpt checksum mismatch")
+	}
+	safeContent := safety.BoundBytes(i.redactor.Apply(string(content)), safety.MaxExcerptBytes)
+	return excerptOutput{FailureID: failureID, ExcerptPath: entry.Reference, Content: safeContent}, nil
 }
 
 func mcpCommand(opts globalOptions, args []string, stderr io.Writer, info BuildInfo) int {

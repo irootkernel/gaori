@@ -171,7 +171,8 @@ func TestBinaryMCPLifecycleAndBoundedEvidence(t *testing.T) {
 		t.Fatalf("MCP snapshot exposed raw secret: %s", encoded)
 	}
 	excerpt := callMCPTool[struct {
-		Content string `json:"content"`
+		ExcerptPath string `json:"excerpt_path"`
+		Content     string `json:"content"`
 	}](t, ctx, session, "get_excerpt", map[string]any{"invocation_id": failed.InvocationID, "failure_id": "F001"})
 	if !strings.Contains(excerpt.Content, "token=<redacted>") || strings.Contains(excerpt.Content, "token=secret") {
 		t.Fatalf("unexpected excerpt: %q", excerpt.Content)
@@ -180,6 +181,19 @@ func TestBinaryMCPLifecycleAndBoundedEvidence(t *testing.T) {
 	if err != nil || !strings.Contains(string(raw), "token=secret") {
 		t.Fatalf("raw evidence was not preserved: err=%v raw=%q", err, raw)
 	}
+
+	excerptPath := filepath.Join(filepath.Dir(filepath.Join(repo, failed.Result.SummaryJSON)), filepath.FromSlash(excerpt.ExcerptPath))
+	if err := os.WriteFile(excerptPath, []byte("TypeError: token=secret copied from raw log\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	assertMCPToolErrorDoesNotContain(t, ctx, session, "get_excerpt", map[string]any{
+		"invocation_id": failed.InvocationID,
+		"failure_id":    "F001",
+	}, "token=secret")
+	assertMCPToolErrorDoesNotContain(t, ctx, session, "get_excerpt", map[string]any{
+		"invocation_id": failed.InvocationID,
+		"failure_id":    "token=secret",
+	}, "token=secret")
 
 	passed := callMCPTool[mcpBinarySnapshot](t, ctx, session, "start_ad_hoc_run", map[string]any{
 		"argv": []string{"sh", "-c", "echo ok"}, "tags": []string{"unit"}, "parser": "generic", "timeout_sec": 10,
@@ -218,6 +232,21 @@ func TestBinaryMCPLifecycleAndBoundedEvidence(t *testing.T) {
 	slow = waitForMCPFinish(t, ctx, session, cancelled.Snapshot)
 	if slow.Result.Status != model.RunStatusKilled || slow.Result.ExitCode != 137 {
 		t.Fatalf("cancelled result = %+v", slow.Result)
+	}
+}
+
+func assertMCPToolErrorDoesNotContain(t *testing.T, ctx context.Context, session *mcp.ClientSession, name string, arguments map[string]any, forbidden string) {
+	t.Helper()
+	result, err := session.CallTool(ctx, &mcp.CallToolParams{Name: name, Arguments: arguments})
+	if err != nil {
+		t.Fatal(err)
+	}
+	encoded, err := json.Marshal(result)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !result.IsError || strings.Contains(string(encoded), forbidden) {
+		t.Fatalf("tool result isError=%t result=%s", result.IsError, encoded)
 	}
 }
 

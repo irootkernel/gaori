@@ -17,6 +17,7 @@ import (
 
 	"github.com/irootkernel/gaori/internal/artifacts"
 	"github.com/irootkernel/gaori/internal/model"
+	"github.com/irootkernel/gaori/internal/safety"
 )
 
 func TestConfiguredRunAndExcerpt(t *testing.T) {
@@ -587,6 +588,24 @@ func TestExcerptRejectsUnsafeReferences(t *testing.T) {
 				t.Fatalf("expected artifact exit code, got %d stderr=%s", exitCode, stderr.String())
 			}
 		})
+	}
+}
+
+func TestExcerptRejectsOversizedEvidence(t *testing.T) {
+	t.Parallel()
+	repo := t.TempDir()
+	excerptsDir := filepath.Join(repo, "excerpts")
+	if err := os.MkdirAll(excerptsDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(excerptsDir, "F001.log"), bytes.Repeat([]byte("x"), safety.MaxExcerptBytes+1), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	summaryPath := writeExcerptSummary(t, repo, "excerpts/F001.log")
+	var stdout, stderr bytes.Buffer
+	exitCode := Main([]string{"--repo", repo, "excerpt", "--summary", summaryPath, "F001"}, &stdout, &stderr)
+	if exitCode != int(model.ExitCodeArtifactError) || stdout.Len() != 0 {
+		t.Fatalf("exit=%d stdout=%q stderr=%q", exitCode, stdout.String(), stderr.String())
 	}
 }
 
