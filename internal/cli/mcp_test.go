@@ -130,7 +130,7 @@ func TestMCPInvocationLookupErrorsAreBoundedAndNonReflective(t *testing.T) {
 	}
 }
 
-func TestMCPTimeoutInputsRejectExplicitOutOfRangeValuesBeforeStart(t *testing.T) {
+func TestMCPTimeoutInputsRejectExplicitInvalidValues(t *testing.T) {
 	t.Parallel()
 	manager := newMCPManager(globalOptions{RepoRoot: t.TempDir()})
 	defer manager.close()
@@ -166,6 +166,15 @@ func TestMCPTimeoutInputsRejectExplicitOutOfRangeValuesBeforeStart(t *testing.T)
 		if !result.IsError || len(manager.invocations) != 0 {
 			t.Fatalf("timeout_sec=%d isError=%t invocations=%d", value, result.IsError, len(manager.invocations))
 		}
+	}
+	result, err := clientSession.CallTool(context.Background(), &mcp.CallToolParams{Name: "start_ad_hoc_run", Arguments: map[string]any{
+		"argv": []string{"true"}, "tags": []string{"unit"}, "timeout_sec": nil,
+	}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !result.IsError || len(manager.invocations) != 0 {
+		t.Fatalf("explicit null timeout_sec result=%+v invocations=%d", result, len(manager.invocations))
 	}
 
 	for _, value := range []int{0, -1, 50001} {
@@ -214,6 +223,15 @@ func TestMCPTimeoutInputsRejectExplicitOutOfRangeValuesBeforeStart(t *testing.T)
 			t.Fatalf("accepted timeout_ms=%v result=%+v err=%v", timeout, result, err)
 		}
 	}
+	result, err = clientSession.CallTool(context.Background(), &mcp.CallToolParams{Name: "wait_run", Arguments: map[string]any{
+		"invocation_id": invocationID, "after_revision": 0, "timeout_ms": nil,
+	}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !result.IsError {
+		t.Fatalf("explicit null timeout_ms result=%+v", result)
+	}
 }
 
 func assertOptionalIntegerBounds(t *testing.T, schema any, property string, minimum, maximum float64) {
@@ -225,6 +243,7 @@ func assertOptionalIntegerBounds(t *testing.T, schema any, property string, mini
 	var document struct {
 		Required   []string `json:"required"`
 		Properties map[string]struct {
+			Type    any      `json:"type"`
 			Minimum *float64 `json:"minimum"`
 			Maximum *float64 `json:"maximum"`
 		} `json:"properties"`
@@ -236,8 +255,8 @@ func assertOptionalIntegerBounds(t *testing.T, schema any, property string, mini
 		t.Fatalf("%s must remain optional", property)
 	}
 	got := document.Properties[property]
-	if got.Minimum == nil || *got.Minimum != minimum || got.Maximum == nil || *got.Maximum != maximum {
-		t.Fatalf("%s bounds = minimum %v maximum %v", property, got.Minimum, got.Maximum)
+	if got.Type != "integer" || got.Minimum == nil || *got.Minimum != minimum || got.Maximum == nil || *got.Maximum != maximum {
+		t.Fatalf("%s schema = type %v minimum %v maximum %v", property, got.Type, got.Minimum, got.Maximum)
 	}
 }
 

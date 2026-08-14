@@ -178,9 +178,15 @@ func TestBinaryMCPLifecycleAndBoundedEvidence(t *testing.T) {
 		"after_revision": 0,
 		"timeout_ms":     1,
 	}, "token=secret")
+	assertMCPToolError(t, ctx, session, "start_ad_hoc_run", map[string]any{
+		"argv": []string{"true"}, "tags": []string{"unit"}, "timeout_sec": nil,
+	})
 
 	failed := callMCPTool[mcpBinarySnapshot](t, ctx, session, "start_configured_run", map[string]any{"command_id": "fail"})
 	failed = waitForMCPFinish(t, ctx, session, failed)
+	assertMCPToolError(t, ctx, session, "wait_run", map[string]any{
+		"invocation_id": failed.InvocationID, "after_revision": 0, "timeout_ms": nil,
+	})
 	if failed.Result.Status != model.RunStatusFailed || failed.Result.ExitCode != 7 || failed.Result.ExtractorStatus != string(model.ExtractorStatusPrecise) {
 		t.Fatalf("failed result = %+v", failed.Result)
 	}
@@ -286,6 +292,17 @@ func assertMCPToolErrorDoesNotContain(t *testing.T, ctx context.Context, session
 	}
 	if !result.IsError || strings.Contains(string(encoded), forbidden) {
 		t.Fatalf("tool result isError=%t result=%s", result.IsError, encoded)
+	}
+}
+
+func assertMCPToolError(t *testing.T, ctx context.Context, session *mcp.ClientSession, name string, arguments map[string]any) {
+	t.Helper()
+	result, err := session.CallTool(ctx, &mcp.CallToolParams{Name: name, Arguments: arguments})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !result.IsError {
+		t.Fatalf("tool %s unexpectedly succeeded: %+v", name, result)
 	}
 }
 

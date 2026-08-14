@@ -377,6 +377,8 @@ func boundedIntegerInputSchema[T any](property string, minimum, maximum float64)
 		panic(err)
 	}
 	field := schema.Properties[property]
+	field.Type = "integer"
+	field.Types = nil
 	field.Minimum = jsonschema.Ptr(minimum)
 	field.Maximum = jsonschema.Ptr(maximum)
 	return schema
