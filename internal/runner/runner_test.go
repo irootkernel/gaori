@@ -124,6 +124,29 @@ func TestExecuteCanceledContext(t *testing.T) {
 	}
 }
 
+func TestExecutePreCanceledContextDoesNotStartCommand(t *testing.T) {
+	t.Parallel()
+	repo := t.TempDir()
+	marker := filepath.Join(repo, "command-ran")
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	var raw bytes.Buffer
+	output, err := ExecuteContextOnly(ctx, repo, "cancel", []string{"unit"}, "generic", []string{"sh", "-c", "touch command-ran"}, 30, &raw)
+	if err != nil {
+		t.Fatalf("ExecuteContextOnly failed: %v", err)
+	}
+	if output.Status != model.RunStatusKilled || output.Metadata.ExitCode != 137 {
+		t.Fatalf("expected killed/137, got status=%s exit=%d", output.Status, output.Metadata.ExitCode)
+	}
+	if raw.Len() != 0 || len(output.RawLogBytes) != 0 {
+		t.Fatalf("pre-canceled command produced raw output: writer=%q output=%q", raw.String(), output.RawLogBytes)
+	}
+	if _, err := os.Stat(marker); !os.IsNotExist(err) {
+		t.Fatalf("pre-canceled command started: marker err=%v", err)
+	}
+}
+
 func waitForFile(t *testing.T, path string) {
 	t.Helper()
 	deadline := time.Now().Add(3 * time.Second)

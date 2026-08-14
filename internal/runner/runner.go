@@ -66,12 +66,15 @@ func executeWithSignals(ctx context.Context, workDir, commandID string, tags []s
 	started := time.Now().UTC()
 	runCtx, cancel := context.WithTimeout(ctx, time.Duration(timeoutSec)*time.Second)
 	defer cancel()
+	capture := &streamCapture{raw: raw}
+	if err := runCtx.Err(); err != nil {
+		return contextDoneOutput(started, commandID, tags, parser, argv, capture, err)
+	}
 
 	cmd := exec.Command(argv[0], argv[1:]...)
 	cmd.Dir = workDir
 	cmd.WaitDelay = gracePeriod
 	prepareProcess(cmd)
-	capture := &streamCapture{raw: raw}
 	cmd.Stdout = capture
 	cmd.Stderr = capture
 
@@ -109,13 +112,7 @@ func executeWithSignals(ctx context.Context, workDir, commandID string, tags []s
 		default:
 			_ = killProcess(cmd)
 			<-waited
-			if errors.Is(runCtx.Err(), context.DeadlineExceeded) {
-				status = model.RunStatusTimedOut
-				exitCode = int(model.ExitCodeTimeout)
-			} else {
-				status = model.RunStatusKilled
-				exitCode = 137
-			}
+			return contextDoneOutput(started, commandID, tags, parser, argv, capture, runCtx.Err())
 		}
 	}
 
@@ -125,6 +122,21 @@ func executeWithSignals(ctx context.Context, workDir, commandID string, tags []s
 	}
 	output.Status = status
 	output.Metadata.ExitCode = exitCode
+	return output, nil
+}
+
+func contextDoneOutput(started time.Time, commandID string, tags []string, parser string, argv []string, capture *streamCapture, cause error) (model.RunOutput, error) {
+	output, err := completedOutput(started, commandID, tags, parser, argv, capture)
+	if err != nil {
+		return model.RunOutput{}, err
+	}
+	if errors.Is(cause, context.DeadlineExceeded) {
+		output.Status = model.RunStatusTimedOut
+		output.Metadata.ExitCode = int(model.ExitCodeTimeout)
+	} else {
+		output.Status = model.RunStatusKilled
+		output.Metadata.ExitCode = 137
+	}
 	return output, nil
 }
 

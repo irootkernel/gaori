@@ -17,6 +17,7 @@ import (
 
 	"github.com/irootkernel/gaori/internal/artifacts"
 	"github.com/irootkernel/gaori/internal/model"
+	"github.com/irootkernel/gaori/internal/runner"
 	"github.com/irootkernel/gaori/internal/safety"
 )
 
@@ -449,6 +450,42 @@ func TestExecuteRunContextReportsLifecycleAndPassesCallerContext(t *testing.T) {
 	want := []executionPhase{executionPhaseExecuting, executionPhaseMaterializing}
 	if !slices.Equal(phases, want) {
 		t.Fatalf("phases = %v, want %v", phases, want)
+	}
+}
+
+func TestExecuteRunContextPreCanceledDoesNotStartChild(t *testing.T) {
+	t.Parallel()
+	repo := t.TempDir()
+	writeMarkerCommandConfig(t, repo, "unit")
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	req := model.RunRequest{RepoRoot: repo, RunID: "pre-canceled", Mode: model.RunModeConfigured, CommandID: "unit"}
+	result, exitCode, err := executeRunContext(ctx, req, runner.ExecuteContextOnly, executionObserver{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if exitCode != 137 || result.Status != model.RunStatusKilled || result.ExitCode != 137 {
+		t.Fatalf("unexpected canceled result: process_exit=%d result=%+v", exitCode, result)
+	}
+	if result.ExtractorStatus != string(model.ExtractorStatusDegraded) {
+		t.Fatalf("extractor_status=%q want=%q", result.ExtractorStatus, model.ExtractorStatusDegraded)
+	}
+	if _, err := os.Stat(filepath.Join(repo, "command-ran")); !os.IsNotExist(err) {
+		t.Fatalf("pre-canceled command started: marker err=%v", err)
+	}
+	base := filepath.Join(repo, ".gaori", "runs", "scoped", "pre-canceled", "artifacts", "test")
+	raw, err := os.ReadFile(filepath.Join(base, "unit.raw.log"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(raw) != 0 {
+		t.Fatalf("pre-canceled raw log=%q want empty", raw)
+	}
+	for _, name := range []string{"unit.summary.json", "unit.summary.md", "unit.status.json"} {
+		if _, err := os.Stat(filepath.Join(base, name)); err != nil {
+			t.Fatalf("missing canceled artifact %s: %v", name, err)
+		}
 	}
 }
 
