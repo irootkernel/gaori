@@ -73,13 +73,13 @@ This matrix records the primary evidence for every requirement marked complete. 
 | `GAORI-REQ-RQMCP-002` | `TestExecuteRunContextReportsLifecycleAndPassesCallerContext`; `TestMCPManagerWaitDoesNotCancelAndExplicitCancelFinishes`; `TestMCPMaterializingTransitionWakesRevisionWait`; `TestMCPTimeoutInputsRejectExplicitOutOfRangeValuesBeforeStart`; `TestBinaryMCPLifecycleAndBoundedEvidence` |
 | `GAORI-REQ-RQMCP-003` | `TestMCPManagerWaitDoesNotCancelAndExplicitCancelFinishes`; `TestMCPWaitCancellationDoesNotCancelRun`; `TestMCPWaitRejectsFutureRevision`; `TestMCPTimeoutInputsRejectExplicitOutOfRangeValuesBeforeStart`; `TestBinaryMCPLifecycleAndBoundedEvidence` |
 | `GAORI-REQ-RQMCP-004` | `TestMCPManagerWaitDoesNotCancelAndExplicitCancelFinishes`; `TestMCPManagerCloseCancelsActiveRun`; `TestBinaryMCPEOFCancelsActiveProcessGroup`; `TestBinaryMCPSignalsShutDownServerAndProcessGroup`; `TestBinaryMCPLifecycleAndBoundedEvidence` |
-| `GAORI-REQ-RQMCP-005` | `TestMCPRunErrorsUseValidatedRedaction`; `TestMCPRunErrorsHideDetailsBeforeRedactorIsAvailable`; `TestBinaryMCPLifecycleAndBoundedEvidence`; `TestMCPDocumentationAndSkillContract` (including finalized excerpt integrity and request-data non-reflection) |
+| `GAORI-REQ-RQMCP-005` | `TestMCPRunErrorsUseValidatedRedaction`; `TestMCPRunErrorsHideDetailsBeforeRedactorIsAvailable`; `TestBinaryMCPLifecycleAndBoundedEvidence` (including finalized excerpt checksum and location integrity); `TestMCPDocumentationAndSkillContract` |
 | `GAORI-REQ-RQMCP-006` | `TestMCPManagerWaitDoesNotCancelAndExplicitCancelFinishes`; `TestMCPDocumentationAndSkillContract` |
 | `GAORI-REQ-RQDOC-001` | authoritative documents listed in `AGENTS.md` and `README.md`; `TestArchitectureJSONContractExamplesMatchFreshRunArtifacts` |
 | `GAORI-REQ-RQDOC-002` | `TestDocumentedCLIWorkflowAgainstFreshFixture` |
 | `GAORI-REQ-RQDOC-003` | parser fixtures under `internal/extract/testdata`; `TestTestRuleMatchesExpectedSpan`; `TestDocumentedCLIWorkflowAgainstFreshFixture` |
 | `GAORI-REQ-RQDOC-004` | release-readiness checklist in `implementation-note.md`; `make test` |
-| `GAORI-REQ-RQHAR-001` | `TestBinaryArtifactContainment`; path, artifact, and rule symlink tests |
+| `GAORI-REQ-RQHAR-001` | `TestBinaryArtifactContainment`; `TestBinaryMCPLifecycleAndBoundedEvidence` (relocated MCP evidence); path, artifact, and rule symlink tests |
 | `GAORI-REQ-RQHAR-002` | `TestBinaryPreservesInterruptedEvidence`; `TestExecuteInterruptedReportsRawLogWriteFailure`; Unix runner signal tests |
 | `GAORI-REQ-RQHAR-003` | `TestBinaryStandaloneCollisionResistance`; concurrent artifact allocation tests |
 | `GAORI-REQ-RQHAR-004` | `TestBinaryJSONRedactsCommandMetadata`; CLI redaction integration tests |

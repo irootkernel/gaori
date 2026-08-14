@@ -207,6 +207,24 @@ func TestBinaryMCPLifecycleAndBoundedEvidence(t *testing.T) {
 		"invocation_id": failed.InvocationID,
 		"failure_id":    "token=secret",
 	}, "token=secret")
+	if err := os.WriteFile(excerptPath, []byte(excerpt.Content), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	callMCPTool[struct {
+		Content string `json:"content"`
+	}](t, ctx, session, "get_excerpt", map[string]any{"invocation_id": failed.InvocationID, "failure_id": "F001"})
+	summaryDir := filepath.Dir(filepath.Join(repo, failed.Result.SummaryJSON))
+	relocatedSummaryDir := summaryDir + "-relocated"
+	if err := os.Rename(summaryDir, relocatedSummaryDir); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(relocatedSummaryDir, summaryDir); err != nil {
+		t.Fatal(err)
+	}
+	assertMCPToolErrorDoesNotContain(t, ctx, session, "get_excerpt", map[string]any{
+		"invocation_id": failed.InvocationID,
+		"failure_id":    "F001",
+	}, "relocated")
 
 	passed := callMCPTool[mcpBinarySnapshot](t, ctx, session, "start_ad_hoc_run", map[string]any{
 		"argv": []string{"sh", "-c", "echo ok"}, "tags": []string{"unit"}, "parser": "generic", "timeout_sec": 10,

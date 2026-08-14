@@ -52,12 +52,13 @@ type mcpSnapshot struct {
 }
 
 type mcpInvocation struct {
-	mu       sync.Mutex
-	snapshot mcpSnapshot
-	changed  chan struct{}
-	cancel   context.CancelFunc
-	done     chan struct{}
-	redactor *safety.Redactor
+	mu                   sync.Mutex
+	snapshot             mcpSnapshot
+	changed              chan struct{}
+	cancel               context.CancelFunc
+	done                 chan struct{}
+	redactor             *safety.Redactor
+	finalizedSummaryPath string
 }
 
 func (i *mcpInvocation) read() mcpSnapshot {
@@ -78,17 +79,31 @@ func (i *mcpInvocation) transition(phase mcpPhase) {
 	i.bumpLocked()
 }
 
-func (i *mcpInvocation) finish(result *runResult, err error, redactor *safety.Redactor) {
+func (i *mcpInvocation) finish(result *runResult, err error, redactor *safety.Redactor, repoRoot string) {
 	i.mu.Lock()
 	defer i.mu.Unlock()
 	i.snapshot.Phase = mcpPhaseFinished
 	i.snapshot.Result = result
 	i.redactor = redactor
+	if result != nil {
+		i.finalizedSummaryPath = canonicalMCPPath(repoRoot, result.SummaryJSON)
+	}
 	if err != nil {
 		i.snapshot.Error = &mcpRunError{ExitCode: model.ExitCodeFor(err), Message: safeMCPErrorMessage(err, redactor)}
 	}
 	i.bumpLocked()
 	close(i.done)
+}
+
+func canonicalMCPPath(repoRoot, path string) string {
+	if !filepath.IsAbs(path) {
+		path = filepath.Join(repoRoot, path)
+	}
+	canonical, err := filepath.EvalSymlinks(path)
+	if err != nil {
+		return ""
+	}
+	return canonical
 }
 
 func safeMCPErrorMessage(err error, redactor *safety.Redactor) string {
@@ -167,10 +182,10 @@ func (m *mcpManager) start(req model.RunRequest) mcpSnapshot {
 			},
 		})
 		if err != nil {
-			inv.finish(nil, err, runRedactor)
+			inv.finish(nil, err, runRedactor, m.repoRoot)
 			return
 		}
-		inv.finish(&result, nil, runRedactor)
+		inv.finish(&result, nil, runRedactor, m.repoRoot)
 	}()
 	snapshot := inv.read()
 	snapshot.Changed = true
@@ -365,11 +380,11 @@ func (i *mcpInvocation) excerpt(repoRoot, failureID string) (excerptOutput, erro
 	if !filepath.IsAbs(summaryPath) {
 		summaryPath = filepath.Join(repoRoot, summaryPath)
 	}
-	canonicalSummary, err := filepath.EvalSymlinks(summaryPath)
-	if err != nil {
-		return excerptOutput{}, err
+	canonicalSummary := canonicalMCPPath(repoRoot, summaryPath)
+	if canonicalSummary == "" || canonicalSummary != i.finalizedSummaryPath {
+		return excerptOutput{}, fmt.Errorf("summary artifact location changed after finalization")
 	}
-	summaryDir := filepath.Dir(canonicalSummary)
+	summaryDir := filepath.Dir(i.finalizedSummaryPath)
 	excerptsDir := filepath.Join(summaryDir, "excerpts")
 	if err := safety.ValidateExistingPathWithin(summaryDir, excerptsDir); err != nil {
 		return excerptOutput{}, err
