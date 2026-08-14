@@ -11,6 +11,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/google/jsonschema-go/jsonschema"
 	"github.com/irootkernel/gaori/internal/artifacts"
 	"github.com/irootkernel/gaori/internal/model"
 	"github.com/irootkernel/gaori/internal/runner"
@@ -248,7 +249,7 @@ type startAdHocInput struct {
 	Argv       []string `json:"argv" jsonschema:"child argv without a shell"`
 	Tags       []string `json:"tags" jsonschema:"canonical rule selector tags"`
 	Parser     string   `json:"parser,omitempty" jsonschema:"built-in parser label; defaults to generic"`
-	TimeoutSec int      `json:"timeout_sec,omitempty" jsonschema:"command timeout from 1 through 86400; defaults to 600"`
+	TimeoutSec *int     `json:"timeout_sec,omitempty" jsonschema:"command timeout from 1 through 86400; defaults to 600"`
 }
 type invocationInput struct {
 	InvocationID string `json:"invocation_id" jsonschema:"session-local invocation identifier"`
@@ -256,7 +257,7 @@ type invocationInput struct {
 type waitInput struct {
 	InvocationID  string `json:"invocation_id"`
 	AfterRevision int64  `json:"after_revision"`
-	TimeoutMS     int    `json:"timeout_ms,omitempty" jsonschema:"wait timeout from 1 through 50000; defaults to 50000"`
+	TimeoutMS     *int   `json:"timeout_ms,omitempty" jsonschema:"wait timeout from 1 through 50000; defaults to 50000"`
 }
 type cancelOutput struct {
 	Accepted bool        `json:"accepted"`
@@ -283,11 +284,18 @@ func newMCPServer(manager *mcpManager, info BuildInfo) *mcp.Server {
 		}
 		return nil, manager.start(model.RunRequest{Mode: model.RunModeConfigured, CommandID: in.CommandID}), nil
 	})
-	mcp.AddTool(server, &mcp.Tool{Name: "start_ad_hoc_run", Description: "Start a tagged ad-hoc Gaori test run and return immediately.", Annotations: &write}, func(_ context.Context, _ *mcp.CallToolRequest, in startAdHocInput) (*mcp.CallToolResult, mcpSnapshot, error) {
+	mcp.AddTool(server, &mcp.Tool{Name: "start_ad_hoc_run", Description: "Start a tagged ad-hoc Gaori test run and return immediately.", Annotations: &write, InputSchema: boundedIntegerInputSchema[startAdHocInput]("timeout_sec", 1, 86400)}, func(_ context.Context, _ *mcp.CallToolRequest, in startAdHocInput) (*mcp.CallToolResult, mcpSnapshot, error) {
 		if len(in.Argv) == 0 {
 			return nil, mcpSnapshot{}, fmt.Errorf("argv is required")
 		}
-		return nil, manager.start(model.RunRequest{Mode: model.RunModeAdHoc, Tags: in.Tags, Parser: in.Parser, TimeoutSec: in.TimeoutSec, CommandArgv: in.Argv}), nil
+		timeoutSec := 0
+		if in.TimeoutSec != nil {
+			if *in.TimeoutSec < 1 || *in.TimeoutSec > 86400 {
+				return nil, mcpSnapshot{}, fmt.Errorf("timeout_sec must be between 1 and 86400")
+			}
+			timeoutSec = *in.TimeoutSec
+		}
+		return nil, manager.start(model.RunRequest{Mode: model.RunModeAdHoc, Tags: in.Tags, Parser: in.Parser, TimeoutSec: timeoutSec, CommandArgv: in.Argv}), nil
 	})
 	mcp.AddTool(server, &mcp.Tool{Name: "get_run", Description: "Read the current snapshot of a session-local Gaori run.", Annotations: &readOnly}, func(_ context.Context, _ *mcp.CallToolRequest, in invocationInput) (*mcp.CallToolResult, mcpSnapshot, error) {
 		inv, err := manager.lookup(in.InvocationID)
@@ -296,16 +304,16 @@ func newMCPServer(manager *mcpManager, info BuildInfo) *mcp.Server {
 		}
 		return nil, inv.read(), nil
 	})
-	mcp.AddTool(server, &mcp.Tool{Name: "wait_run", Description: "Wait up to 50 seconds for a run revision change without cancelling the run.", Annotations: &readOnly}, func(ctx context.Context, _ *mcp.CallToolRequest, in waitInput) (*mcp.CallToolResult, mcpSnapshot, error) {
+	mcp.AddTool(server, &mcp.Tool{Name: "wait_run", Description: "Wait up to 50 seconds for a run revision change without cancelling the run.", Annotations: &readOnly, InputSchema: boundedIntegerInputSchema[waitInput]("timeout_ms", 1, 50000)}, func(ctx context.Context, _ *mcp.CallToolRequest, in waitInput) (*mcp.CallToolResult, mcpSnapshot, error) {
 		if in.AfterRevision < 0 {
 			return nil, mcpSnapshot{}, fmt.Errorf("after_revision must not be negative")
 		}
 		timeout := defaultMCPWait
-		if in.TimeoutMS != 0 {
-			timeout = time.Duration(in.TimeoutMS) * time.Millisecond
-		}
-		if timeout <= 0 || timeout > maxMCPWait {
-			return nil, mcpSnapshot{}, fmt.Errorf("timeout_ms must be between 1 and 50000")
+		if in.TimeoutMS != nil {
+			if *in.TimeoutMS < 1 || *in.TimeoutMS > int(maxMCPWait/time.Millisecond) {
+				return nil, mcpSnapshot{}, fmt.Errorf("timeout_ms must be between 1 and 50000")
+			}
+			timeout = time.Duration(*in.TimeoutMS) * time.Millisecond
 		}
 		out, err := manager.wait(ctx, in.InvocationID, in.AfterRevision, timeout)
 		return nil, out, err
@@ -330,6 +338,17 @@ func newMCPServer(manager *mcpManager, info BuildInfo) *mcp.Server {
 		return nil, out, nil
 	})
 	return server
+}
+
+func boundedIntegerInputSchema[T any](property string, minimum, maximum float64) *jsonschema.Schema {
+	schema, err := jsonschema.For[T](nil)
+	if err != nil {
+		panic(err)
+	}
+	field := schema.Properties[property]
+	field.Minimum = jsonschema.Ptr(minimum)
+	field.Maximum = jsonschema.Ptr(maximum)
+	return schema
 }
 
 func (i *mcpInvocation) excerpt(repoRoot, failureID string) (excerptOutput, error) {

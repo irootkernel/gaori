@@ -3,6 +3,7 @@ package cli
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"os"
 	"path/filepath"
@@ -18,6 +19,7 @@ import (
 func TestMCPServerAdvertisesExpectedTools(t *testing.T) {
 	t.Parallel()
 	manager := newMCPManager(globalOptions{RepoRoot: t.TempDir()})
+	defer manager.close()
 	server := newMCPServer(manager, NewBuildInfo("gaori", "0.1.11", "test", "test"))
 	client := mcp.NewClient(&mcp.Implementation{Name: "test", Version: "v1"}, nil)
 	clientTransport, serverTransport := mcp.NewInMemoryTransports()
@@ -57,11 +59,128 @@ func TestMCPServerAdvertisesExpectedTools(t *testing.T) {
 				t.Fatalf("start tool %q has unsafe annotations: %+v", tool.Name, tool.Annotations)
 			}
 		}
+		if tool.Name == "start_ad_hoc_run" {
+			assertOptionalIntegerBounds(t, tool.InputSchema, "timeout_sec", 1, 86400)
+		}
+		if tool.Name == "wait_run" {
+			assertOptionalIntegerBounds(t, tool.InputSchema, "timeout_ms", 1, 50000)
+		}
 	}
 	want := []string{"cancel_run", "get_excerpt", "get_run", "start_ad_hoc_run", "start_configured_run", "wait_run"}
 	slices.Sort(names)
 	if !slices.Equal(names, want) {
 		t.Fatalf("tools = %v, want %v", names, want)
+	}
+}
+
+func TestMCPTimeoutInputsRejectExplicitOutOfRangeValuesBeforeStart(t *testing.T) {
+	t.Parallel()
+	manager := newMCPManager(globalOptions{RepoRoot: t.TempDir()})
+	defer manager.close()
+	server := newMCPServer(manager, NewBuildInfo("gaori", "0.1.11", "test", "test"))
+	client := mcp.NewClient(&mcp.Implementation{Name: "test", Version: "v1"}, nil)
+	clientTransport, serverTransport := mcp.NewInMemoryTransports()
+	serverSession, err := server.Connect(context.Background(), serverTransport, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		if err := serverSession.Close(); err != nil {
+			t.Errorf("close server session: %v", err)
+		}
+	}()
+	clientSession, err := client.Connect(context.Background(), clientTransport, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		if err := clientSession.Close(); err != nil {
+			t.Errorf("close client session: %v", err)
+		}
+	}()
+
+	for _, value := range []int{0, -1, 86401} {
+		result, err := clientSession.CallTool(context.Background(), &mcp.CallToolParams{Name: "start_ad_hoc_run", Arguments: map[string]any{
+			"argv": []string{"true"}, "tags": []string{"unit"}, "timeout_sec": value,
+		}})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !result.IsError || len(manager.invocations) != 0 {
+			t.Fatalf("timeout_sec=%d isError=%t invocations=%d", value, result.IsError, len(manager.invocations))
+		}
+	}
+
+	for _, value := range []int{0, -1, 50001} {
+		result, err := clientSession.CallTool(context.Background(), &mcp.CallToolParams{Name: "wait_run", Arguments: map[string]any{
+			"invocation_id": "missing", "after_revision": 0, "timeout_ms": value,
+		}})
+		if err != nil {
+			t.Fatal(err)
+		}
+		encoded, err := json.Marshal(result)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !result.IsError || !strings.Contains(string(encoded), "timeout_ms") {
+			t.Fatalf("timeout_ms=%d result=%s", value, encoded)
+		}
+	}
+
+	var invocationID string
+	for _, timeout := range []any{nil, 1, 86400} {
+		arguments := map[string]any{"argv": []string{"true"}, "tags": []string{"unit"}}
+		if timeout != nil {
+			arguments["timeout_sec"] = timeout
+		}
+		result, err := clientSession.CallTool(context.Background(), &mcp.CallToolParams{Name: "start_ad_hoc_run", Arguments: arguments})
+		if err != nil || result.IsError {
+			t.Fatalf("accepted timeout_sec=%v result=%+v err=%v", timeout, result, err)
+		}
+		encoded, err := json.Marshal(result.StructuredContent)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var snapshot mcpSnapshot
+		if err := json.Unmarshal(encoded, &snapshot); err != nil {
+			t.Fatal(err)
+		}
+		invocationID = snapshot.InvocationID
+	}
+	for _, timeout := range []any{nil, 1, 50000} {
+		arguments := map[string]any{"invocation_id": invocationID, "after_revision": 0}
+		if timeout != nil {
+			arguments["timeout_ms"] = timeout
+		}
+		result, err := clientSession.CallTool(context.Background(), &mcp.CallToolParams{Name: "wait_run", Arguments: arguments})
+		if err != nil || result.IsError {
+			t.Fatalf("accepted timeout_ms=%v result=%+v err=%v", timeout, result, err)
+		}
+	}
+}
+
+func assertOptionalIntegerBounds(t *testing.T, schema any, property string, minimum, maximum float64) {
+	t.Helper()
+	encoded, err := json.Marshal(schema)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var document struct {
+		Required   []string `json:"required"`
+		Properties map[string]struct {
+			Minimum *float64 `json:"minimum"`
+			Maximum *float64 `json:"maximum"`
+		} `json:"properties"`
+	}
+	if err := json.Unmarshal(encoded, &document); err != nil {
+		t.Fatal(err)
+	}
+	if slices.Contains(document.Required, property) {
+		t.Fatalf("%s must remain optional", property)
+	}
+	got := document.Properties[property]
+	if got.Minimum == nil || *got.Minimum != minimum || got.Maximum == nil || *got.Maximum != maximum {
+		t.Fatalf("%s bounds = minimum %v maximum %v", property, got.Minimum, got.Maximum)
 	}
 }
 
