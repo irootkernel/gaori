@@ -313,6 +313,10 @@ func TestMCPDocumentationAndSkillContract(t *testing.T) {
 		"README.md", "docs/user-interface.md", "docs/architecture.md", "docs/integration-guide.md",
 		"skills/use-gaori/SKILL.md", "skills/use-gaori/references/lifecycle.md", "skills/use-gaori/references/recovery.md",
 	}
+	completionStatus := map[string]string{
+		"docs/architecture.md":   "Status: Complete through `MCP-005`",
+		"docs/user-interface.md": "complete through `MCP-005`",
+	}
 	for _, relative := range paths {
 		data, err := os.ReadFile(filepath.Join(root, relative))
 		if err != nil {
@@ -323,6 +327,9 @@ func TestMCPDocumentationAndSkillContract(t *testing.T) {
 			if !strings.Contains(text, required) {
 				t.Errorf("%s does not describe %s", relative, required)
 			}
+		}
+		if expected := completionStatus[relative]; expected != "" && !strings.Contains(text, expected) {
+			t.Errorf("%s does not contain current MCP completion status %q", relative, expected)
 		}
 	}
 	skill, err := os.ReadFile(filepath.Join(root, "skills/use-gaori/SKILL.md"))

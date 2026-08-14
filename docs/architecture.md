@@ -1,6 +1,6 @@
 # Gaori Architecture
 
-Status: Complete through `MCP-004`
+Status: Complete through `MCP-005`
 Scope: Standalone Gaori v0.1 architecture, including session-local STDIO MCP execution
 
 This document defines Gaori's technical and artifact contracts. See the [integration guide](integration-guide.md) for parent-project ownership, supported capability status, and rollout guidance.
