@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/irootkernel/gaori/internal/model"
+	"github.com/irootkernel/gaori/internal/safety"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
@@ -70,6 +71,62 @@ func TestMCPServerAdvertisesExpectedTools(t *testing.T) {
 	slices.Sort(names)
 	if !slices.Equal(names, want) {
 		t.Fatalf("tools = %v, want %v", names, want)
+	}
+}
+
+func TestMCPInvocationLookupErrorsAreBoundedAndNonReflective(t *testing.T) {
+	t.Parallel()
+	manager := newMCPManager(globalOptions{RepoRoot: t.TempDir()})
+	server := newMCPServer(manager, NewBuildInfo("gaori", "0.1.11", "test", "test"))
+	client := mcp.NewClient(&mcp.Implementation{Name: "test", Version: "v1"}, nil)
+	clientTransport, serverTransport := mcp.NewInMemoryTransports()
+	serverSession, err := server.Connect(context.Background(), serverTransport, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		if err := serverSession.Close(); err != nil {
+			t.Errorf("close server session: %v", err)
+		}
+	}()
+	clientSession, err := client.Connect(context.Background(), clientTransport, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		if err := clientSession.Close(); err != nil {
+			t.Errorf("close client session: %v", err)
+		}
+	}()
+
+	tools := []struct {
+		name      string
+		arguments map[string]any
+	}{
+		{name: "get_run", arguments: map[string]any{}},
+		{name: "wait_run", arguments: map[string]any{"after_revision": 0, "timeout_ms": 1}},
+		{name: "cancel_run", arguments: map[string]any{}},
+		{name: "get_excerpt", arguments: map[string]any{"failure_id": "F001"}},
+	}
+	for _, invocationID := range []string{"run-999999", "run-000001-token=secret", "run-" + strings.Repeat("9", safety.MaxExcerptBytes*2)} {
+		for _, tool := range tools {
+			arguments := make(map[string]any, len(tool.arguments)+1)
+			for key, value := range tool.arguments {
+				arguments[key] = value
+			}
+			arguments["invocation_id"] = invocationID
+			result, err := clientSession.CallTool(context.Background(), &mcp.CallToolParams{Name: tool.name, Arguments: arguments})
+			if err != nil {
+				t.Fatal(err)
+			}
+			encoded, err := json.Marshal(result)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !result.IsError || strings.Contains(string(encoded), invocationID) || len(encoded) > safety.MaxExcerptBytes {
+				t.Fatalf("%s reflected or failed to bound invocation %q: %s", tool.name, invocationID, encoded)
+			}
+		}
 	}
 }
 

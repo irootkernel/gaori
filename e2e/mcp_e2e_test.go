@@ -170,6 +170,14 @@ func TestBinaryMCPLifecycleAndBoundedEvidence(t *testing.T) {
 	if err != nil || len(tools.Tools) != 6 {
 		t.Fatalf("list tools: count=%d err=%v", len(tools.Tools), err)
 	}
+	assertMCPToolErrorDoesNotContain(t, ctx, session, "get_run", map[string]any{
+		"invocation_id": "run-999999",
+	}, "run-999999")
+	assertMCPToolErrorDoesNotContain(t, ctx, session, "wait_run", map[string]any{
+		"invocation_id":  "run-000001-token=secret",
+		"after_revision": 0,
+		"timeout_ms":     1,
+	}, "token=secret")
 
 	failed := callMCPTool[mcpBinarySnapshot](t, ctx, session, "start_configured_run", map[string]any{"command_id": "fail"})
 	failed = waitForMCPFinish(t, ctx, session, failed)

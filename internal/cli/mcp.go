@@ -20,9 +20,10 @@ import (
 )
 
 const (
-	defaultMCPWait = 50 * time.Second
-	maxMCPWait     = 50 * time.Second
-	mcpDrainWait   = 3 * time.Second
+	defaultMCPWait     = 50 * time.Second
+	maxMCPWait         = 50 * time.Second
+	mcpDrainWait       = 3 * time.Second
+	maxMCPInvocationID = 24
 )
 
 type mcpPhase string
@@ -193,13 +194,28 @@ func (m *mcpManager) start(req model.RunRequest) mcpSnapshot {
 }
 
 func (m *mcpManager) lookup(id string) (*mcpInvocation, error) {
+	if !validMCPInvocationID(id) {
+		return nil, fmt.Errorf("unknown invocation id")
+	}
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	inv, ok := m.invocations[id]
 	if !ok {
-		return nil, fmt.Errorf("unknown invocation id %q", id)
+		return nil, fmt.Errorf("unknown invocation id")
 	}
 	return inv, nil
+}
+
+func validMCPInvocationID(id string) bool {
+	if len(id) < len("run-")+6 || len(id) > maxMCPInvocationID || id[:len("run-")] != "run-" {
+		return false
+	}
+	for _, char := range id[len("run-"):] {
+		if char < '0' || char > '9' {
+			return false
+		}
+	}
+	return true
 }
 
 func (m *mcpManager) wait(ctx context.Context, id string, after int64, timeout time.Duration) (mcpSnapshot, error) {
