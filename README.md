@@ -324,7 +324,7 @@ gaori rules propose \
   --failure F001
 ```
 
-Gaori verifies that the summary and adjacent raw log belong together, streams the full raw-log checksum, and reads only the bounded selected span. The summary supplies the parser, tags, command, checksum, and exact line/byte provenance. This mode is mutually exclusive with the legacy `--tag ... --parser ... --raw-log ... --span ...` form. Both forms create only an ignored local candidate; neither activates a rule.
+Gaori verifies that the summary and adjacent raw log belong together and captures the bounded selected span while streaming the full raw-log checksum. The summary supplies the parser, tags, command, checksum, and exact line/byte provenance. This mode is mutually exclusive with the legacy `--tag ... --parser ... --raw-log ... --span ...` form. Both forms create only an ignored local candidate; neither activates a rule.
 
 Add `--json` when a script needs compact command output. Global options may appear before or after the subcommand and its operands, but options after an ad-hoc `--` boundary always belong to the child command. The `summary_json` field is the structured summary accepted by `excerpt`, while `summary_markdown` is the human review path. The legacy `summary` and `extractor` fields remain aliases for `summary_markdown` and `extractor_status`. Use `--repo`, `--config`, or `--output-dir` to select a different project root, config, or standalone evidence directory.
 
@@ -332,7 +332,7 @@ Add `--json` when a script needs compact command output. Global options may appe
 
 - The executed command's exit code is authoritative.
 - Summaries and excerpts are bounded; raw logs are preserved unchanged. Summaries retain at most 50 failures and 50 warnings, report truncation explicitly, and remain within their byte budget. Logs larger than 256 KiB use degraded extraction from a bounded complete-line tail instead of becoming internal errors.
-- Config YAML, stored and imported rule YAML, and legacy `rules propose --raw-log` inputs are limited to 256 KiB and fail with config exit code `2` when oversized. Summary-based proposals may verify a larger raw log with one streaming checksum pass that also validates the selected start line; subsequent reads are limited to the selected 256 KiB failure span and its boundary bytes.
+- Config YAML, stored and imported rule YAML, and legacy `rules propose --raw-log` inputs are limited to 256 KiB and fail with config exit code `2` when oversized. Summary-based proposals may verify a larger raw log with one streaming checksum pass that also captures the selected 256 KiB failure span and validates its line boundaries from that same stream.
 - Redaction applies to surfaced summaries, excerpts, status, and console metadata, not to raw logs or literal artifact paths.
 - Cleanup has no implicit default: it requires an explicit age or `--all`, supports dry-run, and never treats incomplete or unrecognized entries as safe deletion targets.
 - Do not put secrets in run IDs, command IDs, output directories, or filenames.

@@ -347,24 +347,23 @@ func proposeRuleFromSummary(repoRoot, summaryPath, failureID string) (model.Rule
 		return model.RuleProposal{}, model.NewGaoriError(model.ExitCodeArtifactError, "open summary raw log", err)
 	}
 	defer func() { _ = rawFile.Close() }()
-	actualSHA, rawSize, prefixLines, err := hashRawLogAndCountPrefix(rawFile, int64(span.StartByte))
+	rawScan, err := scanProposalRawLog(rawFile, span)
 	if err != nil {
 		return model.RuleProposal{}, model.NewGaoriError(model.ExitCodeArtifactError, "hash summary raw log", err)
 	}
-	if summary.RawLogSHA256 == "" || actualSHA != summary.RawLogSHA256 {
+	if summary.RawLogSHA256 == "" || rawScan.SHA256 != summary.RawLogSHA256 {
 		return model.RuleProposal{}, model.NewGaoriError(model.ExitCodeArtifactError, "validate summary raw log", fmt.Errorf("raw log checksum does not match summary"))
 	}
-	if int64(span.EndByte) > rawSize {
+	if int64(span.EndByte) > rawScan.Size {
 		return model.RuleProposal{}, model.NewGaoriError(model.ExitCodeConfigError, "propose rule from summary", fmt.Errorf("failure byte span is invalid or exceeds %d bytes", safety.MaxRegexInputBytes))
 	}
-	if prefixLines+1 != span.StartLine {
+	if rawScan.PrefixLines+1 != span.StartLine {
 		return model.RuleProposal{}, model.NewGaoriError(model.ExitCodeConfigError, "propose rule from summary", fmt.Errorf("failure start line does not match byte span"))
 	}
-	segment, err := readValidatedFailureSpan(rawFile, rawSize, span)
-	if err != nil {
+	if err := validateScannedFailureSpan(rawScan, span); err != nil {
 		return model.RuleProposal{}, err
 	}
-	return rules.ProposeFromEvidence(repoRoot, summary.Tags, summary.Parser, resolvedRaw, actualSHA, inferSummarySourceRun(filepath.Dir(resolvedSummary)), summary.CommandID, span, segment)
+	return rules.ProposeFromEvidence(repoRoot, summary.Tags, summary.Parser, resolvedRaw, rawScan.SHA256, inferSummarySourceRun(filepath.Dir(resolvedSummary)), summary.CommandID, span, rawScan.Segment)
 }
 
 func selectSummaryFailure(failures []model.Failure, failureID string) (*model.Failure, error) {
@@ -384,63 +383,83 @@ func selectSummaryFailure(failures []model.Failure, failureID string) (*model.Fa
 	return selected, nil
 }
 
-func hashRawLogAndCountPrefix(reader io.Reader, prefixBytes int64) (string, int64, int, error) {
+type proposalRawScan struct {
+	SHA256       string
+	Size         int64
+	PrefixLines  int
+	Segment      []byte
+	PreviousByte byte
+	HasPrevious  bool
+	NextByte     byte
+	HasNext      bool
+}
+
+func scanProposalRawLog(reader io.Reader, span model.RawSpan) (proposalRawScan, error) {
+	result := proposalRawScan{Segment: make([]byte, span.EndByte-span.StartByte)}
 	hash := sha256.New()
 	buffer := make([]byte, 32*1024)
-	var total int64
-	prefixLines := 0
+	startByte := int64(span.StartByte)
+	endByte := int64(span.EndByte)
 	for {
 		n, err := reader.Read(buffer)
 		if n > 0 {
-			_, _ = hash.Write(buffer[:n])
-			remainingPrefix := prefixBytes - total
-			if remainingPrefix > 0 {
-				prefixLength := int64(n)
-				if prefixLength > remainingPrefix {
-					prefixLength = remainingPrefix
+			chunk := buffer[:n]
+			_, _ = hash.Write(chunk)
+			chunkEnd := result.Size + int64(n)
+			if result.Size < startByte {
+				prefixEnd := chunkEnd
+				if prefixEnd > startByte {
+					prefixEnd = startByte
 				}
-				prefixLines += bytes.Count(buffer[:prefixLength], []byte{'\n'})
+				result.PrefixLines += bytes.Count(chunk[:prefixEnd-result.Size], []byte{'\n'})
 			}
-			total += int64(n)
+			if startByte > 0 && result.Size <= startByte-1 && startByte-1 < chunkEnd {
+				result.PreviousByte = chunk[startByte-1-result.Size]
+				result.HasPrevious = true
+			}
+			copyStart := result.Size
+			if copyStart < startByte {
+				copyStart = startByte
+			}
+			copyEnd := chunkEnd
+			if copyEnd > endByte {
+				copyEnd = endByte
+			}
+			if copyStart < copyEnd {
+				copy(result.Segment[copyStart-startByte:copyEnd-startByte], chunk[copyStart-result.Size:copyEnd-result.Size])
+			}
+			if result.Size <= endByte && endByte < chunkEnd {
+				result.NextByte = chunk[endByte-result.Size]
+				result.HasNext = true
+			}
+			result.Size = chunkEnd
 		}
 		if err == io.EOF {
-			return "sha256:" + hex.EncodeToString(hash.Sum(nil)), total, prefixLines, nil
+			result.SHA256 = "sha256:" + hex.EncodeToString(hash.Sum(nil))
+			return result, nil
 		}
 		if err != nil {
-			return "", 0, 0, err
+			return proposalRawScan{}, err
 		}
 	}
 }
 
-func readValidatedFailureSpan(rawFile io.ReaderAt, rawSize int64, span model.RawSpan) ([]byte, error) {
-	if err := validateFailureSpanBoundaries(rawFile, rawSize, span); err != nil {
-		return nil, err
-	}
-	segment := make([]byte, span.EndByte-span.StartByte)
-	if _, err := io.ReadFull(io.NewSectionReader(rawFile, int64(span.StartByte), int64(len(segment))), segment); err != nil {
-		return nil, model.NewGaoriError(model.ExitCodeArtifactError, "read summary failure span", err)
-	}
-	return segment, nil
-}
-
-func validateFailureSpanBoundaries(rawFile io.ReaderAt, rawSize int64, span model.RawSpan) error {
+func validateScannedFailureSpan(rawScan proposalRawScan, span model.RawSpan) error {
 	if span.StartByte > 0 {
-		previous := []byte{0}
-		if _, err := rawFile.ReadAt(previous, int64(span.StartByte-1)); err != nil {
-			return model.NewGaoriError(model.ExitCodeArtifactError, "read failure start boundary", err)
+		if !rawScan.HasPrevious {
+			return model.NewGaoriError(model.ExitCodeArtifactError, "read failure start boundary", io.ErrUnexpectedEOF)
 		}
-		if previous[0] != '\n' {
+		if rawScan.PreviousByte != '\n' {
 			return model.NewGaoriError(model.ExitCodeConfigError, "propose rule from summary", fmt.Errorf("failure start byte is not at a line boundary"))
 		}
 	}
-	if int64(span.EndByte) == rawSize {
+	if int64(span.EndByte) == rawScan.Size {
 		return nil
 	}
-	next := []byte{0}
-	if _, err := rawFile.ReadAt(next, int64(span.EndByte)); err != nil {
-		return model.NewGaoriError(model.ExitCodeArtifactError, "read failure end boundary", err)
+	if !rawScan.HasNext {
+		return model.NewGaoriError(model.ExitCodeArtifactError, "read failure end boundary", io.ErrUnexpectedEOF)
 	}
-	if next[0] != '\n' {
+	if rawScan.NextByte != '\n' {
 		return model.NewGaoriError(model.ExitCodeConfigError, "propose rule from summary", fmt.Errorf("failure end byte is not at a line boundary"))
 	}
 	return nil

@@ -293,7 +293,7 @@ gaori rules delete generic-v1 --reason "superseded by v2"
 
 For project rules, `max_block_lines` counts the matched block including its start line. The matched block plus `include_context.before` and `include_context.after` must not exceed 160 lines; overbroad or overflow-sized values fail closed with config exit code `2`.
 
-The summary form derives parser, tags, command identity, checksum, and the exact line/byte span from one generated failure. It requires the matching regular raw-log file beside the regular summary file, rejects symlinks, stale checksums, duplicate failure IDs, and cross-directory references, and writes nothing on validation failure. It streams the complete raw-log checksum and reads only the selected span, bounded to 256 KiB and 158 lines. Summary mode and the legacy manual metadata/span mode are mutually exclusive.
+The summary form derives parser, tags, command identity, checksum, and the exact line/byte span from one generated failure. It requires the matching regular raw-log file beside the regular summary file, rejects symlinks, stale checksums, duplicate failure IDs, and cross-directory references, and writes nothing on validation failure. It captures only the selected span, bounded to 256 KiB and 158 lines, while streaming the complete raw-log checksum. Summary mode and the legacy manual metadata/span mode are mutually exclusive.
 
 For an existing generated failure summary:
 

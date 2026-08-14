@@ -75,7 +75,7 @@ Current implementation snapshot:
 | RULES-001 | Done | Implement rule storage, list/search/show, disabled-rule handling, deletion reason, and project-local rule loading. | `GAORI-REQ-RQRUL-001`, `GAORI-REQ-RQRUL-002`, `GAORI-REQ-RQRUL-004` |
 | RULES-002 | Done | Implement create/update validation with provenance requirements, RE2-safe matching config, and capture group diagnostics. | `GAORI-REQ-RQRUL-003`, `GAORI-REQ-RQRUL-006`, `ADR-0007` |
 | RULES-003 | Done | Implement rule test and rule propose from raw-log span, including run-local proposed rule separation. | `GAORI-REQ-RQRUL-005`, `GAORI-REQ-RQRUL-007`, `GAORI-REQ-RQDOC-003` |
-| RULES-004 | Done | Propose a local rule candidate from one summary failure with matching-artifact validation, streaming raw checksum, bounded span reads, and preserved provenance. | `GAORI-REQ-RQRUL-003`, `GAORI-REQ-RQRUL-009`, `GAORI-REQ-RQSEC-004` |
+| RULES-004 | Done | Propose a local rule candidate from one summary failure with matching-artifact validation, checksum-stream-bound span capture, and preserved provenance. | `GAORI-REQ-RQRUL-003`, `GAORI-REQ-RQRUL-009`, `GAORI-REQ-RQSEC-004` |
 
 ## DOCUM: Documentation and release readiness
 

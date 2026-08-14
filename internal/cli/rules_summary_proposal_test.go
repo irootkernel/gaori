@@ -13,47 +13,69 @@ import (
 	"github.com/irootkernel/gaori/internal/model"
 )
 
-func TestSummaryProposalRawReadsStayBoundedAfterChecksum(t *testing.T) {
+func TestSummaryProposalCapturesBoundedSpanDuringChecksum(t *testing.T) {
 	t.Parallel()
 	prefix := bytes.Repeat([]byte("noise\n"), 50_000)
 	failure := []byte("TypeError: failed\nsrc/foo.go:42")
 	raw := append(append([]byte(nil), prefix...), failure...)
-
-	sha, size, prefixLines, err := hashRawLogAndCountPrefix(bytes.NewReader(raw), int64(len(prefix)))
-	if err != nil {
-		t.Fatal(err)
-	}
-	if sha != artifacts.SHA256(raw) || size != int64(len(raw)) || prefixLines != 50_000 {
-		t.Fatalf("sha=%q size=%d prefixLines=%d", sha, size, prefixLines)
-	}
-
-	reader := &countingReaderAt{data: raw}
 	span := model.RawSpan{StartByte: len(prefix), EndByte: len(raw)}
-	segment, err := readValidatedFailureSpan(reader, size, span)
+
+	rawScan, err := scanProposalRawLog(bytes.NewReader(raw), span)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !bytes.Equal(segment, failure) {
-		t.Fatalf("segment=%q", segment)
+	if rawScan.SHA256 != artifacts.SHA256(raw) || rawScan.Size != int64(len(raw)) || rawScan.PrefixLines != 50_000 {
+		t.Fatalf("scan=%+v", rawScan)
 	}
-	if reader.requested > int64(len(failure)+2) {
-		t.Fatalf("post-checksum reads=%d, want at most %d", reader.requested, len(failure)+2)
+	if !bytes.Equal(rawScan.Segment, failure) {
+		t.Fatalf("segment=%q", rawScan.Segment)
 	}
 }
 
-type countingReaderAt struct {
-	data      []byte
-	requested int64
+func TestSummaryProposalBindsSelectedBytesToChecksumStream(t *testing.T) {
+	t.Parallel()
+	original := []byte("prefix\nTypeError: original\ntrailer")
+	mutable := append([]byte(nil), original...)
+	start := bytes.Index(original, []byte("TypeError"))
+	end := start + len("TypeError: original")
+	reader := &mutatingReader{
+		data: mutable,
+		mutate: func(data []byte) {
+			copy(data[start:end], []byte("TypeError: replaced"))
+		},
+	}
+	span := model.RawSpan{StartByte: start, EndByte: end}
+
+	rawScan, err := scanProposalRawLog(reader, span)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if rawScan.SHA256 != artifacts.SHA256(original) {
+		t.Fatalf("sha=%q want=%q", rawScan.SHA256, artifacts.SHA256(original))
+	}
+	if got, want := string(rawScan.Segment), "TypeError: original"; got != want {
+		t.Fatalf("segment=%q want=%q", got, want)
+	}
+	if got := string(mutable[start:end]); got != "TypeError: replaced" {
+		t.Fatalf("fixture did not mutate backing evidence: %q", got)
+	}
 }
 
-func (r *countingReaderAt) ReadAt(p []byte, offset int64) (int, error) {
-	r.requested += int64(len(p))
-	if offset >= int64(len(r.data)) {
+type mutatingReader struct {
+	data   []byte
+	offset int
+	mutate func([]byte)
+}
+
+func (r *mutatingReader) Read(p []byte) (int, error) {
+	if r.offset == len(r.data) {
 		return 0, io.EOF
 	}
-	n := copy(p, r.data[offset:])
-	if n != len(p) {
-		return n, io.EOF
+	n := copy(p, r.data[r.offset:])
+	r.offset += n
+	if r.mutate != nil {
+		r.mutate(r.data)
+		r.mutate = nil
 	}
 	return n, nil
 }
