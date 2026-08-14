@@ -3,6 +3,7 @@ package cli
 import (
 	"bytes"
 	"encoding/json"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -11,6 +12,51 @@ import (
 	"github.com/irootkernel/gaori/internal/artifacts"
 	"github.com/irootkernel/gaori/internal/model"
 )
+
+func TestSummaryProposalRawReadsStayBoundedAfterChecksum(t *testing.T) {
+	t.Parallel()
+	prefix := bytes.Repeat([]byte("noise\n"), 50_000)
+	failure := []byte("TypeError: failed\nsrc/foo.go:42")
+	raw := append(append([]byte(nil), prefix...), failure...)
+
+	sha, size, prefixLines, err := hashRawLogAndCountPrefix(bytes.NewReader(raw), int64(len(prefix)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if sha != artifacts.SHA256(raw) || size != int64(len(raw)) || prefixLines != 50_000 {
+		t.Fatalf("sha=%q size=%d prefixLines=%d", sha, size, prefixLines)
+	}
+
+	reader := &countingReaderAt{data: raw}
+	span := model.RawSpan{StartByte: len(prefix), EndByte: len(raw)}
+	segment, err := readValidatedFailureSpan(reader, size, span)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(segment, failure) {
+		t.Fatalf("segment=%q", segment)
+	}
+	if reader.requested > int64(len(failure)+2) {
+		t.Fatalf("post-checksum reads=%d, want at most %d", reader.requested, len(failure)+2)
+	}
+}
+
+type countingReaderAt struct {
+	data      []byte
+	requested int64
+}
+
+func (r *countingReaderAt) ReadAt(p []byte, offset int64) (int, error) {
+	r.requested += int64(len(p))
+	if offset >= int64(len(r.data)) {
+		return 0, io.EOF
+	}
+	n := copy(p, r.data[offset:])
+	if n != len(p) {
+		return n, io.EOF
+	}
+	return n, nil
+}
 
 func TestRulesProposeFromSummaryStreamsLargeRawLog(t *testing.T) {
 	t.Parallel()

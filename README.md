@@ -330,7 +330,7 @@ Add `--json` when a script needs compact command output. Global options may appe
 
 - The executed command's exit code is authoritative.
 - Summaries and excerpts are bounded; raw logs are preserved unchanged. Summaries retain at most 50 failures and 50 warnings, report truncation explicitly, and remain within their byte budget. Logs larger than 256 KiB use degraded extraction from a bounded complete-line tail instead of becoming internal errors.
-- Config YAML, stored and imported rule YAML, and legacy `rules propose --raw-log` inputs are limited to 256 KiB and fail with config exit code `2` when oversized. Summary-based proposals may verify a larger raw log by streaming its checksum, but read at most the selected 256 KiB failure span.
+- Config YAML, stored and imported rule YAML, and legacy `rules propose --raw-log` inputs are limited to 256 KiB and fail with config exit code `2` when oversized. Summary-based proposals may verify a larger raw log with one streaming checksum pass that also validates the selected start line; subsequent reads are limited to the selected 256 KiB failure span and its boundary bytes.
 - Redaction applies to surfaced summaries, excerpts, status, and console metadata, not to raw logs or literal artifact paths.
 - Cleanup has no implicit default: it requires an explicit age or `--all`, supports dry-run, and never treats incomplete or unrecognized entries as safe deletion targets.
 - Do not put secrets in run IDs, command IDs, output directories, or filenames.

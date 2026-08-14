@@ -51,7 +51,7 @@ gaori --json rules show generic-v1
 gaori --json rules test --rule generic-v1 --log fixtures/unit.raw.log --expect-span 2:5
 ```
 
-Summary-based proposal fails closed when redaction or malformed evidence leaves invalid selector metadata; do not guess replacements. It also rejects a missing, stale, symlinked, or non-adjacent raw log. `rules propose` writes only a local ignored candidate under `.gaori/rule-proposals/`; it does not activate the rule. `rules create` and `rules update` require reviewed YAML and explicit user intent; the resulting `.gaori/tester/rules/*.yaml` may be tracked project policy, but do not stage or commit it without separate explicit user intent. Re-read `rules show` after either mutation. `rules delete` disables a rule with a reason and also requires explicit user intent:
+Summary-based proposal fails closed when redaction or malformed evidence leaves invalid selector metadata; do not guess replacements. It also rejects a missing, stale, symlinked, or non-adjacent raw log. Large matching raw logs are verified with one full streaming checksum pass; Gaori then reads only the selected bounded failure span and boundary bytes. `rules propose` writes only a local ignored candidate under `.gaori/rule-proposals/`; it does not activate the rule. `rules create` and `rules update` require reviewed YAML and explicit user intent; the resulting `.gaori/tester/rules/*.yaml` may be tracked project policy, but do not stage or commit it without separate explicit user intent. Re-read `rules show` after either mutation. `rules delete` disables a rule with a reason and also requires explicit user intent:
 
 ```bash
 gaori --json rules delete generic-v1 --reason "superseded by v2"

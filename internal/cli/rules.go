@@ -328,67 +328,102 @@ func proposeRuleFromSummary(repoRoot, summaryPath, failureID string) (model.Rule
 	if err := requireRegularProposalFile(resolvedRaw, "raw log"); err != nil {
 		return model.RuleProposal{}, err
 	}
-
-	rawFile, err := safety.OpenFileWithin(filepath.Dir(resolvedSummary), resolvedRaw, os.O_RDONLY, 0)
+	selected, err := selectSummaryFailure(summary.Failures, failureID)
 	if err != nil {
-		return model.RuleProposal{}, model.NewGaoriError(model.ExitCodeArtifactError, "open summary raw log", err)
-	}
-	defer func() { _ = rawFile.Close() }()
-	hash := sha256.New()
-	if _, err := io.Copy(hash, rawFile); err != nil {
-		return model.RuleProposal{}, model.NewGaoriError(model.ExitCodeArtifactError, "hash summary raw log", err)
-	}
-	actualSHA := "sha256:" + hex.EncodeToString(hash.Sum(nil))
-	if summary.RawLogSHA256 == "" || actualSHA != summary.RawLogSHA256 {
-		return model.RuleProposal{}, model.NewGaoriError(model.ExitCodeArtifactError, "validate summary raw log", fmt.Errorf("raw log checksum does not match summary"))
-	}
-
-	var selected *model.Failure
-	for i := range summary.Failures {
-		if summary.Failures[i].ID == failureID {
-			if selected != nil {
-				return model.RuleProposal{}, model.NewGaoriError(model.ExitCodeConfigError, "propose rule from summary", fmt.Errorf("failure id %q is duplicated in summary", failureID))
-			}
-			selected = &summary.Failures[i]
-		}
-	}
-	if selected == nil {
-		return model.RuleProposal{}, model.NewGaoriError(model.ExitCodeConfigError, "propose rule from summary", fmt.Errorf("failure id %q not found in summary", failureID))
+		return model.RuleProposal{}, err
 	}
 	span := selected.RawSpan
 	maxLines := safety.MaxBlockLines - 2
 	if span.StartLine <= 0 || span.EndLine < span.StartLine || span.EndLine-span.StartLine+1 > maxLines {
 		return model.RuleProposal{}, model.NewGaoriError(model.ExitCodeConfigError, "propose rule from summary", fmt.Errorf("failure line span must contain at most %d lines", maxLines))
 	}
-	info, err := rawFile.Stat()
-	if err != nil {
-		return model.RuleProposal{}, model.NewGaoriError(model.ExitCodeArtifactError, "stat summary raw log", err)
-	}
-	if span.StartByte < 0 || span.EndByte <= span.StartByte || int64(span.EndByte) > info.Size() {
-		return model.RuleProposal{}, model.NewGaoriError(model.ExitCodeConfigError, "propose rule from summary", fmt.Errorf("failure byte span is invalid or exceeds %d bytes", safety.MaxRegexInputBytes))
-	}
 	spanBytes := span.EndByte - span.StartByte
-	if spanBytes > safety.MaxRegexInputBytes {
+	if span.StartByte < 0 || span.EndByte <= span.StartByte || spanBytes > safety.MaxRegexInputBytes {
 		return model.RuleProposal{}, model.NewGaoriError(model.ExitCodeConfigError, "propose rule from summary", fmt.Errorf("failure byte span is invalid or exceeds %d bytes", safety.MaxRegexInputBytes))
 	}
-	if err := validateFailureSpanBoundaries(rawFile, info.Size(), span); err != nil {
-		return model.RuleProposal{}, err
-	}
-	prefixLines, err := countNewlines(io.NewSectionReader(rawFile, 0, int64(span.StartByte)))
+
+	rawFile, err := safety.OpenFileWithin(filepath.Dir(resolvedSummary), resolvedRaw, os.O_RDONLY, 0)
 	if err != nil {
-		return model.RuleProposal{}, model.NewGaoriError(model.ExitCodeArtifactError, "validate summary failure span", err)
+		return model.RuleProposal{}, model.NewGaoriError(model.ExitCodeArtifactError, "open summary raw log", err)
+	}
+	defer func() { _ = rawFile.Close() }()
+	actualSHA, rawSize, prefixLines, err := hashRawLogAndCountPrefix(rawFile, int64(span.StartByte))
+	if err != nil {
+		return model.RuleProposal{}, model.NewGaoriError(model.ExitCodeArtifactError, "hash summary raw log", err)
+	}
+	if summary.RawLogSHA256 == "" || actualSHA != summary.RawLogSHA256 {
+		return model.RuleProposal{}, model.NewGaoriError(model.ExitCodeArtifactError, "validate summary raw log", fmt.Errorf("raw log checksum does not match summary"))
+	}
+	if int64(span.EndByte) > rawSize {
+		return model.RuleProposal{}, model.NewGaoriError(model.ExitCodeConfigError, "propose rule from summary", fmt.Errorf("failure byte span is invalid or exceeds %d bytes", safety.MaxRegexInputBytes))
 	}
 	if prefixLines+1 != span.StartLine {
 		return model.RuleProposal{}, model.NewGaoriError(model.ExitCodeConfigError, "propose rule from summary", fmt.Errorf("failure start line does not match byte span"))
 	}
-	segment := make([]byte, spanBytes)
-	if _, err := io.ReadFull(io.NewSectionReader(rawFile, int64(span.StartByte), int64(spanBytes)), segment); err != nil {
-		return model.RuleProposal{}, model.NewGaoriError(model.ExitCodeArtifactError, "read summary failure span", err)
+	segment, err := readValidatedFailureSpan(rawFile, rawSize, span)
+	if err != nil {
+		return model.RuleProposal{}, err
 	}
 	return rules.ProposeFromEvidence(repoRoot, summary.Tags, summary.Parser, resolvedRaw, actualSHA, inferSummarySourceRun(filepath.Dir(resolvedSummary)), summary.CommandID, span, segment)
 }
 
-func validateFailureSpanBoundaries(rawFile *os.File, rawSize int64, span model.RawSpan) error {
+func selectSummaryFailure(failures []model.Failure, failureID string) (*model.Failure, error) {
+	var selected *model.Failure
+	for i := range failures {
+		if failures[i].ID != failureID {
+			continue
+		}
+		if selected != nil {
+			return nil, model.NewGaoriError(model.ExitCodeConfigError, "propose rule from summary", fmt.Errorf("failure id %q is duplicated in summary", failureID))
+		}
+		selected = &failures[i]
+	}
+	if selected == nil {
+		return nil, model.NewGaoriError(model.ExitCodeConfigError, "propose rule from summary", fmt.Errorf("failure id %q not found in summary", failureID))
+	}
+	return selected, nil
+}
+
+func hashRawLogAndCountPrefix(reader io.Reader, prefixBytes int64) (string, int64, int, error) {
+	hash := sha256.New()
+	buffer := make([]byte, 32*1024)
+	var total int64
+	prefixLines := 0
+	for {
+		n, err := reader.Read(buffer)
+		if n > 0 {
+			_, _ = hash.Write(buffer[:n])
+			remainingPrefix := prefixBytes - total
+			if remainingPrefix > 0 {
+				prefixLength := int64(n)
+				if prefixLength > remainingPrefix {
+					prefixLength = remainingPrefix
+				}
+				prefixLines += bytes.Count(buffer[:prefixLength], []byte{'\n'})
+			}
+			total += int64(n)
+		}
+		if err == io.EOF {
+			return "sha256:" + hex.EncodeToString(hash.Sum(nil)), total, prefixLines, nil
+		}
+		if err != nil {
+			return "", 0, 0, err
+		}
+	}
+}
+
+func readValidatedFailureSpan(rawFile io.ReaderAt, rawSize int64, span model.RawSpan) ([]byte, error) {
+	if err := validateFailureSpanBoundaries(rawFile, rawSize, span); err != nil {
+		return nil, err
+	}
+	segment := make([]byte, span.EndByte-span.StartByte)
+	if _, err := io.ReadFull(io.NewSectionReader(rawFile, int64(span.StartByte), int64(len(segment))), segment); err != nil {
+		return nil, model.NewGaoriError(model.ExitCodeArtifactError, "read summary failure span", err)
+	}
+	return segment, nil
+}
+
+func validateFailureSpanBoundaries(rawFile io.ReaderAt, rawSize int64, span model.RawSpan) error {
 	if span.StartByte > 0 {
 		previous := []byte{0}
 		if _, err := rawFile.ReadAt(previous, int64(span.StartByte-1)); err != nil {
@@ -409,21 +444,6 @@ func validateFailureSpanBoundaries(rawFile *os.File, rawSize int64, span model.R
 		return model.NewGaoriError(model.ExitCodeConfigError, "propose rule from summary", fmt.Errorf("failure end byte is not at a line boundary"))
 	}
 	return nil
-}
-
-func countNewlines(reader io.Reader) (int, error) {
-	buffer := make([]byte, 32*1024)
-	count := 0
-	for {
-		n, err := reader.Read(buffer)
-		count += bytes.Count(buffer[:n], []byte{'\n'})
-		if err == io.EOF {
-			return count, nil
-		}
-		if err != nil {
-			return 0, err
-		}
-	}
 }
 
 func requireRegularProposalFile(path, label string) error {
