@@ -129,14 +129,20 @@ func TestBinaryMCPMalformedInputFails(t *testing.T) {
 }
 
 type mcpBinarySnapshot struct {
-	InvocationID string          `json:"invocation_id"`
-	Revision     int64           `json:"revision"`
-	Phase        string          `json:"phase"`
-	Changed      bool            `json:"changed"`
-	Result       binaryRunResult `json:"result"`
-	Error        *struct {
+	InvocationID          string          `json:"invocation_id"`
+	Revision              int64           `json:"revision"`
+	Phase                 string          `json:"phase"`
+	Changed               bool            `json:"changed"`
+	CancellationRequested bool            `json:"cancellation_requested"`
+	Result                binaryRunResult `json:"result"`
+	Error                 *struct {
 		ExitCode int `json:"exit_code"`
 	} `json:"gaori_error"`
+}
+
+type mcpBinaryCancelOutput struct {
+	Accepted bool              `json:"accepted"`
+	Snapshot mcpBinarySnapshot `json:"snapshot"`
 }
 
 func TestBinaryMCPLifecycleAndBoundedEvidence(t *testing.T) {
@@ -267,16 +273,21 @@ func TestBinaryMCPLifecycleAndBoundedEvidence(t *testing.T) {
 	if slow.Phase != "executing" {
 		t.Fatalf("slow phase = %q", slow.Phase)
 	}
-	cancelled := callMCPTool[struct {
-		Accepted bool              `json:"accepted"`
-		Snapshot mcpBinarySnapshot `json:"snapshot"`
-	}](t, ctx, session, "cancel_run", map[string]any{"invocation_id": slow.InvocationID})
-	if !cancelled.Accepted {
-		t.Fatal("cancel was not accepted")
+	cancelled := callMCPTool[mcpBinaryCancelOutput](t, ctx, session, "cancel_run", map[string]any{"invocation_id": slow.InvocationID})
+	if !cancelled.Accepted || !cancelled.Snapshot.CancellationRequested {
+		t.Fatalf("first cancel response = %+v", cancelled)
 	}
-	slow = waitForMCPFinish(t, ctx, session, cancelled.Snapshot)
+	repeated := callMCPTool[mcpBinaryCancelOutput](t, ctx, session, "cancel_run", map[string]any{"invocation_id": slow.InvocationID})
+	if repeated.Accepted || !repeated.Snapshot.CancellationRequested {
+		t.Fatalf("repeated cancel response = %+v", repeated)
+	}
+	slow = waitForMCPFinish(t, ctx, session, repeated.Snapshot)
 	if slow.Result.Status != model.RunStatusKilled || slow.Result.ExitCode != 137 {
 		t.Fatalf("cancelled result = %+v", slow.Result)
+	}
+	finishedCancel := callMCPTool[mcpBinaryCancelOutput](t, ctx, session, "cancel_run", map[string]any{"invocation_id": slow.InvocationID})
+	if finishedCancel.Accepted || finishedCancel.Snapshot.Phase != "finished" || finishedCancel.Snapshot.Revision != slow.Revision {
+		t.Fatalf("finished cancel response = %+v, finished revision=%d", finishedCancel, slow.Revision)
 	}
 }
 
@@ -325,6 +336,10 @@ func TestMCPDocumentationAndSkillContract(t *testing.T) {
 		"skills/use-gaori/references/lifecycle.md": true,
 		"skills/use-gaori/references/recovery.md":  true,
 	}
+	acceptedContractPaths := []string{
+		"README.md", "docs/requirements-specs.md", "docs/architecture.md", "docs/integration-guide.md", "docs/user-interface.md",
+		"skills/use-gaori/references/lifecycle.md", "skills/use-gaori/references/recovery.md",
+	}
 	for _, relative := range paths {
 		data, err := os.ReadFile(filepath.Join(root, relative))
 		if err != nil {
@@ -341,6 +356,16 @@ func TestMCPDocumentationAndSkillContract(t *testing.T) {
 		}
 		if drainContractPaths[relative] && !strings.Contains(strings.ToLower(text), "after every in-flight process-start gate resolves") {
 			t.Errorf("%s does not describe the post-gate MCP drain deadline", relative)
+		}
+	}
+	for _, relative := range acceptedContractPaths {
+		data, err := os.ReadFile(filepath.Join(root, relative))
+		if err != nil {
+			t.Fatal(err)
+		}
+		text := string(data)
+		if !strings.Contains(text, "accepted") || !strings.Contains(text, "first cancellation request") || !strings.Contains(text, "finished") {
+			t.Errorf("%s does not define cancel_run.accepted and final-result reconciliation", relative)
 		}
 	}
 	skill, err := os.ReadFile(filepath.Join(root, "skills/use-gaori/SKILL.md"))

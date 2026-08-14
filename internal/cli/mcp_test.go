@@ -14,6 +14,7 @@ import (
 
 	"github.com/irootkernel/gaori/internal/artifacts"
 	"github.com/irootkernel/gaori/internal/model"
+	"github.com/irootkernel/gaori/internal/runner"
 	"github.com/irootkernel/gaori/internal/safety"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
@@ -66,6 +67,12 @@ func TestMCPServerAdvertisesExpectedTools(t *testing.T) {
 		}
 		if tool.Name == "wait_run" {
 			assertOptionalIntegerBounds(t, tool.InputSchema, "timeout_ms", 1, 50000)
+		}
+		if tool.Name == "cancel_run" {
+			if !strings.Contains(tool.Description, "accepted reports whether this call recorded that request") {
+				t.Fatalf("cancel_run description does not define accepted: %q", tool.Description)
+			}
+			assertSchemaPropertyDescription(t, tool.OutputSchema, "accepted", "first cancellation request")
 		}
 	}
 	want := []string{"cancel_run", "get_excerpt", "get_run", "start_ad_hoc_run", "start_configured_run", "wait_run"}
@@ -304,6 +311,25 @@ func assertOptionalIntegerBounds(t *testing.T, schema any, property string, mini
 	}
 }
 
+func assertSchemaPropertyDescription(t *testing.T, schema any, property, expected string) {
+	t.Helper()
+	encoded, err := json.Marshal(schema)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var document struct {
+		Properties map[string]struct {
+			Description string `json:"description"`
+		} `json:"properties"`
+	}
+	if err := json.Unmarshal(encoded, &document); err != nil {
+		t.Fatal(err)
+	}
+	if description := document.Properties[property].Description; !strings.Contains(description, expected) {
+		t.Fatalf("%s schema description = %q, want substring %q", property, description, expected)
+	}
+}
+
 func TestMCPRunErrorsUseValidatedRedaction(t *testing.T) {
 	repo := t.TempDir()
 	if err := os.MkdirAll(filepath.Join(repo, ".gaori"), 0o755); err != nil {
@@ -400,6 +426,46 @@ func TestMCPManagerWaitDoesNotCancelAndExplicitCancelFinishes(t *testing.T) {
 	}
 	if _, err := os.Stat(filepath.Join(repo, finished.Result.StatusJSON)); err != nil {
 		t.Fatalf("missing final status artifact: %v", err)
+	}
+}
+
+func TestMCPCancelAcceptedMeansFirstRequestWasRecorded(t *testing.T) {
+	repo := t.TempDir()
+	now := time.Now().UTC()
+	cancelCalls := 0
+	inv := &mcpInvocation{
+		snapshot:  mcpSnapshot{InvocationID: "run-000001", Revision: 3, Phase: mcpPhaseMaterializing, CreatedAt: now, UpdatedAt: now},
+		changed:   make(chan struct{}),
+		cancel:    func() { cancelCalls++ },
+		startGate: runner.NewStartGate(),
+		done:      make(chan struct{}),
+	}
+
+	if !inv.requestCancel() {
+		t.Fatal("first unfinished cancellation request was not accepted")
+	}
+	requested := inv.read()
+	if !requested.CancellationRequested || requested.Phase != mcpPhaseMaterializing || requested.Revision != 4 || cancelCalls != 1 {
+		t.Fatalf("first cancellation snapshot = %+v, cancel calls=%d", requested, cancelCalls)
+	}
+	if inv.requestCancel() {
+		t.Fatal("repeated cancellation request was accepted")
+	}
+	repeated := inv.read()
+	if repeated.Revision != requested.Revision || cancelCalls != 1 {
+		t.Fatalf("repeated cancellation changed state: snapshot=%+v cancel calls=%d", repeated, cancelCalls)
+	}
+
+	inv.finish(&runResult{Status: model.RunStatusPassed, ExitCode: 0}, nil, nil, repo)
+	finished := inv.read()
+	if finished.Result == nil || finished.Result.Status != model.RunStatusPassed || !finished.CancellationRequested {
+		t.Fatalf("late cancellation changed authoritative result: %+v", finished)
+	}
+	if inv.requestCancel() {
+		t.Fatal("finished invocation cancellation was accepted")
+	}
+	if after := inv.read(); after.Revision != finished.Revision || cancelCalls != 1 {
+		t.Fatalf("finished cancellation changed state: snapshot=%+v cancel calls=%d", after, cancelCalls)
 	}
 }
 

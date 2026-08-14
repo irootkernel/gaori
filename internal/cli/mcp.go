@@ -301,7 +301,7 @@ type waitInput struct {
 	TimeoutMS     *int   `json:"timeout_ms,omitempty" jsonschema:"wait timeout from 1 through 50000; defaults to 50000"`
 }
 type cancelOutput struct {
-	Accepted bool        `json:"accepted"`
+	Accepted bool        `json:"accepted" jsonschema:"true only when this call records the first cancellation request for an unfinished invocation; it does not guarantee a killed final result or stop artifact materialization"`
 	Snapshot mcpSnapshot `json:"snapshot"`
 }
 type excerptInput struct {
@@ -359,7 +359,7 @@ func newMCPServer(manager *mcpManager, info BuildInfo) *mcp.Server {
 		out, err := manager.wait(ctx, in.InvocationID, in.AfterRevision, timeout)
 		return nil, out, err
 	})
-	mcp.AddTool(server, &mcp.Tool{Name: "cancel_run", Description: "Explicitly cancel an active Gaori run and return its current snapshot.", Annotations: &cancel}, func(_ context.Context, _ *mcp.CallToolRequest, in invocationInput) (*mcp.CallToolResult, cancelOutput, error) {
+	mcp.AddTool(server, &mcp.Tool{Name: "cancel_run", Description: "Record the first cancellation request for an unfinished Gaori invocation and return its current snapshot. accepted reports whether this call recorded that request; clients must wait for finished and use the final command result.", Annotations: &cancel}, func(_ context.Context, _ *mcp.CallToolRequest, in invocationInput) (*mcp.CallToolResult, cancelOutput, error) {
 		inv, err := manager.lookup(in.InvocationID)
 		if err != nil {
 			return nil, cancelOutput{}, err
