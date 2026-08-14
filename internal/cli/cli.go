@@ -53,7 +53,10 @@ type materializationSource uint8
 type extractionProcessor func([]byte, model.RunOutput, []model.Rule) (model.RunOutput, error)
 type commandExecutor func(context.Context, string, string, []string, string, []string, int, io.Writer) (model.RunOutput, error)
 type executionPhase string
-type executionObserver func(executionPhase)
+type executionObserver struct {
+	phase    func(executionPhase)
+	redactor func(safety.Redactor)
+}
 
 const (
 	executionPhaseExecuting     executionPhase = "executing"
@@ -353,7 +356,7 @@ func summarizeCommand(opts globalOptions, args []string, stdout, stderr io.Write
 }
 
 func executeRun(req model.RunRequest, execute commandExecutor) (runResult, int, error) {
-	return executeRunContext(context.Background(), req, execute, nil)
+	return executeRunContext(context.Background(), req, execute, executionObserver{})
 }
 
 func executeRunContext(ctx context.Context, req model.RunRequest, execute commandExecutor, observe executionObserver) (runResult, int, error) {
@@ -367,6 +370,13 @@ func executeRunContext(ctx context.Context, req model.RunRequest, execute comman
 	cfg, _, err := config.Load(req.RepoRoot, req.ConfigPath, allowMissing)
 	if err != nil {
 		return runResult{}, 0, err
+	}
+	redactor, err := safety.NewRedactor(cfg.Redaction.Patterns)
+	if err != nil {
+		return runResult{}, 0, err
+	}
+	if observe.redactor != nil {
+		observe.redactor(redactor)
 	}
 
 	var commandID, parser string
@@ -419,8 +429,8 @@ func executeRunContext(ctx context.Context, req model.RunRequest, execute comman
 	if err != nil {
 		return runResult{}, 0, err
 	}
-	if observe != nil {
-		observe(executionPhaseExecuting)
+	if observe.phase != nil {
+		observe.phase(executionPhaseExecuting)
 	}
 	runOutput, runErr := execute(ctx, req.RepoRoot, commandID, tags, parser, argv, timeoutSec, rawFile)
 	closeErr := rawFile.Close()
@@ -433,8 +443,8 @@ func executeRunContext(ctx context.Context, req model.RunRequest, execute comman
 	if err := artifacts.ValidateRawLog(paths); err != nil {
 		return runResult{}, 0, err
 	}
-	if observe != nil {
-		observe(executionPhaseMaterializing)
+	if observe.phase != nil {
+		observe.phase(executionPhaseMaterializing)
 	}
 	rawSHA := artifacts.SHA256(runOutput.RawLogBytes)
 	relRaw := artifacts.Rel(req.RepoRoot, paths.RawLogPath)

@@ -6,7 +6,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"os"
+	"os/signal"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/irootkernel/gaori/internal/model"
@@ -73,16 +76,27 @@ func (i *mcpInvocation) transition(phase mcpPhase) {
 	i.bumpLocked()
 }
 
-func (i *mcpInvocation) finish(result *runResult, err error) {
+func (i *mcpInvocation) finish(result *runResult, err error, redactor *safety.Redactor) {
 	i.mu.Lock()
 	defer i.mu.Unlock()
 	i.snapshot.Phase = mcpPhaseFinished
 	i.snapshot.Result = result
 	if err != nil {
-		i.snapshot.Error = &mcpRunError{ExitCode: model.ExitCodeFor(err), Message: safety.BoundBytes(err.Error(), safety.MaxExcerptBytes)}
+		i.snapshot.Error = &mcpRunError{ExitCode: model.ExitCodeFor(err), Message: safeMCPErrorMessage(err, redactor)}
 	}
 	i.bumpLocked()
 	close(i.done)
+}
+
+func safeMCPErrorMessage(err error, redactor *safety.Redactor) string {
+	if redactor != nil {
+		return safety.BoundBytes(redactor.Apply(err.Error()), safety.MaxExcerptBytes)
+	}
+	var gaoriErr *model.GaoriError
+	if model.As(err, &gaoriErr) && gaoriErr.Op != "" {
+		return safety.BoundBytes(gaoriErr.Op+": request failed", safety.MaxExcerptBytes)
+	}
+	return "run request failed"
 }
 
 func (i *mcpInvocation) requestCancel() bool {
@@ -136,18 +150,24 @@ func (m *mcpManager) start(req model.RunRequest) mcpSnapshot {
 	req.ConfigPath = m.configPath
 	req.OutputDir = m.outputDir
 	go func() {
-		result, _, err := executeRunContext(ctx, req, runner.Execute, func(phase executionPhase) {
-			if phase == executionPhaseExecuting {
-				inv.transition(mcpPhaseExecuting)
-			} else {
-				inv.transition(mcpPhaseMaterializing)
-			}
+		var runRedactor *safety.Redactor
+		result, _, err := executeRunContext(ctx, req, runner.ExecuteContextOnly, executionObserver{
+			phase: func(phase executionPhase) {
+				if phase == executionPhaseExecuting {
+					inv.transition(mcpPhaseExecuting)
+				} else {
+					inv.transition(mcpPhaseMaterializing)
+				}
+			},
+			redactor: func(redactor safety.Redactor) {
+				runRedactor = &redactor
+			},
 		})
 		if err != nil {
-			inv.finish(nil, err)
+			inv.finish(nil, err, runRedactor)
 			return
 		}
-		inv.finish(&result, nil)
+		inv.finish(&result, nil, runRedactor)
 	}()
 	snapshot := inv.read()
 	snapshot.Changed = true
@@ -253,7 +273,7 @@ type excerptOutput struct {
 func newMCPServer(manager *mcpManager, info BuildInfo) *mcp.Server {
 	server := mcp.NewServer(&mcp.Implementation{Name: "gaori", Version: info.Version}, &mcp.ServerOptions{Instructions: "Gaori runs selected test commands and returns factual evidence. Command status and exit_code are authoritative; extractor_status describes evidence only. Prefer wait_run over process polling. Cancel only with explicit user intent. Raw logs may contain unredacted values and are never returned by these tools. Gaori evidence does not grant review or final acceptance."})
 	readOnly := mcp.ToolAnnotations{ReadOnlyHint: true, IdempotentHint: true}
-	write := mcp.ToolAnnotations{ReadOnlyHint: false, DestructiveHint: boolPointer(false), OpenWorldHint: boolPointer(false)}
+	write := mcp.ToolAnnotations{ReadOnlyHint: false}
 	cancel := mcp.ToolAnnotations{ReadOnlyHint: false, DestructiveHint: boolPointer(true), OpenWorldHint: boolPointer(false)}
 	mcp.AddTool(server, &mcp.Tool{Name: "start_configured_run", Description: "Start a configured Gaori test run and return immediately.", Annotations: &write}, func(_ context.Context, _ *mcp.CallToolRequest, in startConfiguredInput) (*mcp.CallToolResult, mcpSnapshot, error) {
 		if in.CommandID == "" {
@@ -329,13 +349,59 @@ func mcpCommand(opts globalOptions, args []string, stderr io.Writer, info BuildI
 		return int(model.ExitCodeConfigError)
 	}
 	manager := newMCPManager(opts)
-	err := newMCPServer(manager, info).Run(context.Background(), &mcp.StdioTransport{})
+	serverCtx, cancelServer := context.WithCancel(context.Background())
+	defer cancelServer()
+	interrupts := make(chan os.Signal, 1)
+	signal.Notify(interrupts, mcpShutdownSignals()...)
+	defer signal.Stop(interrupts)
+	receivedSignal := make(chan os.Signal, 1)
+	serverFinished := make(chan struct{})
+	go func() {
+		select {
+		case sig := <-interrupts:
+			receivedSignal <- sig
+			cancelServer()
+		case <-serverFinished:
+		}
+	}()
+
+	input := &mcpEOFReader{reader: os.Stdin}
+	transport := &mcp.IOTransport{Reader: input, Writer: mcpNoCloseWriter{Writer: os.Stdout}}
+	err := newMCPServer(manager, info).Run(serverCtx, transport)
+	close(serverFinished)
 	manager.close()
+	select {
+	case sig := <-receivedSignal:
+		return mcpSignalExitCode(sig)
+	default:
+	}
+	if input.sawEOF.Load() {
+		return 0
+	}
 	if err != nil {
 		writeLine(stderr, err)
 		return int(model.ExitCodeParserError)
 	}
 	return 0
 }
+
+type mcpEOFReader struct {
+	reader io.ReadCloser
+	sawEOF atomic.Bool
+}
+
+func (r *mcpEOFReader) Read(p []byte) (int, error) {
+	n, err := r.reader.Read(p)
+	if err == io.EOF {
+		r.sawEOF.Store(true)
+	}
+	return n, err
+}
+
+func (r *mcpEOFReader) Close() error { return r.reader.Close() }
+
+type mcpNoCloseWriter struct{ io.Writer }
+
+func (mcpNoCloseWriter) Close() error { return nil }
 
 func boolPointer(value bool) *bool { return &value }

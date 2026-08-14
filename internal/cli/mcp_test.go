@@ -3,9 +3,11 @@ package cli
 import (
 	"bytes"
 	"context"
+	"errors"
 	"os"
 	"path/filepath"
 	"slices"
+	"strings"
 	"testing"
 	"time"
 
@@ -47,11 +49,66 @@ func TestMCPServerAdvertisesExpectedTools(t *testing.T) {
 		if tool.InputSchema == nil || tool.OutputSchema == nil {
 			t.Fatalf("tool %q is missing a schema", tool.Name)
 		}
+		if tool.Name == "start_configured_run" || tool.Name == "start_ad_hoc_run" {
+			if tool.Annotations == nil || tool.Annotations.ReadOnlyHint {
+				t.Fatalf("start tool %q must be marked as mutating", tool.Name)
+			}
+			if tool.Annotations.DestructiveHint != nil || tool.Annotations.OpenWorldHint != nil {
+				t.Fatalf("start tool %q has unsafe annotations: %+v", tool.Name, tool.Annotations)
+			}
+		}
 	}
 	want := []string{"cancel_run", "get_excerpt", "get_run", "start_ad_hoc_run", "start_configured_run", "wait_run"}
 	slices.Sort(names)
 	if !slices.Equal(names, want) {
 		t.Fatalf("tools = %v, want %v", names, want)
+	}
+}
+
+func TestMCPRunErrorsUseValidatedRedaction(t *testing.T) {
+	repo := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(repo, ".gaori"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	config := "version: 2\ncommands:\n  fail-start:\n    command: [\"token=secret-missing\"]\n    tags: [unit]\n    parser: generic\n    timeout_sec: 10\nredaction:\n  patterns:\n    - name: token\n      regex: 'token=[^ ]+'\n      replace: 'token=<redacted>'\n"
+	if err := os.WriteFile(filepath.Join(repo, ".gaori", "tester.yaml"), []byte(config), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	manager := newMCPManager(globalOptions{RepoRoot: repo})
+	initial := manager.start(model.RunRequest{Mode: model.RunModeConfigured, CommandID: "fail-start"})
+	finished, err := manager.wait(context.Background(), initial.InvocationID, initial.Revision, 5*time.Second)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for finished.Phase != mcpPhaseFinished {
+		finished, err = manager.wait(context.Background(), initial.InvocationID, finished.Revision, 5*time.Second)
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+	if finished.Error == nil || strings.Contains(finished.Error.Message, "token=secret") || !strings.Contains(finished.Error.Message, "token=<redacted>") {
+		t.Fatalf("unsafe MCP error = %+v", finished.Error)
+	}
+}
+
+func TestMCPRunErrorsHideDetailsBeforeRedactorIsAvailable(t *testing.T) {
+	repo := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(repo, ".gaori"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(repo, ".gaori", "tester.yaml"), []byte("version: token=secret\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	manager := newMCPManager(globalOptions{RepoRoot: repo})
+	initial := manager.start(model.RunRequest{Mode: model.RunModeConfigured, CommandID: "unit"})
+	finished, err := manager.wait(context.Background(), initial.InvocationID, initial.Revision, 5*time.Second)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if finished.Error == nil || strings.Contains(finished.Error.Message, "token=secret") || finished.Error.Message != "parse config: request failed" {
+		t.Fatalf("unsafe pre-redactor MCP error = %+v", finished.Error)
 	}
 }
 
@@ -117,6 +174,64 @@ func TestMCPWaitRejectsFutureRevision(t *testing.T) {
 	manager.close()
 }
 
+func TestMCPWaitCancellationDoesNotCancelRun(t *testing.T) {
+	if os.PathSeparator == '\\' {
+		t.Skip("shell process-group behavior is Unix-specific")
+	}
+	manager := newMCPManager(globalOptions{RepoRoot: t.TempDir()})
+	initial := manager.start(model.RunRequest{
+		Mode: model.RunModeAdHoc, Tags: []string{"unit"}, CommandArgv: []string{"sh", "-c", "echo started; sleep 30"}, TimeoutSec: 30,
+	})
+	executing, err := manager.wait(context.Background(), initial.InvocationID, initial.Revision, 5*time.Second)
+	if err != nil || executing.Phase != mcpPhaseExecuting {
+		t.Fatalf("wait for executing: snapshot=%+v err=%v", executing, err)
+	}
+	waitCtx, cancelWait := context.WithCancel(context.Background())
+	cancelWait()
+	if _, err := manager.wait(waitCtx, initial.InvocationID, executing.Revision, 5*time.Second); !errors.Is(err, context.Canceled) {
+		t.Fatalf("cancelled wait error = %v", err)
+	}
+	current := mustMCPInvocation(t, manager, initial.InvocationID).read()
+	if current.CancellationRequested || current.Phase != mcpPhaseExecuting {
+		t.Fatalf("cancelled wait changed execution: %+v", current)
+	}
+	manager.close()
+}
+
+func TestMCPMaterializingTransitionWakesRevisionWait(t *testing.T) {
+	manager := newMCPManager(globalOptions{RepoRoot: t.TempDir()})
+	now := time.Now().UTC()
+	inv := &mcpInvocation{
+		snapshot: mcpSnapshot{InvocationID: "run-000001", Revision: 2, Phase: mcpPhaseExecuting, CreatedAt: now, UpdatedAt: now},
+		changed:  make(chan struct{}),
+		cancel:   func() {},
+		done:     make(chan struct{}),
+	}
+	manager.invocations[inv.snapshot.InvocationID] = inv
+
+	result := make(chan mcpSnapshot, 1)
+	errors := make(chan error, 1)
+	go func() {
+		snapshot, err := manager.wait(context.Background(), inv.snapshot.InvocationID, 2, time.Second)
+		if err != nil {
+			errors <- err
+			return
+		}
+		result <- snapshot
+	}()
+	inv.transition(mcpPhaseMaterializing)
+	select {
+	case err := <-errors:
+		t.Fatal(err)
+	case snapshot := <-result:
+		if snapshot.Phase != mcpPhaseMaterializing || snapshot.Revision != 3 || !snapshot.Changed {
+			t.Fatalf("materializing snapshot = %+v", snapshot)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("materializing transition did not wake wait")
+	}
+}
+
 func TestMCPManagerCloseCancelsActiveRun(t *testing.T) {
 	if os.PathSeparator == '\\' {
 		t.Skip("shell process-group behavior is Unix-specific")
@@ -138,6 +253,15 @@ func TestMCPManagerCloseCancelsActiveRun(t *testing.T) {
 	if finished.Phase != mcpPhaseFinished || !finished.CancellationRequested || finished.Result == nil || finished.Result.Status != model.RunStatusKilled {
 		t.Fatalf("shutdown snapshot = %+v", finished)
 	}
+}
+
+func mustMCPInvocation(t *testing.T, manager *mcpManager, id string) *mcpInvocation {
+	t.Helper()
+	inv, err := manager.lookup(id)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return inv
 }
 
 func TestMCPCommandRejectsArgumentsAndIncompatibleGlobals(t *testing.T) {

@@ -69,11 +69,11 @@ This matrix records the primary evidence for every requirement marked complete. 
 | `GAORI-REQ-RQWAT-001` | `TestConfiguredRunAndExcerpt`; `TestRawLogWriteFailureDoesNotPublishDerivedArtifacts`; status-hash assertions in CLI and binary tests; `TestNoisyRunsWriteBoundedTerminalArtifacts` |
 | `GAORI-REQ-RQWAT-002` | `TestComputeStatusHashIncludesTags`; status-hash assertions in CLI and binary tests |
 | `GAORI-REQ-RQWAT-003` | `TestBinaryJSONRedactsCommandMetadata`; `TestDocumentedCLIWorkflowAgainstFreshFixture` |
-| `GAORI-REQ-RQMCP-001` | `TestMCPServerAdvertisesExpectedTools`; `TestBinaryMCPLifecycleAndBoundedEvidence` |
-| `GAORI-REQ-RQMCP-002` | `TestExecuteRunContextReportsLifecycleAndPassesCallerContext`; `TestMCPManagerWaitDoesNotCancelAndExplicitCancelFinishes`; `TestBinaryMCPLifecycleAndBoundedEvidence` |
-| `GAORI-REQ-RQMCP-003` | `TestMCPManagerWaitDoesNotCancelAndExplicitCancelFinishes`; `TestMCPWaitRejectsFutureRevision`; `TestBinaryMCPLifecycleAndBoundedEvidence` |
-| `GAORI-REQ-RQMCP-004` | `TestMCPManagerWaitDoesNotCancelAndExplicitCancelFinishes`; `TestMCPManagerCloseCancelsActiveRun`; `TestBinaryMCPLifecycleAndBoundedEvidence` |
-| `GAORI-REQ-RQMCP-005` | `TestBinaryMCPLifecycleAndBoundedEvidence`; `TestMCPDocumentationAndSkillContract` |
+| `GAORI-REQ-RQMCP-001` | `TestMCPServerAdvertisesExpectedTools`; `TestBinaryMCPExitsCleanlyOnEOF`; `TestBinaryMCPImmediateEOFIsCleanShutdown`; `TestBinaryMCPMalformedInputFails`; `TestBinaryMCPLifecycleAndBoundedEvidence` |
+| `GAORI-REQ-RQMCP-002` | `TestExecuteRunContextReportsLifecycleAndPassesCallerContext`; `TestMCPManagerWaitDoesNotCancelAndExplicitCancelFinishes`; `TestMCPMaterializingTransitionWakesRevisionWait`; `TestBinaryMCPLifecycleAndBoundedEvidence` |
+| `GAORI-REQ-RQMCP-003` | `TestMCPManagerWaitDoesNotCancelAndExplicitCancelFinishes`; `TestMCPWaitCancellationDoesNotCancelRun`; `TestMCPWaitRejectsFutureRevision`; `TestBinaryMCPLifecycleAndBoundedEvidence` |
+| `GAORI-REQ-RQMCP-004` | `TestMCPManagerWaitDoesNotCancelAndExplicitCancelFinishes`; `TestMCPManagerCloseCancelsActiveRun`; `TestBinaryMCPEOFCancelsActiveProcessGroup`; `TestBinaryMCPSignalsShutDownServerAndProcessGroup`; `TestBinaryMCPLifecycleAndBoundedEvidence` |
+| `GAORI-REQ-RQMCP-005` | `TestMCPRunErrorsUseValidatedRedaction`; `TestMCPRunErrorsHideDetailsBeforeRedactorIsAvailable`; `TestBinaryMCPLifecycleAndBoundedEvidence`; `TestMCPDocumentationAndSkillContract` |
 | `GAORI-REQ-RQMCP-006` | `TestMCPManagerWaitDoesNotCancelAndExplicitCancelFinishes`; `TestMCPDocumentationAndSkillContract` |
 | `GAORI-REQ-RQDOC-001` | authoritative documents listed in `AGENTS.md` and `README.md`; `TestArchitectureJSONContractExamplesMatchFreshRunArtifacts` |
 | `GAORI-REQ-RQDOC-002` | `TestDocumentedCLIWorkflowAgainstFreshFixture` |

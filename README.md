@@ -112,7 +112,7 @@ args = ["--repo", "/absolute/path/to/project", "mcp"]
 tool_timeout_sec = 60
 ```
 
-The tools are `start_configured_run`, `start_ad_hoc_run`, `get_run`, `wait_run`, `cancel_run`, and `get_excerpt`. A start returns immediately. Use the returned `invocation_id` and `revision` with `wait_run`; a 50-second wait expiry does not cancel the test. Only `cancel_run` or MCP server shutdown cancels an active run. The registry exists only for that server process, while completed evidence remains in the normal standalone artifact layout. MCP never returns raw-log contents.
+The tools are `start_configured_run`, `start_ad_hoc_run`, `get_run`, `wait_run`, `cancel_run`, and `get_excerpt`. A start returns immediately. Use the returned `invocation_id` and `revision` with `wait_run`; a 50-second wait expiry or cancelled wait request does not cancel the test. Only `cancel_run` or MCP server shutdown cancels an active run. Closing the client input is a clean shutdown and exits `0` after bounded draining; SIGINT/SIGTERM shut down the server with `130`/`143`. The registry exists only for that server process, while completed evidence remains in the normal standalone artifact layout. MCP returns only bounded redacted error/evidence text and never returns raw-log contents.
 
 ## Try it in five minutes
 

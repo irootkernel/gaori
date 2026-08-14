@@ -54,6 +54,10 @@ func Execute(ctx context.Context, workDir, commandID string, tags []string, pars
 	return executeWithSignals(ctx, workDir, commandID, tags, parser, argv, timeoutSec, raw, interrupts, interruptGracePeriod)
 }
 
+func ExecuteContextOnly(ctx context.Context, workDir, commandID string, tags []string, parser string, argv []string, timeoutSec int, raw io.Writer) (model.RunOutput, error) {
+	return executeWithSignals(ctx, workDir, commandID, tags, parser, argv, timeoutSec, raw, nil, interruptGracePeriod)
+}
+
 func executeWithSignals(ctx context.Context, workDir, commandID string, tags []string, parser string, argv []string, timeoutSec int, raw io.Writer, interrupts <-chan os.Signal, gracePeriod time.Duration) (model.RunOutput, error) {
 	if len(argv) == 0 {
 		return model.RunOutput{}, model.NewGaoriError(model.ExitCodeConfigError, "execute command", fmt.Errorf("empty argv"))

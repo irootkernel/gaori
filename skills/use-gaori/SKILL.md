@@ -43,7 +43,7 @@ Use `gaori --help`, `gaori help <command>`, or `gaori help rules <subcommand>` t
 
 ## Run and report
 
-When the connected tool list contains all six Gaori MCP tools, prefer MCP for a new long-running test: call `start_configured_run` or `start_ad_hoc_run`, then use `get_run` or `wait_run` with the returned invocation ID and revision. A wait may return unchanged after at most 50 seconds; call it again without treating that as a failure. Do not use process polling. Use `cancel_run` only with explicit user intent. When MCP is absent, incomplete, or the installed Gaori version does not provide it, use the CLI workflow below.
+When the connected tool list contains all six Gaori MCP tools, prefer MCP for a new long-running test: call `start_configured_run` or `start_ad_hoc_run`, then use `get_run` or `wait_run` with the returned invocation ID and revision. A wait may return unchanged after at most 50 seconds, and cancelling that wait request does not cancel the run; call it again without treating either case as a test failure. Do not use process polling. Use `cancel_run` only with explicit user intent. Closing the MCP client cancels active runs as server shutdown, so keep the session attached until completion unless cancellation is intended. When MCP is absent, incomplete, or the installed Gaori version does not provide it, use the CLI workflow below.
 
 1. Perform the real requested external check before recording that it ran. Use `gaori --json run <command-id>` for a configured command, or an explicitly selected tagged ad-hoc invocation:
 

@@ -46,7 +46,7 @@ The final `<command-id>.status.json` appears only after execution and extraction
 
 `cancel_run` is the MCP-only explicit cancellation surface and requires user intent. Cancelling or timing out `wait_run` does not cancel execution. CLI invocations still use SIGINT or SIGTERM. On Unix, Gaori forwards cancellation to the child process group; MCP context cancellation records `killed` with exit `137` when materialization succeeds, while SIGINT/SIGTERM use `130`/`143`. Configured timeout remains `timed_out` with exit `124`.
 
-`gaori mcp` is an attached STDIO server, not a daemon or service controller. Server shutdown cancels active invocations and discards their registry. It cannot restart or recover them.
+`gaori mcp` is an attached STDIO server, not a daemon or service controller. Closing client input is a clean server shutdown: it cancels active invocations, boundedly drains their evidence, exits `0`, and discards the registry. SIGINT/SIGTERM follow the same cancellation path but the server exits `130`/`143`. It cannot restart or recover those invocations.
 
 ## Cleanup, reset, and repair
 

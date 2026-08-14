@@ -1,6 +1,7 @@
 package e2e
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"os"
@@ -13,6 +14,106 @@ import (
 	"github.com/irootkernel/gaori/internal/model"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
+
+func TestBinaryMCPExitsCleanlyOnEOF(t *testing.T) {
+	root := projectRoot(t)
+	bin := buildBinary(t, root)
+	command := exec.Command(bin, "mcp")
+	stdin, err := command.StdinPipe()
+	if err != nil {
+		t.Fatal(err)
+	}
+	stdout, err := command.StdoutPipe()
+	if err != nil {
+		t.Fatal(err)
+	}
+	var stderr bytes.Buffer
+	command.Stderr = &stderr
+	if err := command.Start(); err != nil {
+		t.Fatal(err)
+	}
+	encoder := json.NewEncoder(stdin)
+	decoder := json.NewDecoder(stdout)
+	if err := encoder.Encode(map[string]any{"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": map[string]any{"protocolVersion": "2025-06-18", "capabilities": map[string]any{}, "clientInfo": map[string]any{"name": "eof-test", "version": "1"}}}); err != nil {
+		t.Fatal(err)
+	}
+	var response map[string]any
+	if err := decoder.Decode(&response); err != nil || response["id"] != float64(1) {
+		t.Fatalf("initialize response = %v, err=%v", response, err)
+	}
+	if err := encoder.Encode(map[string]any{"jsonrpc": "2.0", "method": "notifications/initialized"}); err != nil {
+		t.Fatal(err)
+	}
+	if err := encoder.Encode(map[string]any{"jsonrpc": "2.0", "id": 2, "method": "tools/list", "params": map[string]any{}}); err != nil {
+		t.Fatal(err)
+	}
+	response = nil
+	if err := decoder.Decode(&response); err != nil || response["id"] != float64(2) {
+		t.Fatalf("tools/list response = %v, err=%v", response, err)
+	}
+	if err := stdin.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if err := command.Wait(); err != nil {
+		t.Fatalf("MCP server did not exit cleanly: %v stderr=%q", err, stderr.String())
+	}
+	if stderr.Len() != 0 {
+		t.Fatalf("unexpected MCP shutdown output: stderr=%q", stderr.String())
+	}
+}
+
+func TestBinaryMCPImmediateEOFIsCleanShutdown(t *testing.T) {
+	root := projectRoot(t)
+	bin := buildBinary(t, root)
+	command := exec.Command(bin, "mcp")
+	stdin, err := command.StdinPipe()
+	if err != nil {
+		t.Fatal(err)
+	}
+	var stdout, stderr bytes.Buffer
+	command.Stdout = &stdout
+	command.Stderr = &stderr
+	if err := command.Start(); err != nil {
+		t.Fatal(err)
+	}
+	encoder := json.NewEncoder(stdin)
+	if err := encoder.Encode(map[string]any{"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": map[string]any{"protocolVersion": "2025-06-18", "capabilities": map[string]any{}, "clientInfo": map[string]any{"name": "eof-test", "version": "1"}}}); err != nil {
+		t.Fatal(err)
+	}
+	if err := stdin.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if err := command.Wait(); err != nil {
+		t.Fatalf("MCP server treated immediate EOF as failure: %v stderr=%q stdout=%q", err, stderr.String(), stdout.String())
+	}
+	if stderr.Len() != 0 {
+		t.Fatalf("unexpected MCP shutdown error: %q", stderr.String())
+	}
+}
+
+func TestBinaryMCPMalformedInputFails(t *testing.T) {
+	root := projectRoot(t)
+	bin := buildBinary(t, root)
+	command := exec.Command(bin, "mcp")
+	stdin, err := command.StdinPipe()
+	if err != nil {
+		t.Fatal(err)
+	}
+	var stdout, stderr bytes.Buffer
+	command.Stdout = &stdout
+	command.Stderr = &stderr
+	if err := command.Start(); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := stdin.Write([]byte("{not-json}\n")); err != nil {
+		t.Fatal(err)
+	}
+	if err := stdin.Close(); err != nil {
+		t.Fatal(err)
+	}
+	err = command.Wait()
+	requireExitCode(t, err, int(model.ExitCodeParserError), append(stdout.Bytes(), stderr.Bytes()...))
+}
 
 type mcpBinarySnapshot struct {
 	InvocationID string          `json:"invocation_id"`

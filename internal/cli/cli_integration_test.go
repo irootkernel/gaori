@@ -438,7 +438,7 @@ func TestExecuteRunContextReportsLifecycleAndPassesCallerContext(t *testing.T) {
 		}, nil
 	}
 	req := model.RunRequest{RepoRoot: repo, RunID: "context-run", Mode: model.RunModeConfigured, CommandID: "unit"}
-	result, exitCode, err := executeRunContext(ctx, req, execute, func(phase executionPhase) { phases = append(phases, phase) })
+	result, exitCode, err := executeRunContext(ctx, req, execute, executionObserver{phase: func(phase executionPhase) { phases = append(phases, phase) }})
 	if err != nil {
 		t.Fatal(err)
 	}
