@@ -57,6 +57,7 @@ type mcpInvocation struct {
 	snapshot             mcpSnapshot
 	changed              chan struct{}
 	cancel               context.CancelFunc
+	startGate            *runner.StartGate
 	done                 chan struct{}
 	redactor             *safety.Redactor
 	finalizedSummaryPath string
@@ -126,7 +127,7 @@ func (i *mcpInvocation) requestCancel() bool {
 	}
 	i.snapshot.CancellationRequested = true
 	i.bumpLocked()
-	i.cancel()
+	i.startGate.Cancel(i.cancel)
 	return true
 }
 
@@ -155,12 +156,15 @@ func (m *mcpManager) start(req model.RunRequest) mcpSnapshot {
 	m.nextID++
 	id := fmt.Sprintf("run-%06d", m.nextID)
 	ctx, cancel := context.WithCancel(context.Background())
+	startGate := runner.NewStartGate()
+	ctx = runner.WithStartGate(ctx, startGate)
 	now := time.Now().UTC()
 	inv := &mcpInvocation{
-		snapshot: mcpSnapshot{InvocationID: id, Revision: 1, Phase: mcpPhaseQueued, CreatedAt: now, UpdatedAt: now},
-		changed:  make(chan struct{}),
-		cancel:   cancel,
-		done:     make(chan struct{}),
+		snapshot:  mcpSnapshot{InvocationID: id, Revision: 1, Phase: mcpPhaseQueued, CreatedAt: now, UpdatedAt: now},
+		changed:   make(chan struct{}),
+		cancel:    cancel,
+		startGate: startGate,
+		done:      make(chan struct{}),
 	}
 	m.invocations[id] = inv
 	m.mu.Unlock()

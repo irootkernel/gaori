@@ -59,6 +59,20 @@ func TestParseGlobalOptionsPreservesCommandValuesAndChildBoundary(t *testing.T) 
 	}
 }
 
+func TestParseGlobalOptionsPreservesExplicitSearchOperandBoundary(t *testing.T) {
+	t.Parallel()
+	opts, remaining, err := parseGlobalOptions([]string{"rules", "search", "--repo", "project", "--", "--json"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if opts.RepoRoot != "project" || opts.JSON {
+		t.Fatalf("unexpected options: %+v", opts)
+	}
+	if !slices.Equal(remaining, []string{"rules", "search", "--", "--json"}) {
+		t.Fatalf("remaining=%q", remaining)
+	}
+}
+
 func TestParseGlobalOptionsRejectsInvalidValues(t *testing.T) {
 	t.Parallel()
 	for _, args := range [][]string{

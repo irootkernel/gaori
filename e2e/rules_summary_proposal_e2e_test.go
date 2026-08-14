@@ -2,6 +2,7 @@ package e2e
 
 import (
 	"encoding/json"
+	"os"
 	"os/exec"
 	"path/filepath"
 	"testing"
@@ -82,5 +83,41 @@ func TestBinaryProposesRuleFromGeneratedLFTerminalFailureSummary(t *testing.T) {
 	}
 	if proposal.Rule.Match.Start.Regex != "^TypeError: boom$" || proposal.Rule.Provenance.SourceSpan != span {
 		t.Fatalf("proposal lost terminal failure evidence: %+v", proposal.Rule)
+	}
+}
+
+func TestBinaryRejectsRuleProposalFromSummaryThatNoLongerMatchesStatus(t *testing.T) {
+	t.Parallel()
+	root := projectRoot(t)
+	bin := buildBinary(t, root)
+	repo := t.TempDir()
+
+	run, _ := runBinaryJSONWithExit(t, bin, repo, 1,
+		"run", "--parser", "generic", "--tag", "unit", "--",
+		"sh", "-c", "printf 'TypeError: boom\n'; exit 1")
+	summaryPath := filepath.Join(repo, filepath.FromSlash(run.SummaryJSON))
+	data, err := os.ReadFile(summaryPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var summary model.Summary
+	if err := json.Unmarshal(data, &summary); err != nil {
+		t.Fatal(err)
+	}
+	summary.CommandID = "tampered"
+	data, err = json.Marshal(summary)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(summaryPath, data, 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	cmd := exec.Command(bin, "--repo", repo, "rules", "propose", "--summary", run.SummaryJSON, "--failure", summary.Failures[0].ID)
+	cmd.Dir = repo
+	output, err := cmd.CombinedOutput()
+	requireExitCode(t, err, int(model.ExitCodeArtifactError), output)
+	if _, err := os.Stat(filepath.Join(repo, ".gaori", "rule-proposals")); !os.IsNotExist(err) {
+		t.Fatalf("stale summary created proposal state: %v", err)
 	}
 }

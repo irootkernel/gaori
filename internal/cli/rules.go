@@ -10,11 +10,13 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 
 	"gopkg.in/yaml.v3"
 
+	"github.com/irootkernel/gaori/internal/artifacts"
 	"github.com/irootkernel/gaori/internal/model"
 	"github.com/irootkernel/gaori/internal/rules"
 	"github.com/irootkernel/gaori/internal/safety"
@@ -72,8 +74,11 @@ func rulesListCommand(opts globalOptions, args []string, stdout, stderr io.Write
 }
 
 func rulesSearchCommand(opts globalOptions, args []string, stdout, stderr io.Writer) int {
+	if len(args) == 2 && args[0] == "--" {
+		args = args[1:]
+	}
 	if len(args) != 1 {
-		writeLine(stderr, "usage: gaori rules search <query>")
+		writeLine(stderr, "usage: gaori rules search [--] <query>")
 		return int(model.ExitCodeConfigError)
 	}
 	loaded, err := rules.Search(opts.RepoRoot, args[0])
@@ -328,6 +333,9 @@ func proposeRuleFromSummary(repoRoot, summaryPath, failureID string) (model.Rule
 	if err := requireRegularProposalFile(resolvedRaw, "raw log"); err != nil {
 		return model.RuleProposal{}, err
 	}
+	if err := validateProposalStatus(repoRoot, resolvedSummary, resolvedRaw, data, summary); err != nil {
+		return model.RuleProposal{}, err
+	}
 	selected, err := selectSummaryFailure(summary.Failures, failureID)
 	if err != nil {
 		return model.RuleProposal{}, err
@@ -364,6 +372,49 @@ func proposeRuleFromSummary(repoRoot, summaryPath, failureID string) (model.Rule
 		return model.RuleProposal{}, err
 	}
 	return rules.ProposeFromEvidence(repoRoot, summary.Tags, summary.Parser, resolvedRaw, rawScan.SHA256, inferSummarySourceRun(filepath.Dir(resolvedSummary)), summary.CommandID, span, rawScan.Segment)
+}
+
+func validateProposalStatus(repoRoot, summaryPath, rawLogPath string, summaryData []byte, summary model.Summary) error {
+	statusPath := strings.TrimSuffix(summaryPath, ".summary.json") + ".status.json"
+	if err := requireRegularProposalFile(statusPath, "status"); err != nil {
+		return err
+	}
+	data, err := safety.ReadFileWithinLimit(filepath.Dir(summaryPath), statusPath)
+	if err != nil {
+		return model.NewGaoriError(model.ExitCodeArtifactError, "read proposal status", err)
+	}
+	var status model.Status
+	if err := json.Unmarshal(data, &status); err != nil {
+		return model.NewGaoriError(model.ExitCodeArtifactError, "parse proposal status", err)
+	}
+	if status.StatusHash == "" || status.StatusHash != artifacts.ComputeStatusHash(status) {
+		return model.NewGaoriError(model.ExitCodeArtifactError, "validate proposal status", fmt.Errorf("status hash does not match status artifact"))
+	}
+	if status.SummarySHA256 == "" || status.SummarySHA256 != artifacts.SHA256(summaryData) {
+		return model.NewGaoriError(model.ExitCodeArtifactError, "validate proposal status", fmt.Errorf("summary checksum does not match status artifact"))
+	}
+	resolvedStatusSummary, err := resolveProposalLocator(repoRoot, status.SummaryPath)
+	if err != nil || resolvedStatusSummary != summaryPath {
+		return model.NewGaoriError(model.ExitCodeArtifactError, "validate proposal status", fmt.Errorf("status summary locator does not match selected summary"))
+	}
+	resolvedStatusRaw, err := resolveProposalLocator(repoRoot, status.RawLogPath)
+	if err != nil || resolvedStatusRaw != rawLogPath {
+		return model.NewGaoriError(model.ExitCodeArtifactError, "validate proposal status", fmt.Errorf("status raw-log locator does not match selected evidence"))
+	}
+	if status.Status != summary.Status || status.CommandID != summary.CommandID || !slices.Equal(status.Tags, summary.Tags) ||
+		status.ExitCode != summary.ExitCode || status.ExtractorStatus != summary.ExtractorStatus || status.RawLogSHA256 != summary.RawLogSHA256 ||
+		!slices.Equal(status.FailureSignatures, signatureHashes(summary.Failures)) || !slices.Equal(status.WarningSignatures, warningSignatureHashes(summary.Warnings)) {
+		return model.NewGaoriError(model.ExitCodeArtifactError, "validate proposal status", fmt.Errorf("status metadata does not match summary artifact"))
+	}
+	return nil
+}
+
+func resolveProposalLocator(repoRoot, locator string) (string, error) {
+	resolved := filepath.FromSlash(locator)
+	if !filepath.IsAbs(resolved) {
+		resolved = filepath.Join(repoRoot, resolved)
+	}
+	return filepath.Abs(resolved)
 }
 
 func selectSummaryFailure(failures []model.Failure, failureID string) (*model.Failure, error) {

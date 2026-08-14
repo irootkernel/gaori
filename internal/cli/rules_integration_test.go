@@ -16,7 +16,7 @@ func TestRulesLifecycleCommands(t *testing.T) {
 	t.Parallel()
 	repo := t.TempDir()
 	inputPath := filepath.Join(repo, "generic-v1.yaml")
-	ruleText := ruleInputYAML("generic-v1", "fixture-backed rule")
+	ruleText := ruleInputYAML("generic-v1", "fixture-backed --json rule")
 	if err := os.WriteFile(inputPath, []byte(ruleText), 0o644); err != nil {
 		t.Fatal(err)
 	}
@@ -39,6 +39,12 @@ func TestRulesLifecycleCommands(t *testing.T) {
 	}
 	stdout.Reset()
 	stderr.Reset()
+	exitCode = Main([]string{"rules", "search", "--repo", repo, "--", "--json"}, &stdout, &stderr)
+	if exitCode != 0 || !strings.Contains(stdout.String(), "generic-v1") {
+		t.Fatalf("expected escaped global-option query to find created rule, exit=%d stdout=%q stderr=%q", exitCode, stdout.String(), stderr.String())
+	}
+	stdout.Reset()
+	stderr.Reset()
 	exitCode = Main([]string{"--repo", repo, "rules", "show", "generic-v1"}, &stdout, &stderr)
 	if exitCode != 0 || !strings.Contains(stdout.String(), "created_by: tester") {
 		t.Fatalf("expected show to print yaml, exit=%d stdout=%q stderr=%q", exitCode, stdout.String(), stderr.String())
@@ -57,7 +63,7 @@ func TestRulesLifecycleCommands(t *testing.T) {
 	stdout.Reset()
 	stderr.Reset()
 	updatedPath := filepath.Join(repo, "generic-v1-update.yaml")
-	updatedRuleText := strings.ReplaceAll(ruleText, "reason: fixture-backed rule", "reason: fixture-backed rule updated")
+	updatedRuleText := strings.ReplaceAll(ruleText, "reason: fixture-backed --json rule", "reason: fixture-backed rule updated")
 	updatedRuleText = strings.ReplaceAll(updatedRuleText, "confidence: medium", "confidence: high")
 	if err := os.WriteFile(updatedPath, []byte(updatedRuleText), 0o644); err != nil {
 		t.Fatal(err)

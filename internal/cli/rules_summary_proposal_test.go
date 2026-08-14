@@ -142,13 +142,7 @@ func TestRulesProposeFromSummaryAcceptsExtractorLineBoundaries(t *testing.T) {
 				Failures: []model.Failure{{ID: "F001", RawSpan: model.RawSpan{StartLine: line, EndLine: line, StartByte: len(test.prefix), EndByte: endByte}}},
 			}
 			summaryPath := filepath.Join(baseDir, "unit.summary.json")
-			data, err := json.Marshal(summary)
-			if err != nil {
-				t.Fatal(err)
-			}
-			if err := os.WriteFile(summaryPath, data, 0o644); err != nil {
-				t.Fatal(err)
-			}
+			writeProposalSummaryAndStatus(t, repo, summaryPath, summary)
 
 			var stdout, stderr bytes.Buffer
 			if exitCode := Main([]string{"--repo", repo, "--json", "rules", "propose", "--summary", summaryPath, "--failure", "F001"}, &stdout, &stderr); exitCode != 0 {
@@ -172,6 +166,50 @@ func TestRulesProposeFromSummaryFailsClosedOnUntrustedEvidence(t *testing.T) {
 		mutate func(t *testing.T, repo, summaryPath string)
 		code   int
 	}{
+		{
+			name: "missing status",
+			mutate: func(t *testing.T, _, summaryPath string) {
+				if err := os.Remove(strings.TrimSuffix(summaryPath, ".summary.json") + ".status.json"); err != nil {
+					t.Fatal(err)
+				}
+			},
+			code: 3,
+		},
+		{
+			name: "stale status summary checksum",
+			mutate: func(t *testing.T, _, summaryPath string) {
+				rewriteProposalSummaryWithoutStatus(t, summaryPath, func(summary *model.Summary) { summary.CommandID = "tampered" })
+			},
+			code: 3,
+		},
+		{
+			name: "status symlink",
+			mutate: func(t *testing.T, _, summaryPath string) {
+				statusPath := strings.TrimSuffix(summaryPath, ".summary.json") + ".status.json"
+				target := statusPath + ".target"
+				if err := os.Rename(statusPath, target); err != nil {
+					t.Fatal(err)
+				}
+				if err := os.Symlink(target, statusPath); err != nil {
+					t.Fatal(err)
+				}
+			},
+			code: 3,
+		},
+		{
+			name: "status locator mismatch",
+			mutate: func(t *testing.T, _, summaryPath string) {
+				rewriteProposalStatus(t, summaryPath, func(status *model.Status) { status.SummaryPath = "other.summary.json" })
+			},
+			code: 3,
+		},
+		{
+			name: "status metadata mismatch",
+			mutate: func(t *testing.T, _, summaryPath string) {
+				rewriteProposalStatus(t, summaryPath, func(status *model.Status) { status.CommandID = "other" })
+			},
+			code: 3,
+		},
 		{
 			name: "stale checksum",
 			mutate: func(t *testing.T, _, summaryPath string) {
@@ -329,17 +367,19 @@ func writeSummaryProposalFixture(t *testing.T, repo string) (string, []byte, mod
 		}},
 	}
 	summaryPath := filepath.Join(baseDir, "unit.summary.json")
-	data, err := json.Marshal(summary)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(summaryPath, data, 0o644); err != nil {
-		t.Fatal(err)
-	}
+	writeProposalSummaryAndStatus(t, repo, summaryPath, summary)
 	return summaryPath, raw, summary
 }
 
 func rewriteProposalSummary(t *testing.T, summaryPath string, mutate func(*model.Summary)) {
+	rewriteProposalSummaryAt(t, summaryPath, mutate, true)
+}
+
+func rewriteProposalSummaryWithoutStatus(t *testing.T, summaryPath string, mutate func(*model.Summary)) {
+	rewriteProposalSummaryAt(t, summaryPath, mutate, false)
+}
+
+func rewriteProposalSummaryAt(t *testing.T, summaryPath string, mutate func(*model.Summary), updateStatus bool) {
 	t.Helper()
 	data, err := os.ReadFile(summaryPath)
 	if err != nil {
@@ -355,6 +395,76 @@ func rewriteProposalSummary(t *testing.T, summaryPath string, mutate func(*model
 		t.Fatal(err)
 	}
 	if err := os.WriteFile(summaryPath, data, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if !updateStatus {
+		return
+	}
+	rewriteProposalStatus(t, summaryPath, func(status *model.Status) {
+		status.Status = summary.Status
+		status.CommandID = summary.CommandID
+		status.Tags = append([]string(nil), summary.Tags...)
+		status.ExitCode = summary.ExitCode
+		status.ExtractorStatus = summary.ExtractorStatus
+		status.SummarySHA256 = artifacts.SHA256(data)
+		status.RawLogPath = summary.RawLog
+		status.RawLogSHA256 = summary.RawLogSHA256
+		status.FailureSignatures = signatureHashes(summary.Failures)
+		status.WarningSignatures = warningSignatureHashes(summary.Warnings)
+	})
+}
+
+func writeProposalSummaryAndStatus(t *testing.T, repo, summaryPath string, summary model.Summary) {
+	t.Helper()
+	data, err := json.Marshal(summary)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(summaryPath, data, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	status := model.Status{
+		Status:            summary.Status,
+		CommandID:         summary.CommandID,
+		Tags:              append([]string(nil), summary.Tags...),
+		ExitCode:          summary.ExitCode,
+		ExtractorStatus:   summary.ExtractorStatus,
+		SummaryPath:       filepath.ToSlash(strings.TrimPrefix(summaryPath, repo+string(filepath.Separator))),
+		SummarySHA256:     artifacts.SHA256(data),
+		RawLogPath:        summary.RawLog,
+		RawLogSHA256:      summary.RawLogSHA256,
+		FailureSignatures: signatureHashes(summary.Failures),
+		WarningSignatures: warningSignatureHashes(summary.Warnings),
+	}
+	status.StatusHash = artifacts.ComputeStatusHash(status)
+	statusData, err := json.Marshal(status)
+	if err != nil {
+		t.Fatal(err)
+	}
+	statusPath := strings.TrimSuffix(summaryPath, ".summary.json") + ".status.json"
+	if err := os.WriteFile(statusPath, statusData, 0o644); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func rewriteProposalStatus(t *testing.T, summaryPath string, mutate func(*model.Status)) {
+	t.Helper()
+	statusPath := strings.TrimSuffix(summaryPath, ".summary.json") + ".status.json"
+	data, err := os.ReadFile(statusPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var status model.Status
+	if err := json.Unmarshal(data, &status); err != nil {
+		t.Fatal(err)
+	}
+	mutate(&status)
+	status.StatusHash = artifacts.ComputeStatusHash(status)
+	data, err = json.Marshal(status)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(statusPath, data, 0o644); err != nil {
 		t.Fatal(err)
 	}
 }

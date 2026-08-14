@@ -122,12 +122,12 @@ Commands:
   update    Replace an existing rule
   delete    Disable a rule with a reason
   test      Test a stored rule against a raw log
-  propose   Create a local rule proposal from a raw-log span
+  propose   Create a local rule proposal from verified evidence
 
 Use "gaori help rules <command>" for command details.
 `,
 	"rules list":    "Usage: gaori rules list\n",
-	"rules search":  "Usage: gaori rules search <query>\n",
+	"rules search":  "Usage: gaori rules search [--] <query>\n\nUse -- before a query that is also a Gaori global option name.\n",
 	"rules show":    "Usage: gaori rules show <rule-id>\n",
 	"rules create":  "Usage: gaori rules create --file <rule.yaml>\n",
 	"rules update":  "Usage: gaori rules update <rule-id> --file <rule.yaml>\n",

@@ -25,7 +25,7 @@ Implementation note: the original v0.1 roadmap and the recorded `RQHAR` hardenin
 - [x] `GAORI-REQ-RQCLI-008` Provide successful plain-text help for the root command, every primary command, the rules command, and every rules subcommand through `help`, `-h`, and `--help`, without consuming child arguments after the ad-hoc `--` boundary.
 - [x] `GAORI-REQ-RQCLI-009` Expose unambiguous `summary_markdown`, `summary_json`, and `extractor_status` fields in run and summarize console JSON while retaining `summary` and `extractor` as compatibility aliases and leaving artifact and watcher schemas unchanged.
 - [x] `GAORI-REQ-RQCLI-010` Provide `gaori config check` as a side-effect-free human and JSON preflight for the selected schema-v2 config and every stored project rule, without executing commands, resolving executables, or creating runtime artifacts.
-- [x] `GAORI-REQ-RQCLI-011` Accept global options before or after subcommands and operands while preserving command-option values and passing every argument after an ad-hoc `--` boundary to the child unchanged.
+- [x] `GAORI-REQ-RQCLI-011` Accept global options before or after subcommands and operands while preserving command-option values, allowing `rules search -- <query>` to escape global-option names as literal queries, and passing every argument after an ad-hoc `--` boundary to the child unchanged.
 - [x] `GAORI-REQ-RQCLI-012` Allow tagged ad-hoc runs to select one `--timeout-sec` value from 1 through 86400 before the explicit child boundary, default to 600 seconds, reject configured-run use before side effects, and preserve child-side timeout arguments.
 
 ## RQCFG: Project configuration
@@ -86,7 +86,7 @@ Implementation note: the original v0.1 roadmap and the recorded `RQHAR` hardenin
 - [x] `GAORI-REQ-RQRUL-006` Detect overmatch, unsupported or invalid regex, excessive block length, and invalid capture groups.
 - [x] `GAORI-REQ-RQRUL-007` Keep run-local proposed rules separate from project-local active rules.
 - [x] `GAORI-REQ-RQRUL-008` Select rules only when the parser matches and every canonical rule tag is present on the run, allowing multiple active rules to inspect one raw log.
-- [x] `GAORI-REQ-RQRUL-009` Allow a rule proposal to select one failure from a summary, fail closed unless the adjacent raw log matches its locator and checksum, preserve summary and span provenance, and capture only the bounded selected span while streaming the full raw-log checksum. Keep this mode mutually exclusive with legacy manual metadata and span selection.
+- [x] `GAORI-REQ-RQRUL-009` Allow a rule proposal to select one failure from a summary, fail closed unless the adjacent status artifact binds the exact summary checksum and metadata and the adjacent raw log matches its locator and checksum, preserve summary and span provenance, and capture only the bounded selected span while streaming the full raw-log checksum. Keep this mode mutually exclusive with legacy manual metadata and span selection.
 
 ## RQSEC: Safety, redaction, and fail-closed behavior
 

@@ -1,13 +1,13 @@
 # Gaori Implementation Note
 
-Status: v0.1 baseline and `CLEAN-001` complete
-Scope: Maintainer guidance for standalone execution, evidence artifacts, parser/rule behavior, and operator-directed cleanup
+Status: Current for `gaori v0.1.12`; complete through `MCP-005`
+Scope: Maintainer guidance for standalone execution, evidence artifacts, parser/rule behavior, operator-directed cleanup, and session-local STDIO MCP execution
 
 This document explains implementation constraints and verification expectations for contributors. It is not the parent-project adoption contract; integrators should start with the [integration guide](integration-guide.md).
 
 ## Implementation posture
 
-Build Gaori as a small deterministic Go CLI first. Do not add orchestration, session, or acceptance-authority concepts to the core package. Treat the optional run-scoped artifact layout as output path compatibility only.
+Keep Gaori a small deterministic Go CLI with one attached, session-local STDIO MCP adapter. The MCP registry may coordinate live execution only inside one server process; do not move session state into durable core artifacts or add workflow, orchestration, recovery, or acceptance authority. Treat the optional run-scoped artifact layout as output path compatibility only.
 
 The post-baseline HARDE sequence is complete. Preserve the contracts in `roadmap.md#harde-post-baseline-hardening-and-contract-closure` and `requirements-specs.md#rqhar-post-baseline-hardening-and-contract-closure`, and rerun affected roadmap verification for future changes.
 
@@ -56,6 +56,7 @@ The skill hardcodes the CLI and MCP surfaces (subcommands, tools, phases, flags,
 - Prefer explicit internal errors for config/artifact failures instead of silently falling back to a different output path.
 - Keep configured parser selection immutable. A tagged ad-hoc run may carry one explicit parser, but it must be validated with the `--` boundary before config/rule loading, artifact preparation, or child execution.
 - Preserve legacy tagged ad-hoc argv parsing and child-side `--` arguments. Only a delimiter reached before the first positional child command is a Gaori option boundary.
+- Linearize MCP explicit cancellation and server shutdown with process start. If cancellation wins the start gate, do not create the child; if start wins, cancel the established process group through the existing context path.
 
 ## Artifact writer guidance
 
@@ -178,12 +179,14 @@ confidence: medium
 
 Validation rejects unknown YAML fields, extra YAML documents, missing IDs or provenance, duplicate IDs, negative or oversized context, a combined matched-block/context budget above 160 lines, excessive `max_block_lines`, invalid capture groups, invalid or unsupported regex, inconsistent active/disabled deletion reasons, and rule overmatch during rule-only `rules test` extraction. Config, stored rule, and imported rule YAML are limited to 256 KiB before decoding.
 
+Summary-based proposal accepts only matching regular summary, status, and raw-log artifacts. Verify the status hash, exact summary checksum, locators, surfaced metadata, and signature hashes before streaming the complete raw log and capturing the selected bounded span. Keep the legacy manual metadata/span form separate and limited to its 256 KiB raw-log input contract.
+
 ## Regex safety guidance
 
 - Use Go `regexp` with RE2 semantics only.
 - Do not support PCRE-only features or backtracking-dependent behavior.
 - Bound regex input size before matching; use the bounded complete-line tail for runtime and summarize extraction, and reject oversized rule-test fixtures.
-- Read config/rule YAML and `rules propose` raw logs through a 256 KiB file bound before decoding, splitting, hashing, or writing derived rule files.
+- Read config/rule YAML and legacy `rules propose --raw-log` inputs through a 256 KiB file bound before decoding, splitting, hashing, or writing derived rule files. Summary-based proposals instead bind the regular summary to its adjacent status checksum, then stream the complete matching raw log while capturing only the selected bounded span.
 - Bound extracted block lines, excerpt bytes, and summary bytes independently of regex success.
 - Fail closed on invalid or unsupported regex.
 
@@ -216,14 +219,15 @@ Tests should cover:
 - Rule test with expected span.
 - Rule overmatch rejection.
 - Extreme rule context values failing closed before command execution, plus defensive extraction bounds and regex compilation errors that prevent overflow or panic for unvalidated in-memory rules.
-- Exact-limit and oversized config, stored rule, imported rule, and `rules propose` raw-log inputs, including config exit `2` and absence of command or output side effects.
+- Exact-limit and oversized config, stored rule, imported rule, and legacy `rules propose --raw-log` inputs, including config exit `2` and absence of command or output side effects.
+- Summary-proposal rejection for missing, stale, symlinked, relocated, or metadata-inconsistent summary/status/raw-log evidence, plus large-log checksum-stream and bounded-span coverage.
 - Artifact path generation for `.gaori/`, caller-selected `--output-dir`, and `.gaori/runs/scoped/<run_id>/...` layouts, plus built-binary rejection of external `.gaori/runs/standalone` and `.gaori/runs/scoped` symlinks before command execution.
 - Sequential, goroutine-concurrent, and cross-process standalone directory allocation within one UTC-second interval, including configured, ad-hoc, and summarize evidence preservation.
 - Cleanup selector fail-closed behavior, UTC directory-age boundaries, dry-run and JSON counts, incomplete/scoped/config preservation, candidate-wide preflight, and symlink containment through a built binary.
 - Invalid run, command, rule, and failure IDs failing before command execution or artifact writes.
 - Traversal, cross-run excerpt access, dangling links, and external symlink escape failing closed across artifact and rule operations.
 - Internal symlinks whose canonical targets remain inside the applicable boundary continuing to work.
-- Specialized parser fixtures for `vitest`, `pytest`, `go-test`, and `playwright`.
+- Fixture-backed execution and summarize coverage for every supported parser label.
 - Tagged ad-hoc selection of every specialized parser, including exact summary metadata and representative fixture extraction.
 - Missing, empty, duplicate, or unknown ad-hoc parser values and configured-command overrides failing before executor invocation or run artifact creation, with built-binary sentinel coverage.
 - Child-side `--parser` and `--` arguments remaining unchanged across the Gaori option boundary.
@@ -233,6 +237,8 @@ Tests should cover:
 - Noisy passing, failing, and summarize logs that exceed failure/warning record caps, including authoritative or inferred exits, truncation fields, rendered size bounds, terminal status artifacts, retained signature hashes, and excerpt counts; also cover noise filtering and redaction expansion before bounding.
 - Exact generated Markdown shape for a fixed summary, plus a built-binary fresh-fixture workflow covering version, configured/ad-hoc run, summarize, excerpt, JSON output, and the complete rule lifecycle.
 - Unsupported historical `--verbose` and `--no-color` placeholders failing closed with config exit code `2`.
+- Built-in help, config preflight, flexible global placement and escaped `rules search -- <query>` operands, explicit ad-hoc timeout selection, and self-describing console JSON fields.
+- MCP tool schemas, lifecycle revisions, wait isolation, start/cancel serialization, bounded evidence, EOF framing, and Unix process-group shutdown.
 - Actual `make install` and `make install-toolchain` execution in isolated temporary roots, including installed-version and resolver checks.
 - Toolchain resolver selection from `GAORI_BIN`, absolute `gaori.binary_path`, and versioned `gaori.cli_version`, including argument forwarding and fail-closed missing, unsafe, or mismatched selections.
 
@@ -245,11 +251,14 @@ Before the next release tag, verify all of the following:
 - `make install` and `make install-toolchain` in isolated temporary roots, including installed-version and resolver checks
 - configured run smoke test
 - ad-hoc run smoke test
+- built-in help hierarchy, `config check`, flexible global placement, escaped global-option search queries, explicit ad-hoc timeout, and console JSON field checks
 - explicit ad-hoc parser smoke covering parser-and-tag rule selection, specialized misses, invalid-input sentinel behavior, and child argv passthrough
 - built-binary SIGINT/SIGTERM interruption smoke across standalone and `--run-id` layouts, including partial raw evidence, `killed` status, and exit codes `130` and `143`
 - summarize smoke test from an existing raw log
 - parser fixture coverage for every implemented parser label
 - rule lifecycle coverage for `list/search/show/create/update/delete/test/propose`
+- summary-based proposal coverage for status-bound provenance, large raw-log streaming, bounded selected spans, and stale or replaced evidence
+- MCP built-binary coverage for all six tools, revision waits, explicit cancellation, EOF/malformed input, redaction, bounded excerpts, and Unix signal/process-group shutdown
 - fresh-fixture execution of every documented Gaori CLI command with generated Markdown compared to the documented shape
 - toolchain resolver status and forwarding checks for environment, absolute-path metadata, and versioned metadata selection
 - artifact path and containment verification for `.gaori/`, `--output-dir`, and `.gaori/runs/scoped/<run_id>/...`, including external `.gaori/runs/standalone` and `.gaori/runs/scoped` symlink rejection

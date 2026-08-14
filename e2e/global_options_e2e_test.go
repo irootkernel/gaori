@@ -83,3 +83,51 @@ func TestBinaryGlobalOptionsArePositionIndependentBeforeChildBoundary(t *testing
 		t.Fatal("raw child output leaked into console JSON")
 	}
 }
+
+func TestBinaryRulesSearchEscapesGlobalOptionNames(t *testing.T) {
+	t.Parallel()
+	root := projectRoot(t)
+	bin := buildBinary(t, root)
+	repo := t.TempDir()
+	rulesDir := filepath.Join(repo, ".gaori", "tester", "rules")
+	if err := os.MkdirAll(rulesDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	rule := strings.Join([]string{
+		"id: global-query",
+		"tags: [unit]",
+		"parser: generic",
+		"status: active",
+		"provenance:",
+		"  created_by: tester",
+		"  source_run: local",
+		"  source_command: unit",
+		"  source_log_sha256: sha256:abc",
+		"  source_span:",
+		"    start_line: 1",
+		"    end_line: 1",
+		"  reason: search for --json literally",
+		"match:",
+		"  start:",
+		"    regex: '^TypeError:'",
+		"  end:",
+		"    any_of:",
+		"      - regex: '^$'",
+		"    max_block_lines: 2",
+		"  include_context:",
+		"    before: 0",
+		"    after: 0",
+		"confidence: high",
+	}, "\n") + "\n"
+	if err := os.WriteFile(filepath.Join(rulesDir, "global-query.yaml"), []byte(rule), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	output, err := exec.Command(bin, "rules", "search", "--repo", repo, "--", "--json").CombinedOutput()
+	if err != nil {
+		t.Fatalf("escaped search failed: %v output=%s", err, output)
+	}
+	if !strings.Contains(string(output), "global-query") {
+		t.Fatalf("escaped search did not find literal query: %s", output)
+	}
+}

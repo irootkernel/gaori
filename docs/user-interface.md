@@ -35,13 +35,13 @@ gaori mcp
 
 `gaori [--repo <path>] [--config <path>] [--output-dir <path>] mcp` serves newline-delimited MCP over stdin/stdout. It rejects operands, `--json`, and `--run-id`; it does not open a socket or detach commands.
 
-The server exposes `start_configured_run`, `start_ad_hoc_run`, `get_run`, `wait_run`, `cancel_run`, and `get_excerpt`. Starts return a session-local invocation ID immediately. Start tools are mutating and leave destructive/open-world hints at their conservative MCP defaults because child argv may have arbitrary effects. Omitted `start_ad_hoc_run.timeout_sec` defaults to 600 seconds and omitted `wait_run.timeout_ms` defaults to 50000 milliseconds; explicit values must be JSON integers from `1` through `86400` and `1` through `50000` respectively, and explicit `null` or zero is rejected before a run starts or wait begins. Snapshots move through `queued`, `executing`, `materializing`, and `finished` with monotonically increasing revisions. `wait_run` accepts a prior revision; expiry or cancellation of that wait request never cancels the command. Explicit `cancel_run` and server shutdown cancel active commands. Empty stdin or stdin closed after a complete newline-delimited frame cancels and drains active runs before the server exits `0`; malformed or truncated final input exits `4`. SIGINT/SIGTERM follow the same drain path and exit `130`/`143`. Finished results preserve the normal command status, exit code, extractor quality, and standalone artifact paths. MCP error and evidence text is bounded and uses the validated configured redaction; failures before redaction is available expose only a safe operation message. `get_excerpt` verifies the failure ID, literal path, byte bound, and checksum recorded when the invocation finalized; stale or replaced evidence fails closed without reflecting request data. Raw-log contents are never returned through MCP.
+The server exposes `start_configured_run`, `start_ad_hoc_run`, `get_run`, `wait_run`, `cancel_run`, and `get_excerpt`. Starts return a session-local invocation ID immediately. Start tools are mutating and leave destructive/open-world hints at their conservative MCP defaults because child argv may have arbitrary effects. Omitted `start_ad_hoc_run.timeout_sec` defaults to 600 seconds and omitted `wait_run.timeout_ms` defaults to 50000 milliseconds; explicit values must be JSON integers from `1` through `86400` and `1` through `50000` respectively, and explicit `null` or zero is rejected before a run starts or wait begins. Snapshots move through `queued`, `executing`, `materializing`, and `finished` with monotonically increasing revisions. `wait_run` accepts a prior revision; expiry or cancellation of that wait request never cancels the command. Explicit `cancel_run` and server shutdown cancel active commands. Cancellation that wins the process-start gate prevents child creation; cancellation after start terminates the established process group. Empty stdin or stdin closed after a complete newline-delimited frame cancels and drains active runs before the server exits `0`; malformed or truncated final input exits `4`. SIGINT/SIGTERM follow the same drain path and exit `130`/`143`. Finished results preserve the normal command status, exit code, extractor quality, and standalone artifact paths. MCP error and evidence text is bounded and uses the validated configured redaction; failures before redaction is available expose only a safe operation message. `get_excerpt` verifies the failure ID, literal path, byte bound, and checksum recorded when the invocation finalized; stale or replaced evidence fails closed without reflecting request data. Raw-log contents are never returned through MCP.
 
 ## Rule commands
 
 ```bash
 gaori rules list
-gaori rules search <query>
+gaori rules search [--] <query>
 gaori rules show <rule-id>
 gaori rules create --file <rule.yaml>
 gaori rules update <rule-id> --file <rule.yaml>
@@ -50,6 +50,8 @@ gaori rules test --rule <rule-id> --log <raw-log> --expect-span <start:end>
 gaori rules propose --summary <summary.json> --failure <failure-id>
 gaori rules propose --tag <tag> [--tag <tag> ...] --parser <parser> --raw-log <raw-log> --span <start:end>
 ```
+
+Use the explicit operand boundary when a search query is also a global option name. For example, `gaori rules search -- --json` searches for the literal `--json`; without the boundary, `--json` selects JSON output as usual.
 
 ## Configuration preflight
 
@@ -293,7 +295,7 @@ gaori rules delete generic-v1 --reason "superseded by v2"
 
 For project rules, `max_block_lines` counts the matched block including its start line. The matched block plus `include_context.before` and `include_context.after` must not exceed 160 lines; overbroad or overflow-sized values fail closed with config exit code `2`.
 
-The summary form derives parser, tags, command identity, checksum, and the exact line/byte span from one generated failure. It requires the matching regular raw-log file beside the regular summary file, rejects symlinks, stale checksums, duplicate failure IDs, and cross-directory references, and writes nothing on validation failure. It captures only the selected span, bounded to 256 KiB and 158 lines, while streaming the complete raw-log checksum. Summary mode and the legacy manual metadata/span mode are mutually exclusive.
+The summary form derives parser, tags, command identity, checksum, and the exact line/byte span from one generated failure. It requires matching regular summary, status, and raw-log files with the same basename and directory. The status hash, recorded summary checksum, locators, metadata, and signature hashes must match before Gaori streams the raw log. Symlinks, stale or replaced artifacts, duplicate failure IDs, cross-directory references, and inconsistent spans fail without writing. The selected span is bounded to 256 KiB and 158 lines while the complete raw-log checksum is streamed. Summary mode and the legacy manual metadata/span mode are mutually exclusive.
 
 For an existing generated failure summary:
 

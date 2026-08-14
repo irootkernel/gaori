@@ -25,6 +25,46 @@ type streamCapture struct {
 	err error
 }
 
+type startGateContextKey struct{}
+
+// StartGate linearizes an explicit caller cancellation with process start.
+// If cancellation wins, the guarded command is never started. If start wins,
+// cancellation waits until process creation has completed before returning.
+type StartGate struct {
+	mu       sync.Mutex
+	canceled bool
+}
+
+func NewStartGate() *StartGate {
+	return &StartGate{}
+}
+
+func WithStartGate(ctx context.Context, gate *StartGate) context.Context {
+	if gate == nil {
+		return ctx
+	}
+	return context.WithValue(ctx, startGateContextKey{}, gate)
+}
+
+func (g *StartGate) Cancel(cancel context.CancelFunc) {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	g.canceled = true
+	cancel()
+}
+
+func (g *StartGate) start(ctx context.Context, start func() error) error {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	if g.canceled {
+		return context.Canceled
+	}
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	return start()
+}
+
 func (c *streamCapture) Write(p []byte) (int, error) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -78,8 +118,18 @@ func executeWithSignals(ctx context.Context, workDir, commandID string, tags []s
 	cmd.Stdout = capture
 	cmd.Stderr = capture
 
-	if err := cmd.Start(); err != nil {
-		return model.RunOutput{}, model.NewGaoriError(model.ExitCodeParserError, "execute command", err)
+	start := cmd.Start
+	var startErr error
+	if gate, ok := runCtx.Value(startGateContextKey{}).(*StartGate); ok {
+		startErr = gate.start(runCtx, start)
+	} else {
+		startErr = start()
+	}
+	if startErr != nil {
+		if errors.Is(startErr, context.Canceled) || errors.Is(startErr, context.DeadlineExceeded) {
+			return contextDoneOutput(started, commandID, tags, parser, argv, capture, startErr)
+		}
+		return model.RunOutput{}, model.NewGaoriError(model.ExitCodeParserError, "execute command", startErr)
 	}
 	waited := make(chan error, 1)
 	go func() {

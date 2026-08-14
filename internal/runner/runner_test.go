@@ -147,6 +147,62 @@ func TestExecutePreCanceledContextDoesNotStartCommand(t *testing.T) {
 	}
 }
 
+func TestStartGateCancellationWinsBeforeProcessStart(t *testing.T) {
+	t.Parallel()
+	gate := NewStartGate()
+	ctx, cancel := context.WithCancel(context.Background())
+	gate.Cancel(cancel)
+	started := false
+
+	err := gate.start(ctx, func() error {
+		started = true
+		return nil
+	})
+	if !errors.Is(err, context.Canceled) {
+		t.Fatalf("start error=%v, want context cancellation", err)
+	}
+	if started {
+		t.Fatal("canceled start gate invoked process start")
+	}
+}
+
+func TestStartGateSerializesCancellationAfterProcessStart(t *testing.T) {
+	t.Parallel()
+	gate := NewStartGate()
+	ctx, cancel := context.WithCancel(context.Background())
+	startEntered := make(chan struct{})
+	releaseStart := make(chan struct{})
+	startFinished := make(chan error, 1)
+	go func() {
+		startFinished <- gate.start(ctx, func() error {
+			close(startEntered)
+			<-releaseStart
+			return nil
+		})
+	}()
+	<-startEntered
+
+	cancelFinished := make(chan struct{})
+	go func() {
+		gate.Cancel(cancel)
+		close(cancelFinished)
+	}()
+	select {
+	case <-cancelFinished:
+		t.Fatal("cancellation returned before process start completed")
+	case <-time.After(20 * time.Millisecond):
+	}
+	close(releaseStart)
+	if err := <-startFinished; err != nil {
+		t.Fatal(err)
+	}
+	select {
+	case <-cancelFinished:
+	case <-time.After(time.Second):
+		t.Fatal("cancellation did not complete after process start")
+	}
+}
+
 func waitForFile(t *testing.T, path string) {
 	t.Helper()
 	deadline := time.Now().Add(3 * time.Second)
