@@ -70,28 +70,31 @@ Before pasting the block below, replace `<expected-version>` and `<command-id>` 
 - In the final report, include the Gaori command, process exit code, artifact `status` and `extractor_status`, relevant summary and raw-log paths when opened, and any skipped checks.
 ````
 
-For task-level operating guidance, use the complete [`use-gaori` skill directory](skills/use-gaori/). In a source checkout, copy it directly after confirming that the destination does not already exist:
+For task-level operating guidance, use the complete
+[`use-gaori` skill directory](skills/use-gaori/). For Codex, install user-scoped
+skills under `$HOME/.agents/skills`. Other agents may use different discovery
+paths, so consult their documentation before choosing a destination. Download
+only the skill directory into that agent-specific location:
 
 ```bash
-gaori_skill_dir=/path/to/agent/skills/use-gaori
-test ! -e "$gaori_skill_dir"
-cp -R skills/use-gaori "$gaori_skill_dir"
-```
-
-Otherwise fetch it. There is no universal skill-discovery path, so set the destination to the path your agent runtime documents and pin the ref to the release tag whose source ships the skill:
-
-```bash
-set -e
-: "${GAORI_SKILL_DIR:?set to the documented use-gaori skill directory}"
-gaori_skill_ref=v0.1.12
-mkdir -p "$GAORI_SKILL_DIR/references"
-curl -fsSLo "$GAORI_SKILL_DIR/SKILL.md" \
-  "https://raw.githubusercontent.com/irootkernel/gaori/$gaori_skill_ref/skills/use-gaori/SKILL.md"
-for reference in lifecycle authoring recovery; do
-  curl -fsSLo "$GAORI_SKILL_DIR/references/$reference.md" \
-    "https://raw.githubusercontent.com/irootkernel/gaori/$gaori_skill_ref/skills/use-gaori/references/$reference.md"
-done
-ls "$GAORI_SKILL_DIR"/SKILL.md "$GAORI_SKILL_DIR"/references/*.md
+(
+  set -eu
+  gaori_skill_parent="${HOME}/.agents/skills"
+  gaori_skill_ref=v0.1.12
+  mkdir -p "$gaori_skill_parent"
+  gaori_skill_target="$gaori_skill_parent/use-gaori"
+  test ! -e "$gaori_skill_target" && test ! -L "$gaori_skill_target"
+  gaori_skill_tmp="$(mktemp -d "$gaori_skill_parent/.use-gaori.XXXXXX")"
+  trap 'rm -rf "$gaori_skill_tmp"' EXIT
+  mkdir -p "$gaori_skill_tmp/use-gaori/references"
+  gaori_skill_url="https://raw.githubusercontent.com/irootkernel/gaori/$gaori_skill_ref/skills/use-gaori"
+  curl -fsSLo "$gaori_skill_tmp/use-gaori/SKILL.md" "$gaori_skill_url/SKILL.md"
+  for reference in lifecycle authoring recovery; do
+    curl -fsSLo "$gaori_skill_tmp/use-gaori/references/$reference.md" \
+      "$gaori_skill_url/references/$reference.md"
+  done
+  mv "$gaori_skill_tmp/use-gaori" "$gaori_skill_target"
+)
 ```
 
 The skill is source-distributed in the v0.1.12 GitHub source archive. `go install`, `make install`, and `make install-toolchain` install only the Gaori binary and do not copy or activate the skill.

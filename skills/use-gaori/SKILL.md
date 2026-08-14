@@ -7,7 +7,7 @@ description: "Run and inspect Gaori through its local CLI or STDIO MCP tools, co
 
 Use Gaori as an optional deterministic command runner and evidence compressor. Let the parent project's documentation decide which checks are required.
 
-Global flags (`--json`, `--run-id`, `--repo`, `--config`, `--output-dir`) may appear before or after the subcommand and its Gaori operands. For ad-hoc runs, keep Gaori options before the explicit `--`; everything after that boundary belongs to the child command unchanged.
+Supported global flags (`--json`, `--run-id`, `--repo`, `--config`, `--output-dir`, `--version`) may appear before or after the subcommand and its Gaori operands. Each command still accepts only its documented subset. For ad-hoc runs, keep Gaori options before the explicit `--`; everything after that boundary belongs to the child command unchanged.
 
 Use `gaori --help`, `gaori help <command>`, or `gaori help rules <subcommand>` to discover the installed command surface. Help exits `0`; invalid invocations still exit `2`.
 
@@ -39,7 +39,7 @@ Use `gaori --help`, `gaori help <command>`, or `gaori help rules <subcommand>` t
 4. Read the most authoritative machine-readable surface available:
    - before a run or after config/rule edits: `gaori --json config check` for a read-only validation of the selected config and every stored rule;
    - after a run: the process exit plus `<command-id>.status.json` and `<command-id>.summary.json`;
-   - for one failure: pass the run or summarize output's `summary_json` field to `gaori --json excerpt --summary <summary_json> <failure-id>`. The `summary_markdown` field is for human review; legacy `summary` remains its alias. Failure IDs (`F001`, ...) come from the structured summary's failure records. When using MCP, retrieve the same evidence through `get_excerpt`; treat its fail-closed error as stale, replaced, relocated, or oversized evidence rather than opening the raw log automatically.
+   - for one failure: pass the run or summarize output's `summary_json` field to `gaori --json excerpt --summary <summary_json> <failure-id>`. The `summary_markdown` field is for human review. Legacy `summary` and `extractor` remain aliases for `summary_markdown` and `extractor_status`. Failure IDs (`F001`, ...) come from the structured summary's failure records. When using MCP, retrieve the same evidence through `get_excerpt`; treat its fail-closed error as stale, replaced, relocated, or oversized evidence rather than opening the raw log automatically.
 
 ## Run and report
 
@@ -76,13 +76,14 @@ When the connected tool list contains all six Gaori MCP tools, prefer MCP for a 
 
    Never infer review acceptance, waiver, release, installation, publication, or runtime activation.
 
-6. After any mutation (`run`, `summarize`, `clean`, `rules create|update|delete`), re-read the affected artifact or `--json` output instead of assuming the outcome. A failed or interrupted mutation may still have taken effect, and `run` is never idempotent because it re-executes the external command.
+6. After any mutation (`run`, `summarize`, `clean`, `rules create|update|delete|propose`), re-read the affected artifact or `--json` output instead of assuming the outcome. For `rules propose`, read the proposal path returned in JSON. A failed or interrupted mutation may still have taken effect, and `run` is never idempotent because it re-executes the external command.
 
 Worked example — a failing configured standalone run:
 
 ```text
 gaori --json run unit
-# process exits 1 (failed); output's status_json / summary / raw_log point into
+# process exits 1 (failed); output's status_json / summary_markdown /
+# summary_json / raw_log point into
 # .gaori/runs/standalone/<UTC-timestamp>/ ; summary.json lists one failure, F001
 gaori --json excerpt --summary .gaori/runs/standalone/<UTC-timestamp>/unit.summary.json F001
 # report: `gaori --json run unit` | exit 1 (failed) | extractor precise | summary_markdown path

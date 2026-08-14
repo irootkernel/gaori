@@ -372,9 +372,30 @@ func TestMCPDocumentationAndSkillContract(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, required := range []string{"start_configured_run", "start_ad_hoc_run", "get_run", "wait_run", "cancel_run", "CLI workflow"} {
+	for _, required := range []string{
+		"start_configured_run", "start_ad_hoc_run", "get_run", "wait_run", "cancel_run", "get_excerpt", "CLI workflow",
+		"--version", "config check", "--timeout-sec", "summary_markdown", "summary_json", "extractor_status", "Legacy `summary` and `extractor`",
+	} {
 		if !strings.Contains(string(skill), required) {
 			t.Errorf("use-gaori skill is missing %q", required)
+		}
+	}
+	authoring, err := os.ReadFile(filepath.Join(root, "skills/use-gaori/references/authoring.md"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, required := range []string{"rules propose --summary", "rules search -- --json", "proposal path returned by its JSON output"} {
+		if !strings.Contains(string(authoring), required) {
+			t.Errorf("use-gaori authoring reference is missing %q", required)
+		}
+	}
+	readme, err := os.ReadFile(filepath.Join(root, "README.md"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, required := range []string{`gaori_skill_parent="${HOME}/.agents/skills"`, `test ! -e "$gaori_skill_target" && test ! -L "$gaori_skill_target"`, `mktemp -d "$gaori_skill_parent/.use-gaori.XXXXXX"`} {
+		if !strings.Contains(string(readme), required) {
+			t.Errorf("README use-gaori installation guidance is missing %q", required)
 		}
 	}
 }
