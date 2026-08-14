@@ -450,6 +450,27 @@ func TestMCPManagerCloseCancelsActiveRun(t *testing.T) {
 	}
 }
 
+func TestWaitMCPInvocationsUsesOneDrainContext(t *testing.T) {
+	t.Parallel()
+	completed := &mcpInvocation{done: make(chan struct{})}
+	pending := &mcpInvocation{done: make(chan struct{})}
+	close(completed.done)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	returned := make(chan struct{})
+	go func() {
+		waitMCPInvocations(ctx, []*mcpInvocation{completed, pending})
+		close(returned)
+	}()
+	cancel()
+
+	select {
+	case <-returned:
+	case <-time.After(time.Second):
+		t.Fatal("drain did not stop when its shared context ended")
+	}
+}
+
 func mustMCPInvocation(t *testing.T, manager *mcpManager, id string) *mcpInvocation {
 	t.Helper()
 	inv, err := manager.lookup(id)

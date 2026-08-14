@@ -317,6 +317,14 @@ func TestMCPDocumentationAndSkillContract(t *testing.T) {
 		"docs/architecture.md":   "Status: Complete through `MCP-005`",
 		"docs/user-interface.md": "complete through `MCP-005`",
 	}
+	drainContractPaths := map[string]bool{
+		"README.md":                                true,
+		"docs/architecture.md":                     true,
+		"docs/integration-guide.md":                true,
+		"docs/user-interface.md":                   true,
+		"skills/use-gaori/references/lifecycle.md": true,
+		"skills/use-gaori/references/recovery.md":  true,
+	}
 	for _, relative := range paths {
 		data, err := os.ReadFile(filepath.Join(root, relative))
 		if err != nil {
@@ -330,6 +338,9 @@ func TestMCPDocumentationAndSkillContract(t *testing.T) {
 		}
 		if expected := completionStatus[relative]; expected != "" && !strings.Contains(text, expected) {
 			t.Errorf("%s does not contain current MCP completion status %q", relative, expected)
+		}
+		if drainContractPaths[relative] && !strings.Contains(strings.ToLower(text), "after every in-flight process-start gate resolves") {
+			t.Errorf("%s does not describe the post-gate MCP drain deadline", relative)
 		}
 	}
 	skill, err := os.ReadFile(filepath.Join(root, "skills/use-gaori/SKILL.md"))

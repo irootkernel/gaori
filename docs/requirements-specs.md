@@ -1,8 +1,8 @@
 # Gaori Requirement Specs
 
-Status: v0.1 baseline and operator-directed standalone evidence cleanup complete
-Scope: Gaori v0.1 standalone baseline, post-baseline hardening, schema-v2 tag selectors, explicit parser selection, release-readiness follow-up, and operator-directed standalone evidence cleanup
-Source context: standalone deterministic Gaori v0.1 CLI behavior and evidence contracts.
+Status: Current for `gaori v0.1.12`; all listed requirements complete
+Scope: Gaori v0.1 standalone baseline, post-baseline hardening, portable project configuration, CLI usability, verified rule proposals, operator-directed cleanup, and session-local STDIO MCP execution
+Source context: deterministic Gaori v0.1 CLI, evidence, and attached MCP behavior.
 
 ## Requirement status legend
 
@@ -107,7 +107,7 @@ Implementation note: the original v0.1 roadmap and the recorded `RQHAR` hardenin
 - [x] `GAORI-REQ-RQMCP-001` Provide a local STDIO MCP server through `gaori mcp` without adding a network listener, resident daemon, or detached execution.
 - [x] `GAORI-REQ-RQMCP-002` Start configured and tagged ad-hoc runs asynchronously and expose session-local `queued`, `executing`, `materializing`, and `finished` phases with a monotonically increasing revision.
 - [x] `GAORI-REQ-RQMCP-003` Provide bounded `get` and revision-based `wait` operations that report live state without treating a wait timeout or cancelled wait request as cancellation of the test command.
-- [x] `GAORI-REQ-RQMCP-004` Cancel an active MCP run only through an explicit cancellation operation or server shutdown, forward cancellation to the child process group, and preserve the existing killed and partial-evidence contracts when materialization succeeds.
+- [x] `GAORI-REQ-RQMCP-004` Cancel an active MCP run only through an explicit cancellation operation or server shutdown, resolve every in-flight process-start gate before returning cancellation ownership, forward cancellation to an established child process group, then share one three-second artifact-drain deadline across all invocations while preserving the existing killed and partial-evidence contracts when materialization succeeds.
 - [x] `GAORI-REQ-RQMCP-005` Return authoritative command status and exit code independently from extractor quality, expose only redacted bounded derived evidence, and never return raw-log contents through MCP.
 - [x] `GAORI-REQ-RQMCP-006` Keep MCP invocation state ephemeral to one server process; do not provide restart recovery, a durable job ledger, acceptance state, or workflow orchestration.
 

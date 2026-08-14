@@ -263,15 +263,23 @@ func (m *mcpManager) close() {
 		all = append(all, inv)
 	}
 	m.mu.Unlock()
+	// requestCancel may wait for an in-flight process start to resolve. This
+	// preserves the guarantee that shutdown never returns while a child can
+	// still start outside cancellation ownership. The bounded drain begins only
+	// after every invocation has crossed that start gate.
 	for _, inv := range all {
 		inv.requestCancel()
 	}
-	deadline := time.NewTimer(mcpDrainWait)
-	defer deadline.Stop()
+	drainCtx, cancelDrain := context.WithTimeout(context.Background(), mcpDrainWait)
+	defer cancelDrain()
+	waitMCPInvocations(drainCtx, all)
+}
+
+func waitMCPInvocations(ctx context.Context, all []*mcpInvocation) {
 	for _, inv := range all {
 		select {
 		case <-inv.done:
-		case <-deadline.C:
+		case <-ctx.Done():
 			return
 		}
 	}

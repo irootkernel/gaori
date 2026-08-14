@@ -238,7 +238,7 @@ Tests should cover:
 - Exact generated Markdown shape for a fixed summary, plus a built-binary fresh-fixture workflow covering version, configured/ad-hoc run, summarize, excerpt, JSON output, and the complete rule lifecycle.
 - Unsupported historical `--verbose` and `--no-color` placeholders failing closed with config exit code `2`.
 - Built-in help, config preflight, flexible global placement and escaped `rules search -- <query>` operands, explicit ad-hoc timeout selection, and self-describing console JSON fields.
-- MCP tool schemas, lifecycle revisions, wait isolation, start/cancel serialization, bounded evidence, EOF framing, and Unix process-group shutdown.
+- MCP tool schemas, lifecycle revisions, wait isolation, start/cancel serialization, one shared post-gate drain deadline, bounded evidence, EOF framing, and Unix process-group shutdown.
 - Actual `make install` and `make install-toolchain` execution in isolated temporary roots, including installed-version and resolver checks.
 - Toolchain resolver selection from `GAORI_BIN`, absolute `gaori.binary_path`, and versioned `gaori.cli_version`, including argument forwarding and fail-closed missing, unsafe, or mismatched selections.
 
