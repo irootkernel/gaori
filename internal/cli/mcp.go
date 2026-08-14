@@ -59,7 +59,6 @@ type mcpInvocation struct {
 	cancel               context.CancelFunc
 	startGate            *runner.StartGate
 	done                 chan struct{}
-	redactor             *safety.Redactor
 	finalizedSummaryPath string
 }
 
@@ -86,7 +85,6 @@ func (i *mcpInvocation) finish(result *runResult, err error, redactor *safety.Re
 	defer i.mu.Unlock()
 	i.snapshot.Phase = mcpPhaseFinished
 	i.snapshot.Result = result
-	i.redactor = redactor
 	if result != nil {
 		i.finalizedSummaryPath = canonicalMCPPath(repoRoot, result.SummaryJSON)
 	}
@@ -399,7 +397,7 @@ func boundedIntegerInputSchema[T any](property string, minimum, maximum float64)
 func (i *mcpInvocation) excerpt(repoRoot, failureID string) (excerptOutput, error) {
 	i.mu.Lock()
 	defer i.mu.Unlock()
-	if i.snapshot.Phase != mcpPhaseFinished || i.snapshot.Result == nil || i.redactor == nil {
+	if i.snapshot.Phase != mcpPhaseFinished || i.snapshot.Result == nil {
 		return excerptOutput{}, fmt.Errorf("invocation has no completed evidence")
 	}
 	entry, ok := i.snapshot.Result.excerpts[failureID]
@@ -427,8 +425,7 @@ func (i *mcpInvocation) excerpt(repoRoot, failureID string) (excerptOutput, erro
 	if artifacts.SHA256(content) != entry.SHA256 {
 		return excerptOutput{}, fmt.Errorf("excerpt checksum mismatch")
 	}
-	safeContent := safety.BoundBytes(i.redactor.Apply(string(content)), safety.MaxExcerptBytes)
-	return excerptOutput{FailureID: failureID, ExcerptPath: entry.Reference, Content: safeContent}, nil
+	return excerptOutput{FailureID: failureID, ExcerptPath: entry.Reference, Content: string(content)}, nil
 }
 
 func mcpCommand(opts globalOptions, args []string, stderr io.Writer, info BuildInfo) int {

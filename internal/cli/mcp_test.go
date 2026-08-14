@@ -12,6 +12,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/irootkernel/gaori/internal/artifacts"
 	"github.com/irootkernel/gaori/internal/model"
 	"github.com/irootkernel/gaori/internal/safety"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
@@ -127,6 +128,49 @@ func TestMCPInvocationLookupErrorsAreBoundedAndNonReflective(t *testing.T) {
 				t.Fatalf("%s reflected or failed to bound invocation %q: %s", tool.name, invocationID, encoded)
 			}
 		}
+	}
+}
+
+func TestMCPExcerptReturnsFinalizedContentWithoutSecondRedaction(t *testing.T) {
+	t.Parallel()
+	repo := t.TempDir()
+	summaryDir := filepath.Join(repo, "evidence")
+	excerptsDir := filepath.Join(summaryDir, "excerpts")
+	if err := os.MkdirAll(excerptsDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	summaryPath := filepath.Join(summaryDir, "unit.summary.json")
+	if err := os.WriteFile(summaryPath, []byte("{}\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	content := []byte("TypeError: secret-redacted\n")
+	if err := os.WriteFile(filepath.Join(excerptsDir, "F001.log"), content, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	redactor, err := safety.NewRedactor([]model.RedactionPattern{{Regex: "secret", Replace: "secret-redacted"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := redactor.Apply(string(content)); got == string(content) {
+		t.Fatal("test redactor must be non-idempotent")
+	}
+	result := &runResult{
+		SummaryJSON: summaryPath,
+		excerpts: map[string]excerptManifestEntry{
+			"F001": {Reference: "excerpts/F001.log", SHA256: artifacts.SHA256(content)},
+		},
+	}
+	inv := &mcpInvocation{
+		snapshot:             mcpSnapshot{Phase: mcpPhaseFinished, Result: result},
+		finalizedSummaryPath: canonicalMCPPath(repo, summaryPath),
+	}
+
+	excerpt, err := inv.excerpt(repo, "F001")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if excerpt.Content != string(content) {
+		t.Fatalf("content=%q, want finalized excerpt %q", excerpt.Content, content)
 	}
 }
 

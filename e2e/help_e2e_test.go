@@ -19,6 +19,7 @@ func TestBinaryHelpHierarchy(t *testing.T) {
 		{args: []string{"--json", "help", "run"}, want: "gaori run <command-id>"},
 		{args: []string{"help", "run", "--json"}, want: "gaori run <command-id>"},
 		{args: []string{"rules", "propose", "--help"}, want: "--span <start:end>"},
+		{args: []string{"rules", "search", "tag", "--help"}, want: "gaori rules search"},
 	} {
 		output, err := exec.Command(bin, test.args...).CombinedOutput()
 		if err != nil {

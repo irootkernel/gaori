@@ -216,6 +216,9 @@ func removedGlobalOptionName(arg string) (string, bool) {
 }
 
 func commandOptionNeedsValue(arg string) bool {
+	if !strings.HasPrefix(arg, "-") || arg == "-" {
+		return false
+	}
 	trimmed := strings.TrimPrefix(strings.TrimPrefix(arg, "-"), "-")
 	if strings.Contains(trimmed, "=") {
 		return false

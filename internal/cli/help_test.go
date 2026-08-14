@@ -48,6 +48,17 @@ func TestHelpDoesNotConsumeChildArguments(t *testing.T) {
 	}
 }
 
+func TestHelpAfterPositionalOptionNameIsRecognized(t *testing.T) {
+	t.Parallel()
+	var stdout, stderr bytes.Buffer
+	if exitCode := Main([]string{"rules", "search", "tag", "--help"}, &stdout, &stderr); exitCode != 0 {
+		t.Fatalf("exit=%d stdout=%q stderr=%q", exitCode, stdout.String(), stderr.String())
+	}
+	if !strings.Contains(stdout.String(), "Usage: gaori rules search") || stderr.Len() != 0 {
+		t.Fatalf("stdout=%q stderr=%q", stdout.String(), stderr.String())
+	}
+}
+
 func TestUnknownHelpTopicFailsClosed(t *testing.T) {
 	t.Parallel()
 	for _, args := range [][]string{{"help", "unknown"}, {"bogus", "--help"}, {"rules", "bogus", "--help"}} {

@@ -21,6 +21,24 @@ func TestParseGlobalOptionsAcceptsFlexiblePositions(t *testing.T) {
 	}
 }
 
+func TestParseGlobalOptionsDoesNotTreatPositionalOptionNamesAsFlags(t *testing.T) {
+	t.Parallel()
+	opts, remaining, err := parseGlobalOptions([]string{"rules", "search", "tag", "--json"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !opts.JSON {
+		t.Fatalf("unexpected options: %+v", opts)
+	}
+	if !slices.Equal(remaining, []string{"rules", "search", "tag"}) {
+		t.Fatalf("remaining=%q", remaining)
+	}
+
+	if _, _, err := parseGlobalOptions([]string{"rules", "search", "tag", "--verbose", "--version"}); err == nil {
+		t.Fatal("removed global option after positional operand was accepted")
+	}
+}
+
 func TestParseGlobalOptionsPreservesCommandValuesAndChildBoundary(t *testing.T) {
 	t.Parallel()
 	opts, remaining, err := parseGlobalOptions([]string{

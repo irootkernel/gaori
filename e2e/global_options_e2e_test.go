@@ -19,6 +19,7 @@ func TestBinaryRemovedOptionsFailBeforeVersionDispatch(t *testing.T) {
 		{name: "verbose", args: []string{"run", "--verbose", "unit", "--version"}},
 		{name: "no-color", args: []string{"run", "unit", "--no-color", "--version"}},
 		{name: "lane", args: []string{"run", "--lane", "unit", "--version"}},
+		{name: "after positional option name", args: []string{"rules", "search", "tag", "--verbose", "--version"}},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
@@ -38,6 +39,18 @@ func TestBinaryRemovedOptionsFailBeforeVersionDispatch(t *testing.T) {
 				t.Fatalf("stderr=%q, want unsupported-option diagnostic", stderr.String())
 			}
 		})
+	}
+}
+
+func TestBinaryGlobalOptionAfterPositionalOptionName(t *testing.T) {
+	t.Parallel()
+	bin := buildBinary(t, projectRoot(t))
+	output, err := exec.Command(bin, "rules", "search", "tag", "--repo", t.TempDir(), "--json").CombinedOutput()
+	if err != nil {
+		t.Fatalf("rules search failed: %v output=%s", err, output)
+	}
+	if string(output) != "[]\n" {
+		t.Fatalf("output=%q, want empty JSON rule list", output)
 	}
 }
 
