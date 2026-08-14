@@ -91,28 +91,41 @@ func TestBinaryMCPImmediateEOFIsCleanShutdown(t *testing.T) {
 	}
 }
 
-func TestBinaryMCPMalformedInputFails(t *testing.T) {
+func TestBinaryMCPEmptyEOFIsCleanShutdown(t *testing.T) {
 	root := projectRoot(t)
 	bin := buildBinary(t, root)
 	command := exec.Command(bin, "mcp")
-	stdin, err := command.StdinPipe()
-	if err != nil {
-		t.Fatal(err)
-	}
 	var stdout, stderr bytes.Buffer
+	command.Stdin = bytes.NewReader(nil)
 	command.Stdout = &stdout
 	command.Stderr = &stderr
-	if err := command.Start(); err != nil {
-		t.Fatal(err)
+	if err := command.Run(); err != nil {
+		t.Fatalf("empty EOF failed: %v stdout=%q stderr=%q", err, stdout.String(), stderr.String())
 	}
-	if _, err := stdin.Write([]byte("{not-json}\n")); err != nil {
-		t.Fatal(err)
+}
+
+func TestBinaryMCPMalformedInputFails(t *testing.T) {
+	root := projectRoot(t)
+	bin := buildBinary(t, root)
+	for _, test := range []struct {
+		name  string
+		input []byte
+	}{
+		{name: "malformed complete frame", input: []byte("{not-json}\n")},
+		{name: "truncated JSON", input: []byte(`{"jsonrpc":"2.0"`)},
+		{name: "partial UTF-8", input: []byte{'{', '"', 'x', '"', ':', '"', 0xe2, 0x82}},
+		{name: "trailing partial frame", input: []byte("{}\n{")},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			command := exec.Command(bin, "mcp")
+			var stdout, stderr bytes.Buffer
+			command.Stdin = bytes.NewReader(test.input)
+			command.Stdout = &stdout
+			command.Stderr = &stderr
+			err := command.Run()
+			requireExitCode(t, err, int(model.ExitCodeParserError), append(stdout.Bytes(), stderr.Bytes()...))
+		})
 	}
-	if err := stdin.Close(); err != nil {
-		t.Fatal(err)
-	}
-	err = command.Wait()
-	requireExitCode(t, err, int(model.ExitCodeParserError), append(stdout.Bytes(), stderr.Bytes()...))
 }
 
 type mcpBinarySnapshot struct {

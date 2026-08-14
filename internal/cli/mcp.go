@@ -403,7 +403,7 @@ func mcpCommand(opts globalOptions, args []string, stderr io.Writer, info BuildI
 		return mcpSignalExitCode(sig)
 	default:
 	}
-	if input.sawEOF.Load() {
+	if input.cleanEOF() {
 		return 0
 	}
 	if err != nil {
@@ -414,16 +414,30 @@ func mcpCommand(opts globalOptions, args []string, stderr io.Writer, info BuildI
 }
 
 type mcpEOFReader struct {
-	reader io.ReadCloser
-	sawEOF atomic.Bool
+	reader       io.ReadCloser
+	sawEOF       atomic.Bool
+	partialFrame atomic.Bool
 }
 
 func (r *mcpEOFReader) Read(p []byte) (int, error) {
 	n, err := r.reader.Read(p)
+	for _, b := range p[:n] {
+		switch b {
+		case '\n':
+			r.partialFrame.Store(false)
+		case ' ', '\t', '\r':
+		default:
+			r.partialFrame.Store(true)
+		}
+	}
 	if err == io.EOF {
 		r.sawEOF.Store(true)
 	}
 	return n, err
+}
+
+func (r *mcpEOFReader) cleanEOF() bool {
+	return r.sawEOF.Load() && !r.partialFrame.Load()
 }
 
 func (r *mcpEOFReader) Close() error { return r.reader.Close() }
