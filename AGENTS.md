@@ -84,6 +84,19 @@ For multi-step work, keep a short plan in which every step has a corresponding v
 - Keep completion reports compact: state the outcome, changed files, verification performed, evidence paths when relevant, and actionable remaining risks or blockers.
 - Distinguish development-gate completion from review or final acceptance, commit or push, release, installation, and runtime activation.
 
+## Development Skill References
+
+- Use `$root-kernel:task-handler` for one named roadmap task.
+- Use `$root-kernel:epic-handler` to implement one roadmap epic as sequential task goals.
+- Use `$root-kernel:epic-validator` to cold-validate and remediate one completed roadmap epic.
+- Use `$root-kernel:dev-setup` to diagnose or configure development tooling.
+- Use `$use-mulgae` for an authorized Mulgae review, run inspection, finding follow-up, configuration diagnosis, cleanup plan, or recovery.
+- Use `$use-gaori` when a selected long or noisy check is routed through Gaori or existing Gaori evidence must be inspected.
+- Use `$use-podway` for Podway Procedure v2 session operation, authoring, lifecycle, diagnosis, or recovery; Root Kernel workflow skills retain their stricter roadmap, ownership, and approval rules.
+- In repositories opted into Root Kernel Podway procedures, treat the roadmap as lifecycle authority, Podway as active execution and evidence state, and the Codex goal as a temporary projection of actionable work.
+- Use `$lore-commits` for non-trivial commit messages and `$lore-query` to inspect recorded decision context.
+- Repository-specific rules below override defaults from the referenced skills.
+
 ## Repository Authorities
 
 When documents or behavior appear to disagree, use this order:
@@ -111,11 +124,13 @@ Preserve these invariants:
 
 Do not claim review acceptance, waiver, final acceptance, install, release, push, or runtime activation from Gaori evidence alone.
 
-Local runtime, evidence, and tool state must stay out of source commits. `.gaori/tester.yaml` and reviewed `.gaori/tester/rules/*.yaml` are the only Gaori exceptions when the project adopts the portable-config policy documented in `README.md`:
+Local runtime, evidence, and tool state must stay out of source commits. The portable tracked exceptions are `.gaori/tester.yaml`, reviewed `.gaori/tester/rules/*.yaml`, `.mulgae/config.yaml`, reviewed `.mulgaeignore`, `.podway/config.yaml`, `.podway/.gitignore`, and the three reviewed Root Kernel Procedure v2 files under `.podway/procedures/`:
 
 ```text
 .gaori/* except tester.yaml and reviewed tester/rules/*.yaml
-.mulgae/
+.mulgae/* except config.yaml
+.podway/runtime/
+.codex/
 .codegraph/
 .omx/
 .omc/
@@ -124,31 +139,13 @@ Local runtime, evidence, and tool state must stay out of source commits. `.gaori
 
 Never run `git add`, `git commit`, or `git push` unless the user explicitly asks for that exact action after verification. Do not discard, overwrite, unstage, or otherwise disturb unrelated user changes.
 
-## Git Commit Messages
+## Mulgae Review Overrides
 
-Use the Lora `lore-commits` skill for every non-trivial commit message. Lora records decision context as native Git trailers; it does not require repository hooks or runtime tooling.
-
-- Load the `lore-commits` skill before composing a non-trivial commit message.
-- Write an imperative summary and add only trailers supported by the actual task history, diff, and verification. Never invent constraints, rejected alternatives, confidence, directives, related commits, or test results.
-- Use `Constraint:`, `Rejected:`, `Confidence:`, `Scope-risk:`, `Reversibility:`, `Directive:`, `Tested:`, `Not-tested:`, and `Related:` according to the skill. Keep `Rejected:` in `alternative | reason` form and use only `high`, `medium`, or `low` for `Confidence:`.
-- Trivial typo or formatting commits may omit Lore trailers when there is no meaningful decision context.
-- Do not add Git hook directories, change `core.hooksPath`, or install `prepare-commit-msg`, `commit-msg`, or related hooks for Lora enforcement. Agent guidance and the installed skill are the enforcement boundary.
-
-This policy does not authorize staging, committing, or pushing. The user must still explicitly request each exact Git action after verification.
-
-## Mulgae Code Review
-
-Use Mulgae only when the user explicitly asks for a Mulgae review. Mulgae is an independent advisory reviewer, not a Gaori feature, test gate, acceptance authority, or runtime dependency.
-
-- Run Mulgae from the Gaori repository root. Verify that `mulgae` is installed and `.mulgae/config.yaml` exists before starting. If either prerequisite is missing, stop and report what is required. Do not run `mulgae init` unless the user separately and explicitly asks to initialize the project.
-- Select exactly one target matching the requested scope: use `--stage` for staged changes, `--dirty` for staged and unstaged changes, or `--diff <base>...HEAD` for a branch or pull request after verifying the actual base. Use `--workspace` only when the user explicitly requests all tracked files at the current workspace state. Ask for the target when the request does not establish one safely.
-- Compose a review-only `--objective` from the user's goal. Require concrete findings supported by captured-target evidence and preserve Gaori's standalone boundary, authoritative command-exit semantics, evidence-only parser/rule behavior, artifact containment, and raw-log contract. Do not include instructions to mutate files, run tools or commands, disclose secrets, or grant approval.
-- Gaori assigns all six non-UI roles to ZCode. Do not configure AGY or substitute another provider unless the user explicitly changes that policy. Mulgae does not reroute a failed role automatically.
-- Before invoking providers, run the same target through `mulgae review <target> --roles logic,security,maintainability,product,documentation,testing --preflight --output json`. Confirm the exact transmitted file set, all six ZCode routes, provider timeout, and invocation budgets. Report an unsafe or overbroad capture instead of proceeding.
-- Run the review with all six non-UI roles and `--output json`. Exit `0` is a successful policy outcome and exit `1` is a published request-changes outcome; any other exit is an operational failure and must be reported rather than bypassed.
-- Preserve the exact run ID. Inspect results with `mulgae status --run <run-id> --output json` and `mulgae findings --run <run-id> --severity low --output json`.
-- Treat every finding as an advisory hypothesis. Verify it against current requirements, accepted ADRs, code, tests, and the captured target before recommending or making a change. Do not modify code unless the user authorized fixes, and do not infer review acceptance, waiver, release, or runtime activation from Mulgae output.
-- Keep `.mulgae/`, provider credential directories, raw transcripts, and exported review bundles local and out of source commits.
+- An explicit `$root-kernel:task-handler` invocation authorizes the task-scoped Mulgae review required by that workflow. Outside that workflow, run Mulgae only when the user explicitly asks for a review.
+- Assign all six non-UI roles (`logic`, `security`, `maintainability`, `product`, `documentation`, and `testing`) to ZCode. Do not configure AGY or substitute another provider unless the user explicitly changes that policy.
+- Compose a review-only objective that requires concrete captured-target findings and preserves Gaori's standalone boundary, authoritative command-exit semantics, evidence-only parser and rule behavior, artifact containment, and raw-log contract.
+- Before provider invocation, preflight the same target and all six roles. Confirm the exact transmitted file set, all six ZCode routes, provider timeout, and invocation budgets; stop on unsafe or overbroad capture.
+- Verify every advisory finding against the captured target and the repository authorities before recommending a change. Do not infer review acceptance, waiver, release, or runtime activation from Mulgae output.
 
 ## Verification
 

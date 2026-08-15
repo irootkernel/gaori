@@ -3,11 +3,12 @@ bin/
 .gjc/
 .kat/
 .gaori/
-.mulgae/
+/.mulgae/*
+!/.mulgae/config.yaml
+/.codex/
 .codegraph/
 .omx/
 .omc/
 .external-review-sidecar/
 
 .DS_Store
-.mulgaeignore
