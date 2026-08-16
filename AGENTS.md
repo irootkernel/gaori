@@ -86,14 +86,14 @@ For multi-step work, keep a short plan in which every step has a corresponding v
 
 ## Development Skill References
 
-- Use `$root-kernel:task-handler` for one named roadmap task.
-- Use `$root-kernel:epic-handler` to implement one roadmap epic as sequential task goals.
-- Use `$root-kernel:epic-validator` to cold-validate and remediate one completed roadmap epic.
-- Use `$root-kernel:dev-setup` to diagnose or configure development tooling.
+- Use `$aquarium:task-handler` for one named roadmap task.
+- Use `$aquarium:epic-handler` to implement one roadmap epic as sequential task goals.
+- Use `$aquarium:epic-validator` to cold-validate and remediate one completed roadmap epic.
+- Use `$aquarium:dev-setup` to diagnose or configure development tooling.
 - Use `$use-mulgae` for an authorized Mulgae review, run inspection, finding follow-up, configuration diagnosis, cleanup plan, or recovery.
 - Use `$use-gaori` when a selected long or noisy check is routed through Gaori or existing Gaori evidence must be inspected.
-- Use `$use-podway` for Podway Procedure v2 session operation, authoring, lifecycle, diagnosis, or recovery; Root Kernel workflow skills retain their stricter roadmap, ownership, and approval rules.
-- In repositories opted into Root Kernel Podway procedures, treat the roadmap as lifecycle authority, Podway as active execution and evidence state, and the Codex goal as a temporary projection of actionable work.
+- Let `$aquarium:task-handler`, `$aquarium:epic-handler`, and `$aquarium:epic-validator` use Podway by default unless the current user opts out before the first managed-session mutation; Aquarium workflow skills retain their stricter roadmap, ownership, and approval rules.
+- Use `$use-podway` directly for an explicitly requested Procedure v2 session operation, authoring, lifecycle, diagnosis, recovery, cancellation, or current-session discard flow. Keep each handler opt-out local to its current task, epic, or validation request.
 - Use `$lore-commits` for non-trivial commit messages and `$lore-query` to inspect recorded decision context.
 - Repository-specific rules below override defaults from the referenced skills.
 
@@ -124,7 +124,7 @@ Preserve these invariants:
 
 Do not claim review acceptance, waiver, final acceptance, install, release, push, or runtime activation from Gaori evidence alone.
 
-Local runtime, evidence, and tool state must stay out of source commits. The portable tracked exceptions are `.gaori/tester.yaml`, reviewed `.gaori/tester/rules/*.yaml`, `.mulgae/config.yaml`, reviewed `.mulgaeignore`, `.podway/config.yaml`, `.podway/.gitignore`, and the three reviewed Root Kernel Procedure v2 files under `.podway/procedures/`:
+Local runtime, evidence, and tool state must stay out of source commits. The portable tracked exceptions are `.gaori/tester.yaml`, reviewed `.gaori/tester/rules/*.yaml`, `.mulgae/config.yaml`, reviewed `.mulgaeignore`, `.podway/config.yaml`, `.podway/.gitignore`, and the three reviewed Aquarium Procedure v2 files under `.podway/procedures/`:
 
 ```text
 .gaori/* except tester.yaml and reviewed tester/rules/*.yaml
@@ -159,7 +159,7 @@ Record in the release notes and completion report that the user waived a repeate
 
 ## Mulgae Review Overrides
 
-- An explicit `$root-kernel:task-handler` invocation authorizes the task-scoped Mulgae review required by that workflow. Outside that workflow, run Mulgae only when the user explicitly asks for a review.
+- An explicit `$aquarium:task-handler` invocation authorizes the task-scoped Mulgae review required by that workflow. Outside that workflow, run Mulgae only when the user explicitly asks for a review.
 - Assign all six non-UI roles (`logic`, `security`, `maintainability`, `product`, `documentation`, and `testing`) to ZCode. Do not configure AGY or substitute another provider unless the user explicitly changes that policy.
 - Compose a review-only objective that requires concrete captured-target findings and preserves Gaori's standalone boundary, authoritative command-exit semantics, evidence-only parser and rule behavior, artifact containment, and raw-log contract.
 - Before provider invocation, preflight the same target and all six roles. Confirm the exact transmitted file set, all six ZCode routes, provider timeout, and invocation budgets; stop on unsafe or overbroad capture.

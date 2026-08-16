@@ -1,0 +1,32 @@
+version: 2
+commands:
+  test:
+    command: ["make", "test"]
+    tags: [full, go, test]
+    parser: generic
+    timeout_sec: 3600
+  test-prepare:
+    command: ["make", "test-prepare"]
+    tags: [go, prepare, test]
+    parser: generic
+    timeout_sec: 1800
+  test-unit:
+    command: ["make", "test-unit"]
+    tags: [go, test, unit]
+    parser: go-test
+    timeout_sec: 1200
+  test-int:
+    command: ["make", "test-int"]
+    tags: [go, integration, test]
+    parser: go-test
+    timeout_sec: 1800
+  test-e2e:
+    command: ["make", "test-e2e"]
+    tags: [e2e, go, test]
+    parser: go-test
+    timeout_sec: 1800
+  diff-check:
+    command: ["git", "diff", "--check"]
+    tags: [git, quality]
+    parser: generic
+    timeout_sec: 60

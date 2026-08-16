@@ -2,7 +2,13 @@ bin/
 
 .gjc/
 .kat/
-.gaori/
+.gaori/*
+!.gaori/tester.yaml
+!.gaori/tester/
+.gaori/tester/*
+!.gaori/tester/rules/
+.gaori/tester/rules/*
+!.gaori/tester/rules/*.yaml
 /.mulgae/*
 !/.mulgae/config.yaml
 /.codex/
