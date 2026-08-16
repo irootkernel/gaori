@@ -137,7 +137,25 @@ Local runtime, evidence, and tool state must stay out of source commits. The por
 .external-review-sidecar/
 ```
 
-Never run `git add`, `git commit`, or `git push` unless the user explicitly asks for that exact action after verification. Do not discard, overwrite, unstage, or otherwise disturb unrelated user changes.
+Never run `git add`, `git commit`, or `git push` unless the user explicitly asks for that exact action after verification. An explicit request to create a release is the narrow exception: it authorizes staging release-scoped files, creating the release commit needed for exact-commit verification, tagging and pushing that verified commit, and publishing its GitHub Release without a second approval. It does not authorize unrelated changes. Do not discard, overwrite, unstage, or otherwise disturb unrelated user changes.
+
+## Patch-Only Release Verification
+
+When the user requests a release, ask whether to use the full release-readiness gate or the reduced patch-only gate unless the request already selects one.
+
+A patch-only release may use the reduced gate only when the user states that `make test` has already passed on the current pre-bump candidate, or the agent directly observed that result, and the user accepts relying on it. If the reduced gate is selected but that fact is not already established, ask for confirmation. Treat the user's statement as the authoritative verification waiver; do not require prior artifacts, reconstruct the earlier run, or rerun `make test` merely to prove the statement.
+
+The changes after the accepted full-gate result must be limited to release-version declarations, matching version assertions, release notes, release-procedure documentation, and agent guidance. They must not change runtime behavior, schemas, embedded assets, dependencies, non-version build inputs, provider policy, or tool configuration. If this boundary, the prior full-gate confirmation, or any reduced-gate check is not satisfied, run the full release-readiness gate before releasing.
+
+For an eligible reduced patch-only release:
+
+1. Prepare the version-only release changes and create the release commit.
+2. On that exact clean commit, run `make test-prepare`, `make test-unit`, and `make test-int`.
+3. Install that commit into an isolated temporary `GOBIN` with its release version and commit linker values.
+4. Verify both `gaori --version` and `gaori version --json` report the new patch version.
+5. Confirm the worktree remains clean and the tag targets the verified commit, then push the commit and tag and publish the GitHub Release.
+
+Record in the release notes and completion report that the user waived a repeated full gate and that `make test-e2e` and the extended release-readiness checks were not rerun.
 
 ## Mulgae Review Overrides
 
@@ -154,9 +172,10 @@ Run the narrowest meaningful verification first, then broaden when shared behavi
 Repository-standard targets:
 
 ```bash
-make unit-test
-make integration-test
-make e2e-test
+make test-prepare
+make test-unit
+make test-int
+make test-e2e
 make test
 git diff --check
 ```

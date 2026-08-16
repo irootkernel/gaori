@@ -13,7 +13,7 @@ UNIT_PACKAGES := ./internal/artifacts ./internal/config ./internal/extract ./int
 INTEGRATION_PACKAGES := ./internal/cli
 E2E_PACKAGES := ./e2e
 
-.PHONY: build install install-toolchain test format lint vet guardrails unit-test integration-test e2e-test clean
+.PHONY: build install install-toolchain test test-prepare test-unit test-int test-e2e format lint vet guardrails clean
 
 build:
 	mkdir -p $(BIN_DIR)
@@ -45,13 +45,16 @@ install-toolchain:
 	echo "installed $(BINARY) $$VERSION_TAG to $$INSTALL_DIR/$(BINARY)"
 
 test:
+	$(MAKE) test-prepare
+	$(MAKE) test-unit
+	$(MAKE) test-int
+	$(MAKE) test-e2e
+
+test-prepare:
 	$(MAKE) format
 	$(MAKE) lint
 	$(MAKE) vet
 	$(MAKE) guardrails
-	$(MAKE) unit-test
-	$(MAKE) integration-test
-	$(MAKE) e2e-test
 
 format:
 	$(GO) fmt ./...
@@ -70,13 +73,13 @@ guardrails:
 	$(GO) test -count=1 ./internal/cli -run '^(TestAdHocParserAndTagsSelectRules|TestAdHocParserMissPreservesCommandResult|TestAdHocParserOptionValidationPreventsExecution|TestCleanCommandContract|TestMaterializeArtifactsExtractionErrorContract|TestNoisyRunsWriteBoundedTerminalArtifacts|TestOversizedFailedRunPreservesRawLog|TestOversizedPassingRunUsesBoundedExtraction|TestOversizedSummarizeUsesBoundedExtraction|TestRunAndSummarizeSelectRulesByAllTags|TestSummarizeRebuildsArtifactsFromRawLogOnly|TestRulesLifecycleCommands)$$'
 	$(GO) test -count=1 ./e2e -run '^(TestBinaryAdHocParserContract|TestBinaryAdHocParserValidationFailsBeforeExecution|TestBinaryCleanContract|TestBinaryTagInterfacesFailBeforeExecution|TestBinaryTagsSelectRulesByAllTags|TestRepositoryTestFunctions|TestRequirementTraceabilityAuditRejectsInvalidEvidence|TestRequirementTraceabilityMatrixCoversCompletedRequirements)$$'
 
-unit-test:
+test-unit:
 	$(GO) test -count=1 $(UNIT_PACKAGES)
 
-integration-test:
+test-int:
 	$(GO) test -count=1 $(INTEGRATION_PACKAGES)
 
-e2e-test:
+test-e2e:
 	$(GO) test -count=1 $(E2E_PACKAGES)
 
 clean:
