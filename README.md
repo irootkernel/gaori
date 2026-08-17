@@ -32,7 +32,7 @@ Gaori is not a test gate or verification authority. The parent project decides w
 
 ## Install
 
-Install the current release with Go:
+Install the current release with Go. Command surfaces added since that release are documented here as they land, and the release notes under [docs/releases/](docs/releases/) record what each published version actually contains, so build from source when you need a surface the pinned release does not have yet:
 
 ```bash
 go install github.com/irootkernel/gaori@v0.1.12
