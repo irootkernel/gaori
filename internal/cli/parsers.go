@@ -147,6 +147,15 @@ func readDetectRawLog(repoRoot, arg string) (raw []byte, totalBytes int64, err e
 	if !filepath.IsAbs(resolved) {
 		resolved = filepath.Join(repoRoot, arg)
 	}
+	// Stat before opening: opening a special file such as a FIFO with no writer
+	// blocks, so a check performed on the already-open descriptor would never be
+	// reached. This is the same ordering config check --sample uses.
+	if info, err := os.Stat(resolved); err != nil {
+		return nil, 0, detectReadError(err)
+	} else if !info.Mode().IsRegular() {
+		return nil, 0, detectReadError(fmt.Errorf("path %q is not a regular file", arg))
+	}
+
 	file, err := os.Open(resolved)
 	if err != nil {
 		return nil, 0, detectReadError(err)
@@ -156,6 +165,8 @@ func readDetectRawLog(repoRoot, arg string) (raw []byte, totalBytes int64, err e
 			raw, totalBytes, err = nil, 0, detectReadError(closeErr)
 		}
 	}()
+	// Re-check the descriptor actually opened, so the guard applies to the file
+	// being read rather than only to the path that was stated.
 	info, err := file.Stat()
 	if err != nil {
 		return nil, 0, detectReadError(err)
