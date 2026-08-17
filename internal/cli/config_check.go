@@ -182,9 +182,11 @@ func checkConfig(repoRoot, configPath, samplePath string) (configCheckResult, er
 }
 
 // measureRedactionSample reports how each configured pattern performed against
-// one operator-named raw log. It surfaces only pattern names, counts, and sizes:
-// no matched text, no surrounding line, no offset, and no pattern definition, so
-// the check that looks for leaks cannot become one.
+// one operator-named raw log. It surfaces only positions, counts, sizes, and the
+// literal sample locator: no matched text, no surrounding line, no offset, and no
+// part of a pattern definition, so the check that looks for leaks cannot become
+// one. Nothing it emits is passed through the sampled patterns, because any value
+// they match would be reported as their own replacement string.
 func measureRedactionSample(repoRoot, samplePath string, redactor safety.Redactor) (*configCheckRedactionSample, error) {
 	resolved := samplePath
 	if !filepath.IsAbs(resolved) {
@@ -210,7 +212,11 @@ func measureRedactionSample(repoRoot, samplePath string, redactor safety.Redacto
 
 	_, counts := redactor.ApplyCounted(string(raw))
 	sample := &configCheckRedactionSample{
-		SamplePath:  redactor.Apply(displayConfigPath(repoRoot, resolved)),
+		// Reported literally, like config_path in the same result. Artifact and
+		// input references stay usable locators, and running the sampled patterns
+		// over this path would report a matching path as the pattern's own
+		// replacement string, which this command must never emit.
+		SamplePath:  displayConfigPath(repoRoot, resolved),
 		SampleBytes: len(raw),
 		Patterns:    make([]configCheckRedactionPattern, 0, len(counts)),
 	}

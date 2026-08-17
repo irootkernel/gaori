@@ -324,7 +324,7 @@ Any check for this must not itself become the leak. Until now Gaori's disclosure
 
 ### Decision
 
-Gaori may derive exactly one class of information from raw-log content into a surface that redaction cannot protect: **aggregate match and replaced-byte counts per configured pattern, measured during one ordered redaction pass.** It must never surface matched text, surrounding lines, byte or line offsets, per-match detail, or any part of a pattern definition. A pattern is identified by its position in configured order, not by its name: surfacing the name would require redacting it like any other configured value, and a pattern whose own regex matches its name would then be reported as that pattern's replacement string. Position cannot self-reference.
+Gaori may derive exactly one class of information from raw-log content into a surface that redaction cannot protect: **aggregate match and replaced-byte counts per configured pattern, measured during one ordered redaction pass.** It must never surface matched text, surrounding lines, byte or line offsets, per-match detail, or any part of a pattern definition. No value the report surfaces is passed through the sampled patterns, because any value they match would be reported as their own replacement string. A pattern is therefore identified by its position in configured order rather than by its name, and the sample locator is reported literally like the config path beside it.
 
 The measurement is opt-in on the existing `config check` preflight, stays read-only, creates no artifacts, and fails closed above the 256 KiB input bound rather than reporting a partial count.
 

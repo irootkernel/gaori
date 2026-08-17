@@ -362,6 +362,9 @@ func TestConfigCheckSampleDoesNotEmitPatternDefinitionsThroughIdentity(t *testin
 	if err := os.MkdirAll(filepath.Join(repo, ".gaori"), 0o755); err != nil {
 		t.Fatal(err)
 	}
+	// Each pattern matches one value this command surfaces: the first matches its
+	// own name, the second matches the sample file name. Passing either through
+	// the sampled patterns would print that pattern's replacement string.
 	selfReferencing := `version: 2
 commands: {}
 redaction:
@@ -369,28 +372,38 @@ redaction:
     - name: token
       regex: 'token'
       replace: 'SENTINELREPLACEMENT0007'
+    - name: pathmatch
+      regex: 'sampled'
+      replace: 'SENTINELREPLACEMENT0008'
 `
 	if err := os.WriteFile(filepath.Join(repo, ".gaori", "tester.yaml"), []byte(selfReferencing), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(repo, "unit.raw.log"), []byte("token=abc\n"), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(repo, "sampled.raw.log"), []byte("token=abc\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
 	for _, args := range [][]string{
-		{"--repo", repo, "config", "check", "--sample", "unit.raw.log"},
-		{"--repo", repo, "--json", "config", "check", "--sample", "unit.raw.log"},
+		{"--repo", repo, "config", "check", "--sample", "sampled.raw.log"},
+		{"--repo", repo, "--json", "config", "check", "--sample", "sampled.raw.log"},
 	} {
 		var stdout, stderr bytes.Buffer
 		if exitCode := Main(args, &stdout, &stderr); exitCode != 0 {
 			t.Fatalf("exit=%d stderr=%s", exitCode, stderr.String())
 		}
 		combined := stdout.String() + stderr.String()
-		if strings.Contains(combined, "SENTINELREPLACEMENT0007") {
-			t.Errorf("output emitted the pattern replacement: %s", combined)
+		for _, replacement := range []string{"SENTINELREPLACEMENT0007", "SENTINELREPLACEMENT0008"} {
+			if strings.Contains(combined, replacement) {
+				t.Errorf("output emitted the pattern replacement %q: %s", replacement, combined)
+			}
 		}
 		if strings.Contains(combined, "token") {
 			t.Errorf("output emitted pattern definition text: %s", combined)
+		}
+		// Positive control: the literal sample locator is still reported, so the
+		// absence of the replacement is not just an absent field.
+		if !strings.Contains(combined, "sampled.raw.log") {
+			t.Errorf("output omits the literal sample path: %s", combined)
 		}
 	}
 }
