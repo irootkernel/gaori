@@ -24,12 +24,16 @@ type configCheckCommand struct {
 }
 
 // configCheckRedactionPattern reports one configured pattern's observed effect.
-// It carries no regex and no replacement, so the deliberate omission of
-// redaction definitions from this command's output is preserved.
+//
+// A pattern is identified by its 1-based position in configured order rather than
+// by its name. Surfacing the name would require redacting it like any other
+// configured value, and a pattern whose own regex matches its name would then be
+// reported as that pattern's replacement string, emitting a definition this
+// command must never emit. Position cannot self-reference.
 type configCheckRedactionPattern struct {
-	Name    string `json:"name"`
-	Matches int    `json:"matches"`
-	Bytes   int    `json:"bytes"`
+	Position int `json:"position"`
+	Matches  int `json:"matches"`
+	Bytes    int `json:"bytes"`
 }
 
 // configCheckRedactionSample lists patterns in configured order, because they are
@@ -112,7 +116,7 @@ func writeRedactionSample(stdout io.Writer, sample *configCheckRedactionSample) 
 	}
 	writef(stdout, "Redaction sample: %s (%d bytes)\n", sample.SamplePath, sample.SampleBytes)
 	for _, pattern := range sample.Patterns {
-		writef(stdout, "  %s\tmatches=%d\treplaced_bytes=%d\n", pattern.Name, pattern.Matches, pattern.Bytes)
+		writef(stdout, "  pattern %d\tmatches=%d\treplaced_bytes=%d\n", pattern.Position, pattern.Matches, pattern.Bytes)
 	}
 	if len(sample.Patterns) == 0 {
 		writeLine(stdout, "Redaction totals: no redaction patterns are configured")
@@ -210,11 +214,11 @@ func measureRedactionSample(repoRoot, samplePath string, redactor safety.Redacto
 		SampleBytes: len(raw),
 		Patterns:    make([]configCheckRedactionPattern, 0, len(counts)),
 	}
-	for _, count := range counts {
+	for index, count := range counts {
 		sample.Patterns = append(sample.Patterns, configCheckRedactionPattern{
-			Name:    redactor.Apply(count.Name),
-			Matches: count.Matches,
-			Bytes:   count.Bytes,
+			Position: index + 1,
+			Matches:  count.Matches,
+			Bytes:    count.Bytes,
 		})
 		sample.TotalMatches += count.Matches
 		sample.ReplacedBytes += count.Bytes

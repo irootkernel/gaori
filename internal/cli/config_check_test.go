@@ -186,6 +186,7 @@ func TestConfigCheckSampleReportsPerPatternCountsWithoutEchoingContent(t *testin
 		"SENTINELCONTEXT0003",
 		"SENTINELREGEX0004[",
 		"SENTINELREPLACE0006",
+		"SENTINELNAME0005",
 	}
 
 	for _, args := range [][]string{
@@ -202,9 +203,12 @@ func TestConfigCheckSampleReportsPerPatternCountsWithoutEchoingContent(t *testin
 				t.Errorf("output leaked %q: %s", sentinel, combined)
 			}
 		}
-		// Positive control: the sample really was scanned.
-		if !strings.Contains(combined, "SENTINELNAME0005") {
-			t.Errorf("output omits the pattern name: %s", combined)
+		// Positive control: the sample really was scanned and both configured
+		// patterns were reported, identified by position rather than by name.
+		for _, position := range []string{"pattern 1", "pattern 2"} {
+			if !strings.Contains(combined, position) && !strings.Contains(combined, `"position":`) {
+				t.Errorf("output omits %s: %s", position, combined)
+			}
 		}
 	}
 
@@ -273,11 +277,11 @@ redaction:
 		t.Fatal(err)
 	}
 	patterns := result.RedactionSample.Patterns
-	if patterns[0].Name != "broad" || patterns[0].Matches != 1 {
-		t.Errorf("broad = %+v, want one match", patterns[0])
+	if patterns[0].Position != 1 || patterns[0].Matches != 1 {
+		t.Errorf("first configured pattern = %+v, want position 1 with one match", patterns[0])
 	}
-	if patterns[1].Name != "narrow" || patterns[1].Matches != 0 {
-		t.Errorf("narrow = %+v, want zero because the broad pattern replaced its input first", patterns[1])
+	if patterns[1].Position != 2 || patterns[1].Matches != 0 {
+		t.Errorf("second configured pattern = %+v, want zero because the first pattern replaced its input", patterns[1])
 	}
 }
 
@@ -345,5 +349,48 @@ func TestConfigCheckSampleFailsClosedOnUnusableSample(t *testing.T) {
 				t.Fatalf("rejected sample created runtime state: %v", err)
 			}
 		})
+	}
+}
+
+// TestConfigCheckSampleDoesNotEmitPatternDefinitionsThroughIdentity covers the
+// self-reference that surfacing a redacted pattern name would create: when a
+// pattern's own regex matches its name, redacting the name to surface it would
+// print that pattern's replacement string, which this command must never emit.
+func TestConfigCheckSampleDoesNotEmitPatternDefinitionsThroughIdentity(t *testing.T) {
+	t.Parallel()
+	repo := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(repo, ".gaori"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	selfReferencing := `version: 2
+commands: {}
+redaction:
+  patterns:
+    - name: token
+      regex: 'token'
+      replace: 'SENTINELREPLACEMENT0007'
+`
+	if err := os.WriteFile(filepath.Join(repo, ".gaori", "tester.yaml"), []byte(selfReferencing), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(repo, "unit.raw.log"), []byte("token=abc\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	for _, args := range [][]string{
+		{"--repo", repo, "config", "check", "--sample", "unit.raw.log"},
+		{"--repo", repo, "--json", "config", "check", "--sample", "unit.raw.log"},
+	} {
+		var stdout, stderr bytes.Buffer
+		if exitCode := Main(args, &stdout, &stderr); exitCode != 0 {
+			t.Fatalf("exit=%d stderr=%s", exitCode, stderr.String())
+		}
+		combined := stdout.String() + stderr.String()
+		if strings.Contains(combined, "SENTINELREPLACEMENT0007") {
+			t.Errorf("output emitted the pattern replacement: %s", combined)
+		}
+		if strings.Contains(combined, "token") {
+			t.Errorf("output emitted pattern definition text: %s", combined)
+		}
 	}
 }

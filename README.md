@@ -184,7 +184,7 @@ To confirm that your redaction patterns actually fire, point the same preflight 
 gaori config check --sample .gaori/runs/standalone/<run>/demo.raw.log
 ```
 
-It reports how many times each pattern matched and how many bytes it replaced. A pattern reporting `matches=0` is the signal worth acting on. Matched text and its surrounding lines are never printed, patterns are counted in configured order so an earlier pattern can leave a later one at zero, and a sample larger than 256 KiB fails closed rather than reporting a partial count.
+It reports, per configured pattern in order, how many times it matched and how many bytes it replaced. A pattern reporting `matches=0` is the signal worth acting on; patterns are identified by position rather than name so that no part of a pattern definition is printed. Matched text and its surrounding lines are never printed, patterns are counted in configured order so an earlier pattern can leave a later one at zero, and a sample larger than 256 KiB fails closed rather than reporting a partial count.
 
 ```yaml
 version: 2

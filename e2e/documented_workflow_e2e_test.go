@@ -132,7 +132,7 @@ func TestDocumentedCLIWorkflowAgainstFreshFixture(t *testing.T) {
 
 	redactionSample := runDocumentationBlock(t, bin, repo, 0,
 		markdownCodeBlockAfter(t, userInterface, "Measure redaction coverage against an existing raw log", "bash"))
-	if !strings.Contains(redactionSample, "token\tmatches=1") {
+	if !strings.Contains(redactionSample, "pattern 1\tmatches=1") {
 		t.Fatalf("documented redaction sample did not report counts: %s", redactionSample)
 	}
 	if strings.Contains(redactionSample, "token=secret") {

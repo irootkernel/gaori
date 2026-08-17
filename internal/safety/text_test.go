@@ -43,8 +43,8 @@ func TestApplyCountedReportsSequentialMatchesAndMatchesApplyOutput(t *testing.T)
 		t.Fatalf("ApplyCounted returned %q, want the Apply result %q", got, want)
 	}
 	want := []RedactionCount{
-		{Name: "token", Matches: 1, Bytes: len("token=secret")},
-		{Name: "label", Matches: 1, Bytes: len("<redacted>")},
+		{Matches: 1, Bytes: len("token=secret")},
+		{Matches: 1, Bytes: len("<redacted>")},
 	}
 	if len(counts) != len(want) {
 		t.Fatalf("counts = %+v, want %+v", counts, want)

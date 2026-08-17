@@ -18,7 +18,6 @@ const (
 )
 
 type redactionRule struct {
-	name        string
 	re          *regexp.Regexp
 	replacement string
 }
@@ -28,10 +27,11 @@ type Redactor struct {
 }
 
 // RedactionCount reports how one configured pattern performed during one ordered
-// redaction pass. It deliberately carries no matched text and no location, so it
-// can be surfaced without becoming the leak it is meant to detect.
+// redaction pass, positionally: ApplyCounted returns one entry per configured
+// pattern in configured order. It deliberately carries no matched text, no
+// location, and no part of the pattern definition, so it can be surfaced without
+// becoming the leak it is meant to detect.
 type RedactionCount struct {
-	Name    string
 	Matches int
 	Bytes   int
 }
@@ -64,7 +64,7 @@ func NewRedactor(patterns []model.RedactionPattern) (Redactor, error) {
 		if err != nil {
 			return Redactor{}, model.NewGaoriError(model.ExitCodeConfigError, "validate regex", err)
 		}
-		redactor.rules = append(redactor.rules, redactionRule{name: pattern.Name, re: re, replacement: pattern.Replace})
+		redactor.rules = append(redactor.rules, redactionRule{re: re, replacement: pattern.Replace})
 	}
 	return redactor, nil
 }
@@ -89,7 +89,7 @@ func (r Redactor) ApplyCounted(text string) (string, []RedactionCount) {
 	redacted := text
 	counts := make([]RedactionCount, 0, len(r.rules))
 	for _, rule := range r.rules {
-		count := RedactionCount{Name: rule.name}
+		var count RedactionCount
 		for _, span := range rule.re.FindAllStringIndex(redacted, -1) {
 			count.Matches++
 			count.Bytes += span[1] - span[0]
