@@ -57,6 +57,8 @@ gaori --json runs list --limit 10
 gaori --json runs list --tag go --status failed
 ```
 
+An attached MCP client has the same inventory through the read-only `list_runs` tool, which mirrors these selectors and field names and additionally reports `runs_truncated` when its 50-run cap or byte budget dropped a matching run. A listed run carries no invocation ID, so it cannot be waited on, cancelled, or read with `get_excerpt`; use the CLI `excerpt` for its failure evidence. A server started with `--output-dir` rejects `list_runs`, because standalone runs then live outside the directory the listing reads.
+
 It accepts only the global `--repo` and `--json` flags. `--status` takes one of `passed`, `failed`, `timed_out`, `killed`, or `internal_error`; `--tag` may repeat and requires every named tag on the run. Directories that are not Gaori timestamps, and runs with no status artifact yet, appear only in `skipped_runs`. Unsafe or malformed evidence fails with exit `3` rather than being silently omitted — report that instead of reading around it. Use this before proposing cleanup so the user can see exactly what a selector would remove.
 
 ## Cleanup, reset, and repair

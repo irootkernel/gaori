@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"slices"
@@ -74,8 +75,17 @@ func TestMCPServerAdvertisesExpectedTools(t *testing.T) {
 			}
 			assertSchemaPropertyDescription(t, tool.OutputSchema, "accepted", "first cancellation request")
 		}
+		if tool.Name == "list_runs" {
+			assertOptionalIntegerBounds(t, tool.InputSchema, "limit", 1, maxMCPListedRuns)
+			if !tool.Annotations.ReadOnlyHint {
+				t.Fatalf("list_runs is not annotated read-only: %+v", tool.Annotations)
+			}
+			if !strings.Contains(tool.Description, "not session state") {
+				t.Fatalf("list_runs description does not separate evidence from session state: %q", tool.Description)
+			}
+		}
 	}
-	want := []string{"cancel_run", "get_excerpt", "get_run", "start_ad_hoc_run", "start_configured_run", "wait_run"}
+	want := []string{"cancel_run", "get_excerpt", "get_run", "list_runs", "start_ad_hoc_run", "start_configured_run", "wait_run"}
 	slices.Sort(names)
 	if !slices.Equal(names, want) {
 		t.Fatalf("tools = %v, want %v", names, want)
@@ -607,5 +617,223 @@ func TestMCPCommandRejectsArgumentsAndIncompatibleGlobals(t *testing.T) {
 				t.Fatalf("exit = %d, stderr=%q", got, stderr.String())
 			}
 		})
+	}
+}
+
+// newMCPTestSession wires an in-memory client and server so tool calls exercise
+// the real schema validation path.
+func newMCPTestSession(t *testing.T, manager *mcpManager) *mcp.ClientSession {
+	t.Helper()
+	server := newMCPServer(manager, NewBuildInfo("gaori", "0.1.12", "test", "test"))
+	client := mcp.NewClient(&mcp.Implementation{Name: "test", Version: "v1"}, nil)
+	clientTransport, serverTransport := mcp.NewInMemoryTransports()
+	serverSession, err := server.Connect(context.Background(), serverTransport, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		if err := serverSession.Close(); err != nil {
+			t.Errorf("close server session: %v", err)
+		}
+	})
+	clientSession, err := client.Connect(context.Background(), clientTransport, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		if err := clientSession.Close(); err != nil {
+			t.Errorf("close client session: %v", err)
+		}
+	})
+	return clientSession
+}
+
+func callListRuns(t *testing.T, session *mcp.ClientSession, arguments map[string]any) *mcp.CallToolResult {
+	t.Helper()
+	result, err := session.CallTool(context.Background(), &mcp.CallToolParams{Name: "list_runs", Arguments: arguments})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return result
+}
+
+func decodeListRuns(t *testing.T, result *mcp.CallToolResult) listRunsOutput {
+	t.Helper()
+	if result.IsError {
+		t.Fatalf("list_runs failed: %+v", result)
+	}
+	encoded, err := json.Marshal(result.StructuredContent)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var out listRunsOutput
+	if err := json.Unmarshal(encoded, &out); err != nil {
+		t.Fatalf("decode list_runs: %v content=%s", err, encoded)
+	}
+	return out
+}
+
+// TestMCPListRunsMatchesCLIRunsListSelectors asserts parity directly against the
+// CLI, so the two surfaces cannot drift in ordering or selector semantics.
+func TestMCPListRunsMatchesCLIRunsListSelectors(t *testing.T) {
+	t.Parallel()
+	repo := t.TempDir()
+	writeRunsListStatus(t, repo, "20260801T000000", "unit", []string{"go", "unit"}, model.RunStatusPassed, 0)
+	writeRunsListStatus(t, repo, "20260802T000000", "web", []string{"unit", "web"}, model.RunStatusFailed, 1)
+	writeRunsListStatus(t, repo, "20260803T000000", "e2e", []string{"e2e", "go"}, model.RunStatusFailed, 1)
+	session := newMCPTestSession(t, newMCPManager(globalOptions{RepoRoot: repo}))
+
+	for _, testCase := range []struct {
+		name      string
+		arguments map[string]any
+		cliArgs   []string
+	}{
+		{name: "all", arguments: map[string]any{}, cliArgs: []string{"runs", "list"}},
+		{name: "absent_arguments", arguments: nil, cliArgs: []string{"runs", "list"}},
+		{name: "status", arguments: map[string]any{"status": "failed"}, cliArgs: []string{"runs", "list", "--status", "failed"}},
+		{name: "tags", arguments: map[string]any{"tags": []string{"go"}}, cliArgs: []string{"runs", "list", "--tag", "go"}},
+		{name: "limit", arguments: map[string]any{"limit": 1}, cliArgs: []string{"runs", "list", "--limit", "1"}},
+	} {
+		t.Run(testCase.name, func(t *testing.T) {
+			out := decodeListRuns(t, callListRuns(t, session, testCase.arguments))
+
+			var stdout, stderr bytes.Buffer
+			args := append([]string{"--repo", repo, "--json"}, testCase.cliArgs...)
+			if exitCode := Main(args, &stdout, &stderr); exitCode != 0 {
+				t.Fatalf("cli exit=%d stderr=%s", exitCode, stderr.String())
+			}
+			var cli runsListResult
+			if err := json.Unmarshal(stdout.Bytes(), &cli); err != nil {
+				t.Fatal(err)
+			}
+			if out.SkippedRuns != cli.SkippedRuns {
+				t.Errorf("skipped_runs = %d, cli reports %d", out.SkippedRuns, cli.SkippedRuns)
+			}
+			mcpEncoded, err := json.Marshal(out.Runs)
+			if err != nil {
+				t.Fatal(err)
+			}
+			cliEncoded, err := json.Marshal(cli.Runs)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if string(mcpEncoded) != string(cliEncoded) {
+				t.Fatalf("mcp runs = %s, cli runs = %s", mcpEncoded, cliEncoded)
+			}
+		})
+	}
+}
+
+func TestMCPListRunsBoundsAndReportsTruncation(t *testing.T) {
+	t.Parallel()
+	repo := t.TempDir()
+	for i := 0; i < maxMCPListedRuns+3; i++ {
+		writeRunsListStatus(t, repo, fmt.Sprintf("20260801T00%02d00", i), "unit", []string{"unit"}, model.RunStatusPassed, 0)
+	}
+	session := newMCPTestSession(t, newMCPManager(globalOptions{RepoRoot: repo}))
+
+	capped := decodeListRuns(t, callListRuns(t, session, map[string]any{}))
+	if len(capped.Runs) != maxMCPListedRuns || !capped.RunsTruncated {
+		t.Fatalf("runs=%d truncated=%v, want %d and true", len(capped.Runs), capped.RunsTruncated, maxMCPListedRuns)
+	}
+	encoded, err := json.Marshal(capped)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(encoded) > safety.MaxSummaryBytes*2 {
+		t.Fatalf("response is %d bytes, which exceeds the intended bound", len(encoded))
+	}
+
+	exact := decodeListRuns(t, callListRuns(t, session, map[string]any{"limit": 3}))
+	if len(exact.Runs) != 3 || !exact.RunsTruncated {
+		t.Fatalf("runs=%d truncated=%v, want 3 and true because more runs match", len(exact.Runs), exact.RunsTruncated)
+	}
+
+	small := t.TempDir()
+	writeRunsListStatus(t, small, "20260801T000000", "unit", []string{"unit"}, model.RunStatusPassed, 0)
+	single := decodeListRuns(t, callListRuns(t, newMCPTestSession(t, newMCPManager(globalOptions{RepoRoot: small})), map[string]any{}))
+	if len(single.Runs) != 1 || single.RunsTruncated {
+		t.Fatalf("runs=%d truncated=%v, want 1 and false", len(single.Runs), single.RunsTruncated)
+	}
+}
+
+func TestMCPListRunsRejectsInvalidSelectorsWithoutReflectingRequestData(t *testing.T) {
+	t.Parallel()
+	repo := t.TempDir()
+	writeRunsListStatus(t, repo, "20260801T000000", "unit", []string{"unit"}, model.RunStatusPassed, 0)
+	session := newMCPTestSession(t, newMCPManager(globalOptions{RepoRoot: repo}))
+
+	for name, arguments := range map[string]map[string]any{
+		"zero_limit":     {"limit": 0},
+		"negative_limit": {"limit": -1},
+		"over_limit":     {"limit": maxMCPListedRuns + 1},
+		"null_limit":     {"limit": nil},
+		"unknown_status": {"status": "token=secret"},
+		"unsafe_tag":     {"tags": []string{"token=secret"}},
+	} {
+		t.Run(name, func(t *testing.T) {
+			result, err := session.CallTool(context.Background(), &mcp.CallToolParams{Name: "list_runs", Arguments: arguments})
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !result.IsError {
+				t.Fatalf("expected an error result for %v", arguments)
+			}
+			encoded, err := json.Marshal(result)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if strings.Contains(string(encoded), "token=secret") {
+				t.Fatalf("error reflected request data: %s", encoded)
+			}
+			if len(encoded) > safety.MaxExcerptBytes {
+				t.Fatalf("error result is %d bytes, want at most %d", len(encoded), safety.MaxExcerptBytes)
+			}
+		})
+	}
+}
+
+func TestMCPListRunsFailsClosedOnUnsafeEvidence(t *testing.T) {
+	t.Parallel()
+	repo := t.TempDir()
+	runDir := filepath.Join(repo, ".gaori", "runs", "standalone", "20260801T000000")
+	if err := os.MkdirAll(runDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	tampered, err := json.Marshal(model.Status{
+		Status:      model.RunStatusPassed,
+		CommandID:   "unit",
+		SummaryPath: "../../../token=secret/unit.summary.json",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(runDir, "unit.status.json"), tampered, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	session := newMCPTestSession(t, newMCPManager(globalOptions{RepoRoot: repo}))
+
+	result := callListRuns(t, session, map[string]any{})
+	if !result.IsError {
+		t.Fatalf("expected unsafe evidence to fail closed: %+v", result)
+	}
+	encoded, err := json.Marshal(result)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(encoded), "token=secret") {
+		t.Fatalf("error leaked an artifact-supplied locator: %s", encoded)
+	}
+}
+
+func TestMCPListRunsRejectsCallerSelectedOutputDirectory(t *testing.T) {
+	t.Parallel()
+	repo := t.TempDir()
+	writeRunsListStatus(t, repo, "20260801T000000", "unit", []string{"unit"}, model.RunStatusPassed, 0)
+	session := newMCPTestSession(t, newMCPManager(globalOptions{RepoRoot: repo, OutputDir: t.TempDir()}))
+
+	result := callListRuns(t, session, map[string]any{})
+	if !result.IsError {
+		t.Fatalf("expected a caller-selected output directory to fail closed: %+v", result)
 	}
 }

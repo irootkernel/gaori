@@ -1,6 +1,6 @@
 # Gaori Architecture
 
-Status: Complete through `MCP-005`
+Status: Complete through `MCP-006`
 Scope: Standalone Gaori v0.1 architecture, including session-local STDIO MCP execution
 
 This document defines Gaori's technical and artifact contracts. See the [integration guide](integration-guide.md) for parent-project ownership, supported capability status, and rollout guidance.
@@ -67,6 +67,8 @@ CLI
 ## MCP lifecycle data flow
 
 `gaori mcp` runs an attached STDIO server. A start tool allocates an in-memory invocation in `queued`, then the shared run pipeline reports `executing` and `materializing` before the registry publishes `finished`. Start tools are marked mutating without narrowing the MCP destructive or open-world defaults, since Gaori cannot constrain child-command side effects. Every change increments a revision and wakes bounded `wait_run` calls. Wait request cancellation is isolated from the run context; only `cancel_run` or server shutdown cancels execution. `cancel_run.accepted` records whether that call won the first cancellation request for an unfinished invocation; it does not replace the authoritative final result or abandon evidence materialization, and clients still reconcile `finished`. Those execution cancellations share a start gate with process creation: cancellation that wins the gate prevents `cmd.Start`, while an established child is canceled through its process group. Shutdown first waits until every in-flight process-start gate resolves so no child can start outside cancellation ownership; after every in-flight process-start gate resolves and cancellation is delivered, all invocations share one three-second artifact-drain deadline. This start-safety wait is intentionally outside the drain budget. Empty input or EOF at a newline-delimited frame boundary closes the server through that shutdown path; malformed or truncated transport input remains an operational failure. MCP owns server signals and passes shutdown to child process groups through run-context cancellation, avoiding competing signal consumers. Final results and excerpts reuse existing redaction, containment, and artifact code. Operational error text uses the exact validated run redactor before bounding, or a safe operation-only fallback when config validation failed; raw-log bytes never enter MCP responses. The registry is discarded on server exit and is not a workflow ledger.
+
+`list_runs` deliberately bypasses that registry. It shares the Listing Engine with `gaori runs list`, so both surfaces agree on which evidence exists, and it returns no invocation identifier, phase, or revision: a listed run is finished on-disk evidence rather than session state, which is what keeps the ephemeral-state boundary intact (`ADR-0016`). Responses are bounded by a record cap and the surfaced-evidence byte budget because listing copies command IDs, tags, and extractor status out of a status artifact without validating their length. Listing errors pass through the same bounded non-reflective error path as invocation lookups, since a status artifact can supply a summary locator that redaction leaves literal.
 
 ## Data flow: configured command
 

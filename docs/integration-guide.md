@@ -47,7 +47,7 @@ The default adoption model is selective: route commands through Gaori when their
 | Original raw evidence | Yes | Raw logs are preserved and intentionally not redacted. |
 | Timeout | Yes | A timed-out command retains partial evidence and uses status `timed_out` with exit code `124`. |
 | Operator interruption | Yes | Unix SIGINT/SIGTERM process-group behavior is covered by built-binary tests; non-Unix builds signal the direct child and have a narrower guarantee. |
-| Local MCP lifecycle | Yes | `gaori mcp` provides session-local asynchronous start, revision wait, explicit cancel, and bounded excerpt tools over STDIO. |
+| Local MCP lifecycle | Yes | `gaori mcp` provides session-local asynchronous start, revision wait, explicit cancel, bounded excerpt, and read-only completed-evidence listing tools over STDIO. |
 | Deterministic binary selection | Yes | The bundled Python 3 resolver selects an explicit environment, metadata, or versioned toolchain binary and never falls back to `PATH`. |
 
 Global options are position-independent within the Gaori-owned argument prefix. Integrations may use either `gaori --json run unit` or `gaori run unit --json`; arguments after an ad-hoc `--` boundary are never interpreted as Gaori globals.
@@ -59,7 +59,7 @@ These are current boundaries, not hidden partial features:
 - Selection or enforcement of the parent project's required test gates.
 - Test planning, test generation, code review, or acceptance decisions.
 - External orchestration, workflow/session management, or acceptance-state management.
-- A resident watcher daemon, filesystem running-state heartbeat, or durable progress service. CLI runs still write only final `status.json`; an attached MCP client may use the ephemeral session-local lifecycle instead of process polling.
+- A resident watcher daemon, filesystem running-state heartbeat, or durable progress service. CLI runs still write only final `status.json`; an attached MCP client may use the ephemeral session-local lifecycle instead of process polling. The read-only `list_runs` tool reads finished `status.json` artifacts and is not a ledger, a heartbeat, or restart recovery.
 - Automatic issue creation, release, push, install, update, or runtime activation.
 - Automatic generic-parser fallback after a specialized parser misses.
 - Automatic parser selection or reparsing. `parsers detect` reports candidates for a log; the operator or agent still passes `--parser <label>` explicitly, and Gaori never re-summarizes a completed run on its own.

@@ -2,6 +2,8 @@ package cli
 
 import (
 	"context"
+	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -24,6 +26,7 @@ const (
 	maxMCPWait         = 50 * time.Second
 	mcpDrainWait       = 3 * time.Second
 	maxMCPInvocationID = 24
+	maxMCPListedRuns   = 50
 )
 
 type mcpPhase string
@@ -314,6 +317,41 @@ type excerptOutput struct {
 	Content     string `json:"content"`
 }
 
+// listRunsInput mirrors the `runs list` selectors. Every field carries omitempty
+// because jsonschema-go marks any field without it required, which would reject a
+// call with no arguments.
+type listRunsInput struct {
+	Tags   []string `json:"tags,omitempty" jsonschema:"canonical rule selector tags; every listed tag must be present on the run"`
+	Status string   `json:"status,omitempty" jsonschema:"one terminal run status: passed, failed, timed_out, killed, or internal_error"`
+	Limit  *int     `json:"limit,omitempty" jsonschema:"maximum runs to report from 1 through 50; defaults to 50"`
+}
+
+type listRunsOutput struct {
+	Runs          []artifacts.RunListing `json:"runs"`
+	SkippedRuns   int                    `json:"skipped_runs"`
+	RunsTruncated bool                   `json:"runs_truncated" jsonschema:"true when the record cap or byte budget dropped a run these selectors would otherwise report"`
+}
+
+// boundMCPRunListings returns the longest prefix of runs that fits both the
+// record cap and the surfaced-evidence byte budget. The record cap alone is not a
+// bound: listing copies command IDs, tags, and extractor status out of a status
+// artifact without validating their length, so one hand-edited artifact could
+// otherwise produce a very large response.
+func boundMCPRunListings(runs []artifacts.RunListing, limit int) ([]artifacts.RunListing, bool) {
+	budget := safety.MaxSummaryBytes
+	for index, run := range runs {
+		if index == limit {
+			return runs[:index], true
+		}
+		encoded, err := json.Marshal(run)
+		if err != nil || len(encoded) > budget {
+			return runs[:index], true
+		}
+		budget -= len(encoded)
+	}
+	return runs, false
+}
+
 func newMCPServer(manager *mcpManager, info BuildInfo) *mcp.Server {
 	server := mcp.NewServer(&mcp.Implementation{Name: "gaori", Version: info.Version}, &mcp.ServerOptions{Instructions: "Gaori runs selected test commands and returns factual evidence. Command status and exit_code are authoritative; extractor_status describes evidence only. Prefer wait_run over process polling. Cancel only with explicit user intent. Raw logs may contain unredacted values and are never returned by these tools. Gaori evidence does not grant review or final acceptance."})
 	readOnly := mcp.ToolAnnotations{ReadOnlyHint: true, IdempotentHint: true}
@@ -377,6 +415,39 @@ func newMCPServer(manager *mcpManager, info BuildInfo) *mcp.Server {
 			return nil, excerptOutput{}, fmt.Errorf("get excerpt: evidence unavailable")
 		}
 		return nil, out, nil
+	})
+	mcp.AddTool(server, &mcp.Tool{
+		Name:        "list_runs",
+		Description: "List completed standalone Gaori runs from redacted status artifacts, newest first. This is finished on-disk evidence, not session state: entries carry no invocation ID and cannot be waited on, cancelled, or passed to get_excerpt.",
+		Annotations: &readOnly,
+		InputSchema: boundedIntegerInputSchema[listRunsInput]("limit", 1, maxMCPListedRuns),
+	}, func(_ context.Context, _ *mcp.CallToolRequest, in listRunsInput) (*mcp.CallToolResult, listRunsOutput, error) {
+		// Listing reads only `.gaori/runs/standalone/`, so a server writing
+		// elsewhere would report a list that systematically omits its own runs.
+		if manager.outputDir != "" {
+			return nil, listRunsOutput{}, fmt.Errorf("list_runs reports only default standalone evidence; this server writes to a caller-selected output directory")
+		}
+		limit := maxMCPListedRuns
+		if in.Limit != nil {
+			if *in.Limit < 1 || *in.Limit > maxMCPListedRuns {
+				return nil, listRunsOutput{}, fmt.Errorf("limit must be between 1 and %d", maxMCPListedRuns)
+			}
+			limit = *in.Limit
+		}
+		// Select with no limit so truncation can be reported honestly, then bound.
+		selectors, err := parseRunsListSelectors(stringList(in.Tags), in.Status, 0)
+		if err != nil {
+			return nil, listRunsOutput{}, errors.New(safeMCPErrorMessage(err, nil))
+		}
+		listed, err := artifacts.ListStandalone(manager.repoRoot)
+		if err != nil {
+			// Listing errors can embed an untrusted summary locator decoded from a
+			// status artifact, and redaction leaves path fields literal, so the
+			// message must not reach the client verbatim.
+			return nil, listRunsOutput{}, errors.New(safeMCPErrorMessage(err, nil))
+		}
+		bounded, truncated := boundMCPRunListings(selectors.apply(listed.Runs), limit)
+		return nil, listRunsOutput{Runs: bounded, SkippedRuns: listed.SkippedRuns, RunsTruncated: truncated}, nil
 	})
 	return server
 }

@@ -173,7 +173,7 @@ func TestBinaryMCPLifecycleAndBoundedEvidence(t *testing.T) {
 	}()
 
 	tools, err := session.ListTools(ctx, nil)
-	if err != nil || len(tools.Tools) != 6 {
+	if err != nil || len(tools.Tools) != 7 {
 		t.Fatalf("list tools: count=%d err=%v", len(tools.Tools), err)
 	}
 	assertMCPToolErrorDoesNotContain(t, ctx, session, "get_run", map[string]any{
@@ -325,8 +325,8 @@ func TestMCPDocumentationAndSkillContract(t *testing.T) {
 		"skills/use-gaori/SKILL.md", "skills/use-gaori/references/lifecycle.md", "skills/use-gaori/references/recovery.md",
 	}
 	completionStatus := map[string]string{
-		"docs/architecture.md":   "Status: Complete through `MCP-005`",
-		"docs/user-interface.md": "complete through `MCP-005`",
+		"docs/architecture.md":   "Status: Complete through `MCP-006`",
+		"docs/user-interface.md": "complete through `MCP-006`",
 	}
 	drainContractPaths := map[string]bool{
 		"README.md":                                true,
@@ -346,7 +346,7 @@ func TestMCPDocumentationAndSkillContract(t *testing.T) {
 			t.Fatal(err)
 		}
 		text := string(data)
-		for _, required := range []string{"wait_run", "cancel_run"} {
+		for _, required := range []string{"wait_run", "cancel_run", "list_runs"} {
 			if !strings.Contains(text, required) {
 				t.Errorf("%s does not describe %s", relative, required)
 			}
@@ -373,7 +373,7 @@ func TestMCPDocumentationAndSkillContract(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, required := range []string{
-		"start_configured_run", "start_ad_hoc_run", "get_run", "wait_run", "cancel_run", "get_excerpt", "CLI workflow",
+		"start_configured_run", "start_ad_hoc_run", "get_run", "wait_run", "cancel_run", "get_excerpt", "list_runs", "CLI workflow",
 		"--version", "config check", "--timeout-sec", "summary_markdown", "summary_json", "extractor_status", "Legacy `summary` and `extractor`",
 	} {
 		if !strings.Contains(string(skill), required) {
@@ -425,4 +425,86 @@ func callMCPTool[T any](t *testing.T, ctx context.Context, session *mcp.ClientSe
 		t.Fatalf("decode %s result: %v (%s)", name, err, data)
 	}
 	return output
+}
+
+// TestBinaryMCPListsCompletedStandaloneEvidence closes the gap the use-gaori skill
+// creates: an MCP-attached agent is told to establish current state from the
+// completed-run index, which previously required leaving MCP for the CLI.
+func TestBinaryMCPListsCompletedStandaloneEvidence(t *testing.T) {
+	t.Parallel()
+	root := projectRoot(t)
+	bin := buildBinary(t, root)
+	repo := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(repo, ".gaori"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	config := "version: 2\ncommands:\n  fail:\n    command: [\"sh\", \"-c\", \"echo 'TypeError: token=secret failed'; exit 7\"]\n    tags: [unit]\n    parser: generic\n    timeout_sec: 30\nredaction:\n  patterns:\n    - name: token\n      regex: 'token=[^ ]+'\n      replace: 'token=<redacted>'\n"
+	if err := os.WriteFile(filepath.Join(repo, ".gaori", "tester.yaml"), []byte(config), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	command := exec.Command(bin, "--repo", repo, "mcp")
+	command.Dir = repo
+	client := mcp.NewClient(&mcp.Implementation{Name: "gaori-e2e", Version: "v1"}, nil)
+	session, err := client.Connect(ctx, &mcp.CommandTransport{Command: command}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		if err := session.Close(); err != nil {
+			t.Errorf("close MCP session: %v", err)
+		}
+	}()
+
+	// An empty argument object and an absent one must both satisfy the schema.
+	for _, arguments := range []map[string]any{{}, nil} {
+		empty := callMCPTool[mcpBinaryRunListing](t, ctx, session, "list_runs", arguments)
+		if len(empty.Runs) != 0 || empty.RunsTruncated {
+			t.Fatalf("expected no completed evidence before the first run: %+v", empty)
+		}
+	}
+
+	started := callMCPTool[mcpBinarySnapshot](t, ctx, session, "start_configured_run", map[string]any{"command_id": "fail"})
+	started = waitForMCPFinish(t, ctx, session, started)
+	if started.Result.Status != model.RunStatusFailed || started.Result.ExitCode != 7 {
+		t.Fatalf("unexpected run result: %+v", started.Result)
+	}
+
+	listed := callMCPTool[mcpBinaryRunListing](t, ctx, session, "list_runs", map[string]any{"tags": []string{"unit"}, "status": "failed"})
+	if len(listed.Runs) != 1 || listed.RunsTruncated {
+		t.Fatalf("list_runs = %+v, want the single completed failed run", listed)
+	}
+	run := listed.Runs[0]
+	if run.CommandID != "fail" || run.Status != string(model.RunStatusFailed) || run.ExitCode != 7 {
+		t.Fatalf("unexpected listing: %+v", run)
+	}
+	if !strings.HasPrefix(run.SummaryJSON, ".gaori/runs/standalone/") || !strings.HasSuffix(run.SummaryMarkdown, "fail.summary.md") {
+		t.Fatalf("unexpected artifact references: %+v", run)
+	}
+
+	encoded, err := json.Marshal(listed)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(encoded), "token=secret") {
+		t.Fatalf("listing surfaced unredacted evidence: %s", encoded)
+	}
+	// A listed run is finished evidence, not a session invocation.
+	if strings.Contains(string(encoded), "invocation_id") {
+		t.Fatalf("listing exposed an invocation identity: %s", encoded)
+	}
+}
+
+type mcpBinaryRunListing struct {
+	Runs []struct {
+		CommandID       string `json:"command_id"`
+		Status          string `json:"status"`
+		ExitCode        int    `json:"exit_code"`
+		SummaryJSON     string `json:"summary_json"`
+		SummaryMarkdown string `json:"summary_markdown"`
+	} `json:"runs"`
+	SkippedRuns   int  `json:"skipped_runs"`
+	RunsTruncated bool `json:"runs_truncated"`
 }

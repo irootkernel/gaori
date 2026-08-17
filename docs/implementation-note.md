@@ -1,6 +1,6 @@
 # Gaori Implementation Note
 
-Status: Current for `gaori v0.1.12`; complete through `MCP-005`
+Status: Current for `gaori v0.1.12`; complete through `MCP-006`
 Scope: Maintainer guidance for standalone execution, evidence artifacts, parser/rule behavior, operator-directed cleanup, and session-local STDIO MCP execution
 
 This document explains implementation constraints and verification expectations for contributors. It is not the parent-project adoption contract; integrators should start with the [integration guide](integration-guide.md).
@@ -274,7 +274,7 @@ Before the next release tag, verify all of the following:
 - parser fixture coverage for every implemented parser label
 - rule lifecycle coverage for `list/search/show/create/update/delete/test/propose`
 - summary-based proposal coverage for status-bound provenance, large raw-log streaming, bounded selected spans, and stale or replaced evidence
-- MCP built-binary coverage for all six tools, revision waits, explicit cancellation, EOF/malformed input, redaction, bounded excerpts, and Unix signal/process-group shutdown
+- MCP built-binary coverage for all seven tools, revision waits, explicit cancellation, EOF/malformed input, redaction, bounded excerpts, and Unix signal/process-group shutdown
 - fresh-fixture execution of every documented Gaori CLI command with generated Markdown compared to the documented shape
 - toolchain resolver status and forwarding checks for environment, absolute-path metadata, and versioned metadata selection
 - artifact path and containment verification for `.gaori/`, `--output-dir`, and `.gaori/runs/scoped/<run_id>/...`, including external `.gaori/runs/standalone` and `.gaori/runs/scoped` symlink rejection

@@ -252,7 +252,7 @@ The final `status.json` boundary in ADR-0005 is deterministic for no-agent watch
 
 Gaori will expose a STDIO-only MCP server with an in-memory invocation registry. A start operation returns immediately; get and revision-based wait operations expose `queued`, `executing`, `materializing`, and `finished` phases; explicit cancel and server shutdown cancel active child process groups. Wait expiry and cancellation affect only the wait request. Completed results reuse the existing command, extraction, redaction, and artifact contracts, and raw-log contents are never returned through MCP.
 
-This live channel is scoped to one MCP server process. It does not persist running state, recover invocations after restart, detach commands, listen on a network socket, or own workflow and acceptance state. ADR-0005 remains the compatibility boundary for final filesystem watchers.
+This live channel is scoped to one MCP server process. It does not persist running state, recover invocations after restart, detach commands, listen on a network socket, or own workflow and acceptance state. ADR-0016 clarifies that this session-state boundary does not restrict read-only MCP access to already-materialized on-disk evidence. ADR-0005 remains the compatibility boundary for final filesystem watchers.
 
 ### Consequences
 
@@ -334,6 +334,32 @@ The measurement is opt-in on the existing `config check` preflight, stays read-o
 - Adding any locality to the report — line numbers, offsets, per-match detail, a prefix of a match — requires a new ADR.
 - An oversized sample fails closed because a partial scan could report `matches: 0` for a pattern whose input the scan never saw, which is the most harmful possible output for a leak check.
 - `config check` now reads one operator-named raw log, bounded by the same 256 KiB limit as `rules test` and `rules propose --raw-log`.
+
+## ADR-0016: Finished on-disk evidence is readable through MCP; live state stays session-local
+
+Status: Accepted
+Date: 2026-08-17
+
+### Context
+
+ADR-0012 and `GAORI-REQ-RQMCP-006` keep live invocation state ephemeral to one server process. The `use-gaori` skill directs an attached agent to prefer MCP for a new long-running test, and separately to establish current state from `gaori --json runs list`. MCP exposed only the in-memory registry, so an MCP-attached agent could see just the invocations its own session started and the documented discovery step required falling back to the CLI. The integration guide also asks a client to reconcile the command and final artifacts after a disconnect, which was likewise impossible over MCP alone.
+
+Reading already-materialized artifacts and retaining live state are different things, but nothing recorded that difference, so any listing tool appeared to contradict RQMCP-006.
+
+### Decision
+
+MCP may expose read-only tools over already-materialized on-disk evidence that the CLI already exposes, through the same code path, **when the tool is stateless**: it accepts no invocation identifier, returns none, cannot be waited on or cancelled, and cannot resume, retry, or reconcile an invocation. `list_runs` is the first such tool and reuses `artifacts.ListStandalone` and the `runs list` selectors unchanged.
+
+ADR-0005 remains the boundary for the finished artifacts a listing reads, and ADR-0012 continues to govern live state. The live registry stays ephemeral, single-process, and non-recoverable. Gaori still adds no durable job ledger, restart recovery, acceptance state, or workflow orchestration: a listing is a bounded filesystem read of evidence that already exists, not retained state.
+
+### Consequences
+
+- An MCP-attached agent can perform the documented discovery and post-disconnect reconciliation steps without a CLI fallback.
+- Responses stay bounded by an explicit record cap and a byte budget, with truncation reported explicitly, because listing copies command IDs, tags, and extractor status out of a status artifact without validating their length.
+- A listed run cannot be reattached: it carries no invocation ID, so `get_run`, `wait_run`, `cancel_run`, and `get_excerpt` stay registry-only and excerpt retrieval for a listed run stays the CLI `excerpt` command.
+- Listing errors pass through the bounded non-reflective MCP error path, because a status artifact can supply an attacker-controlled summary locator that redaction deliberately leaves literal.
+- MCP inherits the listing's scope — default standalone evidence only — so a server started with a caller-selected output directory rejects the listing rather than returning a result that omits its own runs.
+- Future MCP read tools must pass the same statelessness test; anything that persists state, recovers an invocation, or accumulates cross-session history stays rejected.
 
 ## Future ADR candidates
 

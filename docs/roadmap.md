@@ -1,6 +1,6 @@
 # Gaori Roadmap
 
-Status: Completed through `MCP-005`
+Status: Completed through `MCP-006`
 Scope: Implementation tracking for the Gaori v0.1 standalone baseline, hardening, tag and parser selection, release readiness, identity migration, operator-directed standalone evidence cleanup, portable project config, CLI usability improvements, and session-local MCP execution
 
 This roadmap is a delivery record, not an operator guide or a promise that out-of-scope capabilities will be added. See the [integration guide](integration-guide.md) for the current supported/unsupported capability boundary and `todo.md` for explicitly accepted open work.
@@ -10,7 +10,7 @@ Task status values: `Planned`, `In Progress`, `Blocked`, `Done`, `Deferred`.
 Existing `Done` entries record completion of the original v0.1 implementation slices. They do not supersede or satisfy the later `HARDE` tasks, which close correctness, safety, verification, and documentation gaps found during repository review.
 
 Current implementation snapshot:
-- `Done`: `SETUP-001` to `SETUP-003`, `RUNNR-001` to `RUNNR-003`, `ARTIF-001` to `ARTIF-003`, `PARSE-001` to `PARSE-007`, `SAFEY-001` to `SAFEY-004`, `CLIUX-001` to `CLIUX-008`, `RULES-001` to `RULES-005`, `DOCUM-001` to `DOCUM-003`, `HARDE-001` to `HARDE-007`, `TAGS-001`, `ADHOC-001`, `ADHOC-002`, `RELRV-001` to `RELRV-009`, `BRAND-001`, `CLEAN-001`, `PORTA-001`, `MCP-001` to `MCP-005`
+- `Done`: `SETUP-001` to `SETUP-003`, `RUNNR-001` to `RUNNR-003`, `ARTIF-001` to `ARTIF-003`, `PARSE-001` to `PARSE-007`, `SAFEY-001` to `SAFEY-004`, `CLIUX-001` to `CLIUX-008`, `RULES-001` to `RULES-005`, `DOCUM-001` to `DOCUM-003`, `HARDE-001` to `HARDE-007`, `TAGS-001`, `ADHOC-001`, `ADHOC-002`, `RELRV-001` to `RELRV-009`, `BRAND-001`, `CLEAN-001`, `PORTA-001`, `MCP-001` to `MCP-006`
 - `In Progress`: none
 - `Deferred`: none
 - `Planned`: none
@@ -161,3 +161,4 @@ Completed release-readiness findings are retained here; remaining accepted findi
 | MCP-003 | Done | Add the asynchronous STDIO MCP server and its six bounded tools. | Lifecycle concurrency, MCP protocol, schema, and CLI integration tests. | `GAORI-REQ-RQMCP-001` to `GAORI-REQ-RQMCP-006` |
 | MCP-004 | Done | Synchronize user documentation and the source-distributed `use-gaori` skill. | Documentation readback, stale-contract search, link checks, and `git diff --check`. | `GAORI-REQ-RQMCP-001` to `GAORI-REQ-RQMCP-006`, `ADR-0012` |
 | MCP-005 | Done | Harden the built-binary MCP lifecycle and complete requirement traceability. | Full unit, integration, E2E, repository, and diff gates. | `GAORI-REQ-RQMCP-001` to `GAORI-REQ-RQMCP-006` |
+| MCP-006 | Done | Add a read-only `list_runs` tool so an attached client can discover completed standalone evidence and reconcile after a disconnect without a durable ledger. | MCP schema and selector-parity integration tests, bounded fail-closed listing tests, built-binary protocol coverage, and the documentation/skill contract test. | `GAORI-REQ-RQMCP-007`, `GAORI-REQ-RQCLI-013`, `ADR-0005`, `ADR-0012`, `ADR-0016` |
