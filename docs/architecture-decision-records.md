@@ -296,7 +296,7 @@ Observed registry behavior makes a single recommendation unsound. Several labels
 
 ### Decision
 
-`gaori parsers list` enumerates registry keys in ascending order. `gaori parsers detect <raw-log>` evaluates every registry entry against one caller-named log and reports each label's candidate count, that label's own summary-heuristic verdict, and the scan bounds. It loads no config, applies no project rules, writes nothing, surfaces no text taken from the log, and names no recommended label.
+`gaori parsers list` enumerates registry keys in ascending order. `gaori parsers detect <raw-log>` evaluates every registry entry against one caller-named log and reports each label's candidate count, that label's own summary-heuristic verdict, the file size, and the scan bounds. Because detection reports only counts, it reads at most the final 256 KiB of complete lines rather than the whole file: both the candidate counts and the heuristic verdicts describe that window, so a diagnostic command cannot be made to hold an unbounded log in memory or run every parser pattern across it. It loads no config, applies no project rules, writes nothing, surfaces no text taken from the log, and names no recommended label.
 
 Results are ordered by positive verdict, then descending candidate count, then label. That is display order only. Because the generic descriptor exposes no heuristic, generic cannot outrank a label that recognized the log.
 
@@ -307,7 +307,8 @@ Discovery output must never be wired into extraction as a fallback or used to re
 - Label selection becomes informed without adding fallback or changing pass/fail.
 - Detect reports observations, so it exits `0` even when every label reports zero candidates.
 - Emitting no log-derived text is stronger than redacting it, so detect needs no redactor and works without project config.
-- Candidate counts are computed inside the bounded scan window while heuristics read the complete log, so a label may report a positive verdict with zero candidates.
+- Candidate counts and heuristic verdicts both describe the bounded scan window, so evidence outside that window is not reported and `truncated` says so.
+- A label may still report a positive verdict with zero candidates, because a heuristic and an extractor can disagree about the same window.
 - Adding a parser remains one registry entry plus its extractor; discovery follows automatically.
 
 ## ADR-0015: Redaction effectiveness is reported as ordered-pass counts only

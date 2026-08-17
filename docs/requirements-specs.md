@@ -77,7 +77,7 @@ Implementation note: the original v0.1 roadmap and the recorded `RQHAR` hardenin
 - [x] `GAORI-REQ-RQEXT-005` Report `extractor_status` as `precise`, `partial`, `degraded`, or `no_match`, with degraded evidence when surfaced records are truncated.
 - [x] `GAORI-REQ-RQEXT-006` Report degraded extraction when a failed, timed-out, or killed command has no useful failure span.
 - [x] `GAORI-REQ-RQEXT-007` Never use extraction rules, parser matches, or parser misses to override the executed command's exit code or authoritative non-pass status.
-- [x] `GAORI-REQ-RQEXT-008` Evaluate every supported parser label against one raw log through the shared parser registry using the same bounded 256 KiB complete-line tail and ANSI handling as extraction, surfacing only label names, candidate counts, heuristic verdicts, and scan bounds; parser discovery never applies project rules, selects a parser, creates artifacts, or changes any run's status, exit code, or `extractor_status`.
+- [x] `GAORI-REQ-RQEXT-008` Evaluate every supported parser label against one raw log through the shared parser registry, reading and scanning at most the final 256 KiB of complete lines with the same ANSI handling as extraction so a large log is never held whole in memory, and surfacing only label names, candidate counts, heuristic verdicts, the file size, and the scan bounds; parser discovery never applies project rules, selects a parser, creates artifacts, or changes any run's status, exit code, or `extractor_status`.
 
 ## RQRUL: Rule lifecycle and CRUD
 

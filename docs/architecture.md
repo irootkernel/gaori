@@ -187,9 +187,9 @@ Listing shares the cleanup selector so both commands agree on what "completed st
 1. User runs `gaori parsers detect <raw-log>`, or `gaori parsers list` for labels only.
 2. CLI rejects `--config`, `--output-dir`, and `--run-id` before filesystem access, and requires a regular file so a special file fails closed instead of blocking the open.
 3. Discovery reads only the named raw log. No config, redaction, noise filter, or project rule is loaded.
-4. The log is scanned through the same bounded complete-line tail and ANSI handling as extraction, and the line index is built once for every label.
-5. Each registry entry reports its candidate failure count over the scanned window and its own summary heuristic over the complete log.
-6. Candidates are ordered by positive verdict, then descending count, then label, and reported with the scan bounds and a truncation flag.
+4. At most the final 256 KiB of complete lines is read from disk and scanned, with the same ANSI handling as extraction, and the line index is built once for every label.
+5. Each registry entry reports its candidate failure count and its own summary heuristic over that window.
+6. Candidates are ordered by positive verdict, then descending count, then label, and reported with the file size, the scan bounds, and a truncation flag.
 ```
 
 Discovery shares the parser registry with extraction so a supported label cannot exist in one and be missing from the other. It reports only label names, counts, verdicts, and byte totals, never text taken from the log, so it needs no redactor and writes nothing. It is a selection aid, not a parser selector, not generic fallback, and not a decision about which parser is correct.

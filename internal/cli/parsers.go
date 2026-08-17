@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"bytes"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -10,6 +11,7 @@ import (
 
 	"github.com/irootkernel/gaori/internal/extract"
 	"github.com/irootkernel/gaori/internal/model"
+	"github.com/irootkernel/gaori/internal/safety"
 )
 
 const (
@@ -91,7 +93,7 @@ func parsersDetectCommand(opts globalOptions, args []string, stdout, stderr io.W
 		return int(model.ExitCodeConfigError)
 	}
 
-	raw, err := readDetectRawLog(opts.RepoRoot, fs.Arg(0))
+	raw, totalBytes, err := readDetectRawLog(opts.RepoRoot, fs.Arg(0))
 	if err != nil {
 		writeLine(stderr, err)
 		return model.ExitCodeFor(err)
@@ -101,8 +103,8 @@ func parsersDetectCommand(opts globalOptions, args []string, stdout, stderr io.W
 	result := parsersDetectResult{
 		Parsers:      detection.Candidates,
 		ScannedBytes: detection.ScannedBytes,
-		TotalBytes:   len(raw),
-		Truncated:    detection.Truncated,
+		TotalBytes:   int(totalBytes),
+		Truncated:    detection.Truncated || totalBytes > int64(len(raw)),
 	}
 	for _, candidate := range detection.Candidates {
 		if candidate.Indicates {
@@ -134,24 +136,59 @@ func parsersDetectCommand(opts globalOptions, args []string, stdout, stderr io.W
 // does: relative to the selected repository root, or absolute as given. The
 // regular-file check runs before the open because opening a special file such as
 // a FIFO would block instead of failing closed.
-func readDetectRawLog(repoRoot, arg string) ([]byte, error) {
+//
+// At most safety.MaxRegexInputBytes are read, taken from the end of the file so
+// the window matches the one extraction scans. Detection reports only counts, so
+// it never needs the bytes ahead of that window, and reading the whole file would
+// let a diagnostic command hold an unbounded log in memory and run every parser
+// pattern across it. The reported total is the file size, not the window.
+func readDetectRawLog(repoRoot, arg string) (raw []byte, totalBytes int64, err error) {
 	resolved := arg
 	if !filepath.IsAbs(resolved) {
 		resolved = filepath.Join(repoRoot, arg)
 	}
-	info, err := os.Stat(resolved)
+	file, err := os.Open(resolved)
 	if err != nil {
-		return nil, model.NewGaoriError(model.ExitCodeConfigError, "read raw log", err)
+		return nil, 0, detectReadError(err)
+	}
+	defer func() {
+		if closeErr := file.Close(); closeErr != nil && err == nil {
+			raw, totalBytes, err = nil, 0, detectReadError(closeErr)
+		}
+	}()
+	info, err := file.Stat()
+	if err != nil {
+		return nil, 0, detectReadError(err)
 	}
 	if !info.Mode().IsRegular() {
-		return nil, model.NewGaoriError(model.ExitCodeConfigError, "read raw log",
-			fmt.Errorf("path %q is not a regular file", arg))
+		return nil, 0, detectReadError(fmt.Errorf("path %q is not a regular file", arg))
 	}
-	raw, err := os.ReadFile(resolved)
+
+	totalBytes = info.Size()
+	oversized := totalBytes > int64(safety.MaxRegexInputBytes)
+	if oversized {
+		if _, err := file.Seek(totalBytes-int64(safety.MaxRegexInputBytes), io.SeekStart); err != nil {
+			return nil, 0, detectReadError(err)
+		}
+	}
+	window, err := io.ReadAll(io.LimitReader(file, int64(safety.MaxRegexInputBytes)))
 	if err != nil {
-		return nil, model.NewGaoriError(model.ExitCodeConfigError, "read raw log", err)
+		return nil, 0, detectReadError(err)
 	}
-	return raw, nil
+	if oversized {
+		// Start at a complete line so a partial first line cannot be matched,
+		// matching how extraction aligns its own bounded tail.
+		if newline := bytes.IndexByte(window, '\n'); newline >= 0 {
+			window = window[newline+1:]
+		} else {
+			window = nil
+		}
+	}
+	return window, totalBytes, nil
+}
+
+func detectReadError(err error) error {
+	return model.NewGaoriError(model.ExitCodeConfigError, "read raw log", err)
 }
 
 func writeParsersJSON(result any, stdout, stderr io.Writer) int {

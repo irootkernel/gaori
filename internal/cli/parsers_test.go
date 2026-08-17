@@ -157,7 +157,9 @@ func TestParsersDetectExitsZeroWhenNoLabelReportsCandidates(t *testing.T) {
 func TestParsersDetectReportsTruncationForOversizedRawLog(t *testing.T) {
 	t.Parallel()
 	repo := t.TempDir()
-	oversized := strings.Repeat("head noise line\n", safety.MaxRegexInputBytes/16+16) + "--- FAIL: TestTail (0.00s)\n"
+	// Far larger than the scan window, so a whole-file read would be obvious.
+	head := "SENTINELHEAD0001 --- FAIL: TestHead (0.00s)\n" + strings.Repeat("head noise line\n", 16*safety.MaxRegexInputBytes/16)
+	oversized := head + "--- FAIL: TestTail (0.00s)\n"
 	writeDetectSample(t, repo, "big.raw.log", oversized)
 
 	var stdout, stderr bytes.Buffer
@@ -171,9 +173,27 @@ func TestParsersDetectReportsTruncationForOversizedRawLog(t *testing.T) {
 	if !result.Truncated {
 		t.Fatal("expected truncation for an oversized log")
 	}
-	if result.ScannedBytes > safety.MaxRegexInputBytes || result.TotalBytes <= result.ScannedBytes {
-		t.Fatalf("unexpected scan window: %+v", result)
+	if result.ScannedBytes > safety.MaxRegexInputBytes {
+		t.Fatalf("scanned %d bytes, want at most %d", result.ScannedBytes, safety.MaxRegexInputBytes)
 	}
+	if result.TotalBytes != len(oversized) {
+		t.Fatalf("total_bytes = %d, want the file size %d", result.TotalBytes, len(oversized))
+	}
+	// The head failure is outside the window, so only the tail one is counted.
+	if got := result.Parsers[candidateIndexByLabel(t, result, "go-test")].Failures; got != 1 {
+		t.Fatalf("go-test candidates = %d, want only the failure inside the scan window", got)
+	}
+}
+
+func candidateIndexByLabel(t *testing.T, result parsersDetectResult, label string) int {
+	t.Helper()
+	for index, candidate := range result.Parsers {
+		if candidate.Parser == label {
+			return index
+		}
+	}
+	t.Fatalf("detection omitted %q", label)
+	return 0
 }
 
 func TestParsersRejectsUnsupportedInput(t *testing.T) {

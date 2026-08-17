@@ -5,10 +5,10 @@ import (
 	"strings"
 )
 
-// ParserCandidate reports what one supported parser label would find in a raw
-// log. Failures counts the candidate spans that label's extractor produces
-// inside the bounded scan window. Indicates is that label's own summary
-// heuristic over the complete log and is false for a label that has none.
+// ParserCandidate reports what one supported parser label would find in the
+// supplied input. Failures counts the candidate spans that label's extractor
+// produces inside the bounded scan window; Indicates is that label's own summary
+// heuristic over the same input and is false for a label that has none.
 type ParserCandidate struct {
 	Parser    string `json:"parser"`
 	Failures  int    `json:"failures"`
@@ -39,7 +39,8 @@ func DetectParsers(raw []byte) ParserDetection {
 	scan, startByte, lineOffset, truncated := boundedTail(text)
 	lines := buildLineIndex(scan, startByte, lineOffset)
 	// Strip ANSI once and reuse for every label instead of paying for it per
-	// call the way parserFailures and ParserIndicatesFailure each do.
+	// call the way parserFailures and ParserIndicatesFailure each do. Callers
+	// bound the input, so this copy is bounded too.
 	visibleLines := parserVisibleLines(lines)
 	visibleAll := visibleText(text)
 
