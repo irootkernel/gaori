@@ -1,6 +1,6 @@
 # Gaori Requirement Specs
 
-Status: Current for `gaori v0.1.12`; all listed requirements complete
+Status: Current for `gaori v0.1.13`; all listed requirements complete
 Scope: Gaori v0.1 standalone baseline, post-baseline hardening, portable project configuration, CLI usability, verified rule proposals, operator-directed cleanup, and session-local STDIO MCP execution
 Source context: deterministic Gaori v0.1 CLI, evidence, and attached MCP behavior.
 

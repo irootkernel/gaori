@@ -1,6 +1,6 @@
 # Gaori User Interface
 
-Status: Current for `gaori v0.1.12`; complete through `MCP-006`
+Status: Current for `gaori v0.1.13`; complete through `MCP-006`
 Scope: CLI and local STDIO MCP interfaces for Gaori v0.1
 
 This is the complete command reference. First-time users should begin with the repository [README](../README.md); parent-project owners should use the [integration guide](integration-guide.md) for ownership boundaries and adoption steps.
@@ -137,7 +137,7 @@ Versioned selection uses local metadata such as:
 ```yaml
 schema_version: "gaori.toolchain.v1"
 gaori:
-  cli_version: "0.1.12"
+  cli_version: "0.1.13"
 ```
 
 An absolute override may be recorded with an optional version assertion:
@@ -145,7 +145,7 @@ An absolute override may be recorded with an optional version assertion:
 ```yaml
 schema_version: "gaori.toolchain.v1"
 gaori:
-  cli_version: "0.1.12"
+  cli_version: "0.1.13"
   binary_path: "/absolute/path/to/gaori"
 ```
 

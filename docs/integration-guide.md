@@ -1,6 +1,6 @@
 # Gaori Parent-Project Integration Guide
 
-Status: Current for `gaori v0.1.12`
+Status: Current for `gaori v0.1.13`
 Audience: Projects that invoke Gaori or consume Gaori evidence
 
 Gaori is an optional standalone execution and evidence-compression adapter for long or noisy test commands. It lets coding agents and other consumers inspect bounded evidence without pulling complete raw output into their working context. A parent project owns which tests are required and when and why they run; Gaori owns command execution, raw-log preservation, bounded extraction, and factual artifacts for an invocation routed through it.
@@ -26,7 +26,7 @@ The default adoption model is selective: route commands through Gaori when their
 
 ## Supported capability matrix
 
-| Area | Supported in v0.1.12 | Integration note |
+| Area | Supported in v0.1.13 | Integration note |
 |---|---|---|
 | Configured execution | Yes | `run <command-id>` reads `.gaori/tester.yaml`. |
 | Configuration preflight | Yes | `config check` validates config and all stored rules without execution or artifacts. `--sample <raw-log>` additionally reports per-pattern redaction match and replaced-byte counts without echoing sample content. |
@@ -94,7 +94,7 @@ Gaori does not create this ignore policy, distribute config, or stage files. The
 For ordinary local use, install and verify the pinned release:
 
 ```bash
-go install github.com/irootkernel/gaori@v0.1.12
+go install github.com/irootkernel/gaori@v0.1.13
 gaori --version
 ```
 
@@ -109,7 +109,7 @@ Example portable version selection:
 ```yaml
 schema_version: "gaori.toolchain.v1"
 gaori:
-  cli_version: "0.1.12"
+  cli_version: "0.1.13"
 ```
 
 Validate selection before invoking Gaori:

@@ -24,7 +24,7 @@ func TestMCPServerAdvertisesExpectedTools(t *testing.T) {
 	t.Parallel()
 	manager := newMCPManager(globalOptions{RepoRoot: t.TempDir()})
 	defer manager.close()
-	server := newMCPServer(manager, NewBuildInfo("gaori", "0.1.12", "test", "test"))
+	server := newMCPServer(manager, NewBuildInfo("gaori", "0.1.13", "test", "test"))
 	client := mcp.NewClient(&mcp.Implementation{Name: "test", Version: "v1"}, nil)
 	clientTransport, serverTransport := mcp.NewInMemoryTransports()
 	serverSession, err := server.Connect(context.Background(), serverTransport, nil)
@@ -95,7 +95,7 @@ func TestMCPServerAdvertisesExpectedTools(t *testing.T) {
 func TestMCPInvocationLookupErrorsAreBoundedAndNonReflective(t *testing.T) {
 	t.Parallel()
 	manager := newMCPManager(globalOptions{RepoRoot: t.TempDir()})
-	server := newMCPServer(manager, NewBuildInfo("gaori", "0.1.12", "test", "test"))
+	server := newMCPServer(manager, NewBuildInfo("gaori", "0.1.13", "test", "test"))
 	client := mcp.NewClient(&mcp.Implementation{Name: "test", Version: "v1"}, nil)
 	clientTransport, serverTransport := mcp.NewInMemoryTransports()
 	serverSession, err := server.Connect(context.Background(), serverTransport, nil)
@@ -195,7 +195,7 @@ func TestMCPTimeoutInputsRejectExplicitInvalidValues(t *testing.T) {
 	t.Parallel()
 	manager := newMCPManager(globalOptions{RepoRoot: t.TempDir()})
 	defer manager.close()
-	server := newMCPServer(manager, NewBuildInfo("gaori", "0.1.12", "test", "test"))
+	server := newMCPServer(manager, NewBuildInfo("gaori", "0.1.13", "test", "test"))
 	client := mcp.NewClient(&mcp.Implementation{Name: "test", Version: "v1"}, nil)
 	clientTransport, serverTransport := mcp.NewInMemoryTransports()
 	serverSession, err := server.Connect(context.Background(), serverTransport, nil)
@@ -613,7 +613,7 @@ func TestMCPCommandRejectsArgumentsAndIncompatibleGlobals(t *testing.T) {
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			var stderr bytes.Buffer
-			if got := mcpCommand(test.opts, test.args, &stderr, NewBuildInfo("gaori", "0.1.12", "test", "test")); got != int(model.ExitCodeConfigError) {
+			if got := mcpCommand(test.opts, test.args, &stderr, NewBuildInfo("gaori", "0.1.13", "test", "test")); got != int(model.ExitCodeConfigError) {
 				t.Fatalf("exit = %d, stderr=%q", got, stderr.String())
 			}
 		})
@@ -624,7 +624,7 @@ func TestMCPCommandRejectsArgumentsAndIncompatibleGlobals(t *testing.T) {
 // the real schema validation path.
 func newMCPTestSession(t *testing.T, manager *mcpManager) *mcp.ClientSession {
 	t.Helper()
-	server := newMCPServer(manager, NewBuildInfo("gaori", "0.1.12", "test", "test"))
+	server := newMCPServer(manager, NewBuildInfo("gaori", "0.1.13", "test", "test"))
 	client := mcp.NewClient(&mcp.Implementation{Name: "test", Version: "v1"}, nil)
 	clientTransport, serverTransport := mcp.NewInMemoryTransports()
 	serverSession, err := server.Connect(context.Background(), serverTransport, nil)

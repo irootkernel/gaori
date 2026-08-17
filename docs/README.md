@@ -1,6 +1,6 @@
 # Gaori Documentation
 
-Status: Current for `gaori v0.1.12`
+Status: Current for `gaori v0.1.13`
 
 This directory contains Gaori's integration contracts, technical design, delivery history, and maintainer guidance. Start with the document that matches your role instead of reading the directory in filename order.
 
@@ -25,7 +25,7 @@ For Gaori maintainers:
 3. Use the [requirements-to-test matrix](requirements-test-matrix.md) to find executable evidence.
 4. Read the [implementation note](implementation-note.md) before changing runner, parser, artifact, redaction, or rule behavior.
 5. Use the [roadmap](roadmap.md) and [todo](todo.md) for recorded delivery and open-work state.
-6. Use the [v0.1.12 release notes](releases/v0.1.12.md) when publishing the GitHub Release.
+6. Use the [v0.1.13 release notes](releases/v0.1.13.md) when publishing the GitHub Release.
 
 ## Current delivery state
 
@@ -55,7 +55,8 @@ Open implementation items are recorded in `todo.md`, including the evidence requ
 | [v0.1.9 release notes](releases/v0.1.9.md) | Users and maintainers | Previous framework parser support, summarize parser selection, and known limitations |
 | [v0.1.10 release notes](releases/v0.1.10.md) | Users and maintainers | Previous standalone evidence cleanup, safety boundaries, and known limitations |
 | [v0.1.11 release notes](releases/v0.1.11.md) | Users and maintainers | Previous optional AI-agent guidance, source-distributed skill, and known limitations |
-| [v0.1.12 release notes](releases/v0.1.12.md) | Users and maintainers | Current CLI usability, portable config, rule proposal, MCP, and hardening changes |
+| [v0.1.12 release notes](releases/v0.1.12.md) | Users and maintainers | Previous CLI usability, portable config, rule proposal, MCP, and hardening changes |
+| [v0.1.13 release notes](releases/v0.1.13.md) | Users and maintainers | Current parser discovery, evidence listing, redaction measurement, and support-tier changes |
 
 ## Source-of-truth order
 

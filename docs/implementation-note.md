@@ -1,6 +1,6 @@
 # Gaori Implementation Note
 
-Status: Current for `gaori v0.1.12`; complete through `MCP-006`
+Status: Current for `gaori v0.1.13`; complete through `MCP-006`
 Scope: Maintainer guidance for standalone execution, evidence artifacts, parser/rule behavior, operator-directed cleanup, and session-local STDIO MCP execution
 
 This document explains implementation constraints and verification expectations for contributors. It is not the parent-project adoption contract; integrators should start with the [integration guide](integration-guide.md).
