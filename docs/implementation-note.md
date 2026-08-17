@@ -34,7 +34,7 @@ internal/cli/mcp.go
   STDIO MCP tools, session-local invocation registry, revision waits, cancellation, shutdown drain
 ```
 
-The module root also holds a `main.go` identical to `cmd/gaori/main.go`. `go install github.com/irootkernel/gaori@<version>` with no subpath resolves the module-root package, so the documented network install depends on it, while `make build` and `make install` use `./cmd/gaori`. `go install` supplies no linker values, so each file's `version` default is what a network install reports. Change both files together.
+The module root also holds a `main.go` whose executable content matches `cmd/gaori/main.go`; only its explanatory comment differs. `go install github.com/irootkernel/gaori@<version>` with no subpath resolves the module-root package, so the documented network install depends on it, while `make build` and `make install` use `./cmd/gaori`. `go install` supplies no linker values, so each file's `version` default is what a network install reports. Change both files together.
 
 ## Agent skills
 

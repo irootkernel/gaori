@@ -43,9 +43,11 @@ func TestHelpSurfacesExitSuccessfully(t *testing.T) {
 	}
 }
 
-// TestRootUsageListsEveryDispatchedCommand and its rules counterpart compare the
-// bare-invocation usage line against helpText rather than a hard-coded list, so a
-// command can never be added to one surface and forgotten in the other.
+// TestRootUsageListsEveryDispatchedCommand and its rules counterpart tie three
+// surfaces together: the bare-invocation usage line, the helpText topics, and the
+// dispatcher itself. Comparing only the first two would pass when a command is
+// wired into the dispatcher and forgotten in both documentation surfaces, so each
+// listed name is also invoked to confirm the dispatcher accepts it.
 func TestRootUsageListsEveryDispatchedCommand(t *testing.T) {
 	t.Parallel()
 	assertUsageMatchesHelpTopics(t, nil, "")
@@ -54,6 +56,28 @@ func TestRootUsageListsEveryDispatchedCommand(t *testing.T) {
 func TestRulesUsageListsEveryDispatchedSubcommand(t *testing.T) {
 	t.Parallel()
 	assertUsageMatchesHelpTopics(t, []string{"rules"}, "rules ")
+}
+
+// assertDispatcherAccepts invokes name through its dispatcher and fails when the
+// dispatcher reports it as unknown. Every other outcome is fine: a command that
+// rejects its own missing operands has still been dispatched.
+//
+// The unknown-name message differs per level, and the marker must be specific:
+// the rules dispatcher prints its own usage line for an unrecognized subcommand,
+// which is also what a bare `gaori rules` legitimately prints.
+func assertDispatcherAccepts(t *testing.T, parents []string, name string) {
+	t.Helper()
+	marker := "unknown command"
+	if len(parents) > 0 {
+		marker = "usage: gaori " + strings.Join(parents, " ") + " <"
+	}
+	var stdout, stderr bytes.Buffer
+	args := append(append([]string{}, parents...), name)
+	Main(args, &stdout, &stderr)
+	combined := stdout.String() + stderr.String()
+	if strings.Contains(combined, marker) {
+		t.Errorf("dispatcher does not handle %q: %s", strings.Join(args, " "), combined)
+	}
 }
 
 // assertUsageMatchesHelpTopics runs args, which must fail with the usage line, and
@@ -90,6 +114,7 @@ func assertUsageMatchesHelpTopics(t *testing.T, args []string, prefix string) {
 		if !expected[name] {
 			t.Errorf("usage line lists %q, which has no %q help topic", name, prefix+name)
 		}
+		assertDispatcherAccepts(t, args, name)
 	}
 }
 
