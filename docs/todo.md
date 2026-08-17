@@ -11,7 +11,7 @@ Scope: Documentation and implementation follow-up notes
 
 ## Active items
 
-- `Open` — The four parsers added by `PARSE-006` (`jest`, `rspec`, `dotnet-test`, `gradle-test`) are backed only by authored fixtures. Closing this item requires, per parser, one raw log captured from a real project outside this repository, the observed `extractor_status`, and either recorded parity with the authored fixture or a recorded parser gap. Additional authored fixtures cannot close it.
+- `Open` — Promote `dotnet-test` and `gradle-test` from Experimental after satisfying the [parser support criteria](parser-support.md#promotion-criteria). `dotnet-test` still needs a failing raw log from a real project. A real Gradle 9.1 failure produced a precise failure and test name but did not retain the available `BookTest.java:10` location, so that parser gap and its regression coverage must be resolved first. Real Jest 30.1.3 and RSpec 3.13.2 failures matched their authored metadata expectations on 2026-08-17 and remain Supported. Additional authored examples alone cannot close this item.
 
 ## Out-of-scope reminder
 

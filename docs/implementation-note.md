@@ -77,25 +77,7 @@ The skill hardcodes the CLI and MCP surfaces (subcommands, tools, phases, flags,
 
 ## Extraction guidance
 
-Current supported parser labels:
-
-- `generic`
-- `vitest`
-- `pytest`
-- `go-test`
-- `playwright`
-- `ginkgo`
-- `godog`
-- `cargo-test`
-- `flutter-test`
-- `bun-test`
-- `node-test`
-- `jest`
-- `rspec`
-- `dotnet-test`
-- `gradle-test`
-
-Every label above is declared once in the `internal/extract` parser registry; config and rule validation resolve labels through `extract.IsKnown` rather than keeping their own allow-lists. Adding a parser means adding one registry entry, its extractor, and its fixture.
+The [parser support matrix](parser-support.md) records every available label, its support tier, verification evidence, and known limitations. Every label is declared once in the `internal/extract` parser registry; config and rule validation resolve labels through `extract.IsKnown` rather than keeping their own allow-lists. Adding a parser means adding one registry entry plus its extractor and fixture, then assigning its documented support tier independently.
 
 Generic extraction is used only for the `generic` parser label. Every specialized parser is fixture-backed and fails closed when its own patterns do not match; specialized parsers do not retry generic extraction. ANSI control sequences are ignored for parser matching while original raw spans continue to reference the unchanged raw log.
 
@@ -146,7 +128,7 @@ Current fixture logs live under `internal/extract/testdata/`:
 - `dotnet-test.raw.log`
 - `gradle-test.raw.log`
 
-These fixtures back automated extraction tests and should remain the source of truth for parser-specific documentation.
+These fixtures back automated extraction tests. The [parser support matrix](parser-support.md), not fixture presence alone, is the source of truth for parser maturity and real-runner limitations.
 
 Parser verification is split by repository test layer:
 
@@ -244,7 +226,7 @@ Tests should cover:
 - Invalid run, command, rule, and failure IDs failing before command execution or artifact writes.
 - Traversal, cross-run excerpt access, dangling links, and external symlink escape failing closed across artifact and rule operations.
 - Internal symlinks whose canonical targets remain inside the applicable boundary continuing to work.
-- Fixture-backed execution and summarize coverage for every supported parser label.
+- Fixture-backed execution and summarize coverage for every available parser label.
 - Tagged ad-hoc selection of every specialized parser, including exact summary metadata and representative fixture extraction.
 - Missing, empty, duplicate, or unknown ad-hoc parser values and configured-command overrides failing before executor invocation or run artifact creation, with built-binary sentinel coverage.
 - Child-side `--parser` and `--` arguments remaining unchanged across the Gaori option boundary.

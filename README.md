@@ -215,25 +215,18 @@ Ignore `.gaori/` by default, then re-include only the portable config and review
 
 This allows Git to track `.gaori/tester.yaml` and direct `.yaml` files under `.gaori/tester/rules/`. It keeps `.gaori/toolchain.yaml`, `.gaori/rule-proposals/`, `.gaori/runs/`, and any other Gaori state ignored. Review active rules before committing them: unlike proposals, they participate in extraction whenever their parser and tags match.
 
-Choose the parser that matches the command output:
+Choose the parser that matches the command output. Common choices are:
 
 | Test output | Parser |
 |---|---|
 | Other or project-specific text | `generic` |
-| Vitest | `vitest` |
-| Pytest | `pytest` |
 | `go test` | `go-test` |
+| Pytest | `pytest` |
+| Vitest | `vitest` |
 | Playwright | `playwright` |
-| Ginkgo | `ginkgo` |
-| Godog | `godog` |
-| Cargo test | `cargo-test` |
-| Flutter test | `flutter-test` |
-| Bun test | `bun-test` |
-| Node.js test runner | `node-test` |
 | Jest | `jest` |
-| RSpec | `rspec` |
-| `dotnet test` | `dotnet-test` |
-| Gradle test | `gradle-test` |
+
+See the [complete parser support matrix](docs/parser-support.md) for all fifteen labels, their verification level, and known limitations. `dotnet-test` and `gradle-test` are currently Experimental; they remain selectable, but callers should not assume complete evidence metadata for every runner output.
 
 Not sure which label matches an existing log? Enumerate the labels and see what each one would find, without creating any evidence:
 
@@ -383,6 +376,7 @@ Add `--json` when a script needs compact command output. Global options may appe
 ## Learn more
 
 - [CLI reference and rule workflow](docs/user-interface.md)
+- [Parser support tiers and known limitations](docs/parser-support.md)
 - [Parent-project integration guide and current capability status](docs/integration-guide.md)
 - [Documentation map](docs/README.md)
 - [Architecture and artifact contracts](docs/architecture.md)

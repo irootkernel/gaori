@@ -68,25 +68,9 @@ Use the explicit operand boundary when a search query is also a global option na
 
 Add `--sample <raw-log>` to also measure whether the configured redaction patterns actually fire against a real log. For each pattern, identified by its 1-based position in configured order, it reports the match count and the number of bytes replaced, plus the sample size and totals; `--json` adds a `redaction_sample` object and omits that key entirely without the option, so existing consumers see an unchanged shape. Matched text, surrounding lines, byte or line offsets, and any part of a pattern definition — name, regex, or replacement — are never printed, so the check cannot become the leak it looks for. Nothing the report surfaces is passed through the sampled patterns, because a value they match would otherwise be reported as their own replacement string. Patterns are therefore identified positionally, and the sample path is reported literally like the config path beside it. Patterns are reported in configured order and counted during one ordered pass, so a pattern can legitimately report `matches: 0` because an earlier pattern already replaced its input. A configuration with no redaction patterns still exits `0` and says so explicitly, because an empty pattern list is valid configuration. Sample mode remains read-only and creates nothing. A missing, unreadable, non-regular, or larger-than-256-KiB sample fails with exit code `2`; a partial scan is refused because it could report `matches: 0` for a pattern whose input the scan never reached, so narrow an oversized log yourself with something like `head -c 262144 big.log > sample.log`.
 
-## Supported parser labels
+## Available parser labels
 
-Implemented parser labels:
-
-- `generic`
-- `vitest`
-- `pytest`
-- `go-test`
-- `playwright`
-- `ginkgo`
-- `godog`
-- `cargo-test`
-- `flutter-test`
-- `bun-test`
-- `node-test`
-- `jest`
-- `rspec`
-- `dotnet-test`
-- `gradle-test`
+`gaori parsers list` is the authoritative label inventory for the installed binary. The current source tree provides fifteen labels; see the [parser support matrix](parser-support.md) for the complete list, support tiers, verification evidence, and known limitations. `dotnet-test` and `gradle-test` are Experimental even though the same registry and validation paths make them selectable.
 
 Applicable project rules are evaluated first. The selected parser is a fallback and runs only when no rule produces a failure. The `generic` label uses generic extraction patterns; specialized labels use only their own parser patterns and never retry generic extraction. A specialized-parser miss reports `no_match` after a pass and `degraded` after a non-pass result.
 
@@ -98,7 +82,7 @@ Existing-log summarization also defaults to `generic`; add exactly one `--parser
 
 An unknown, missing, empty, or repeated parser value, a parser without the explicit ad-hoc `--` boundary, or `--parser` used with a configured command fails with config exit code `2` before config/rule loading, artifact creation, or child execution. Arguments after the boundary belong to the child, so `gaori run --parser generic --tag unit -- my-command --parser child-value` passes the child `--parser` argument through unchanged.
 
-Parser-specific examples in this repository are backed by fixture logs under `internal/extract/testdata/`.
+Parser-specific examples in this repository are backed by fixture logs under `internal/extract/testdata/`. Fixture coverage and real-runner support maturity are separate claims recorded in the [parser support matrix](parser-support.md).
 
 `gaori parsers list` prints the same labels in ascending order from the shared registry, so it is the authoritative list for an installed binary. `gaori parsers detect <raw-log>` reports, per label, the candidate failure count and that label's own summary-heuristic verdict for an existing log. It reports candidates; it never selects a parser and never adds generic fallback.
 

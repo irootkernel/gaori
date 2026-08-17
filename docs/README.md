@@ -9,7 +9,8 @@ This directory contains Gaori's integration contracts, technical design, deliver
 For a person running Gaori directly:
 
 1. Read the repository [README](../README.md) and complete its five-minute example.
-2. Use the [CLI reference](user-interface.md) for options, rule management, exit codes, and tested examples.
+2. Use the [parser support matrix](parser-support.md) to select a label and review its support tier.
+3. Use the [CLI reference](user-interface.md) for options, rule management, exit codes, and tested examples.
 
 For a parent project integrating Gaori:
 
@@ -28,9 +29,9 @@ For Gaori maintainers:
 
 ## Current delivery state
 
-The standalone v0.1 baseline and the session-local STDIO MCP interface are implemented. This document describes the current source tree, which can be ahead of the published release named in the README install commands; the release notes under `releases/` record what each published version actually contains. Current surfaces include configured and tagged ad-hoc execution, read-only config/rule preflight, summarization, bounded excerpts, fifteen parsers resolved through one registry, read-only parser discovery, rule lifecycle commands, read-only standalone run listing and rule-proposal review, redacted derived evidence, final status JSON, explicit cleanup, and asynchronous MCP start/wait/get/cancel/excerpt tools plus a read-only completed-evidence listing. MCP state is ephemeral; completed artifacts retain the existing standalone layout and authority. Parent projects may commit `.gaori/tester.yaml` and reviewed `.gaori/tester/rules/*.yaml`; all other `.gaori/` content remains local-only.
+The standalone v0.1 baseline and the session-local STDIO MCP interface are implemented. This document describes the current source tree, which can be ahead of the published release named in the README install commands; the release notes under `releases/` record what each published version actually contains. Current surfaces include configured and tagged ad-hoc execution, read-only config/rule preflight, summarization, bounded excerpts, fifteen parsers resolved through one registry, read-only parser discovery, rule lifecycle commands, read-only standalone run listing and rule-proposal review, redacted derived evidence, final status JSON, explicit cleanup, and asynchronous MCP start/wait/get/cancel/excerpt tools plus a read-only completed-evidence listing. Thirteen parser labels are Supported; `dotnet-test` and `gradle-test` are Experimental as recorded in the [parser support matrix](parser-support.md). MCP state is ephemeral; completed artifacts retain the existing standalone layout and authority. Parent projects may commit `.gaori/tester.yaml` and reviewed `.gaori/tester/rules/*.yaml`; all other `.gaori/` content remains local-only.
 
-Open implementation items are recorded in `todo.md`, including the four newest parsers, which are still backed only by authored fixtures. The delivery statement above is intentionally narrower than “Gaori provides every testing or orchestration capability.”
+Open implementation items are recorded in `todo.md`, including the evidence required to promote the two Experimental parsers. The delivery statement above is intentionally narrower than “Gaori provides every testing or orchestration capability.”
 
 ## Document catalog
 
@@ -38,6 +39,7 @@ Open implementation items are recorded in `todo.md`, including the four newest p
 |---|---|---|
 | [Repository README](../README.md) | First-time and daily users | Installation, quick start, common workflows |
 | [CLI reference](user-interface.md) | Operators and script authors | Commands, options, examples, exit behavior |
+| [Parser support matrix](parser-support.md) | Operators, integrators, and maintainers | Parser support tiers, verification evidence, known limitations, promotion criteria |
 | [Integration guide](integration-guide.md) | Parent-project owners | Capability status, ownership boundary, adoption contract |
 | [Architecture](architecture.md) | Integrators and maintainers | Components, data flow, schemas, artifact and watcher contracts |
 | [Architecture decisions](architecture-decision-records.md) | Maintainers and reviewers | Accepted design constraints and their rationale |

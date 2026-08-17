@@ -47,7 +47,7 @@ Current implementation snapshot:
 | PARSE-002 | Done | Implement parser registry and parser labels while requiring only `generic` in the first runnable slice and failing closed on unsupported specialized labels. | `GAORI-REQ-RQEXT-002`, `ADR-0008`, `GAORI-REQ-RQSEC-003` |
 | PARSE-003 | Done | Implement extractor status computation and degraded extraction signals for non-zero exits with missing or overly broad spans. | `GAORI-REQ-RQEXT-005`, `GAORI-REQ-RQEXT-006`, `GAORI-REQ-RQEXT-007` |
 | PARSE-004 | Done | Add fixture-backed Ginkgo, Godog, Cargo test, Flutter test, Bun test, and Node.js test parsers and harden Go test, Vitest, and Playwright matching without generic fallback. | `GAORI-REQ-RQEXT-002`, `GAORI-REQ-RQEXT-004`, `GAORI-REQ-RQSEC-005` |
-| PARSE-005 | Done | Replace the duplicated parser-label declarations with one registry in `internal/extract` that config and rule validation resolve through, without changing supported labels or matching behavior. | `GAORI-REQ-RQEXT-002`, `GAORI-REQ-RQCFG-006`, `GAORI-REQ-RQRUL-008`, `ADR-0013` |
+| PARSE-005 | Done | Replace the duplicated parser-label declarations with one registry in `internal/extract` that config and rule validation resolve through, without changing available labels or matching behavior. | `GAORI-REQ-RQEXT-002`, `GAORI-REQ-RQCFG-006`, `GAORI-REQ-RQRUL-008`, `ADR-0013` |
 | PARSE-006 | Done | Add fixture-backed Jest, RSpec, `dotnet test`, and Gradle test parsers for ecosystems that previously fell back to `generic`, preserving the no-generic-fallback contract. | `GAORI-REQ-RQEXT-002`, `GAORI-REQ-RQEXT-004`, `GAORI-REQ-RQSEC-005` |
 | PARSE-007 | Done | Add read-only `parsers list` and `parsers detect <raw-log>` so label selection is informed by registry enumeration and per-label candidate counts, without adding fallback, parser selection, config loading, artifacts, or surfaced log text. | `GAORI-REQ-RQCLI-014`, `GAORI-REQ-RQEXT-008`, `ADR-0002`, `ADR-0013`, `ADR-0014` |
 
@@ -90,6 +90,7 @@ Current implementation snapshot:
 | DOCUM-001 | Done | Create initial docs for requirements, architecture, user interface, ADRs, roadmap, todo, and implementation notes. | `GAORI-REQ-RQDOC-001` |
 | DOCUM-002 | Done | Add real CLI examples, config examples, and artifact examples after first runnable implementation. | `GAORI-REQ-RQDOC-002` |
 | DOCUM-003 | Done | Add release-readiness checklist, fixture evidence expectations, and v0.1 packaging notes before tagging. | `GAORI-REQ-RQDOC-004` |
+| DOCUM-004 | Done | Separate parser-label availability from support maturity, publish one support-tier matrix, and record the two Experimental parsers' promotion criteria. | `GAORI-REQ-RQEXT-009`, `ADR-0017` |
 
 ## HARDE: Post-baseline hardening and contract closure
 

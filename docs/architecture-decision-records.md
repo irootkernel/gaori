@@ -261,7 +261,7 @@ This live channel is scoped to one MCP server process. It does not persist runni
 - Invocation revisions and phases form a new public interface, but status JSON and watcher hashes remain unchanged.
 - A test failure is a successful MCP exchange containing a non-pass command result, not a protocol failure.
 
-## ADR-0013: One parser registry owns every supported parser label
+## ADR-0013: One parser registry owns every available parser label
 
 Status: Accepted
 Date: 2026-08-17
@@ -274,11 +274,11 @@ The eleven built-in parser labels were declared in four places: a `switch` selec
 
 `internal/extract` will own one `parserRegistry` table keyed by parser label. Each entry binds the label to its failure extractor and its optional summarize heuristic. `internal/config` and `internal/rules` will validate labels through the exported `extract.IsKnown` rather than keeping their own copies.
 
-This is a structural boundary only. It does not change which labels are supported, how any parser matches, the absence of generic fallback after a specialized-parser miss, or the authority of the executed command's exit code.
+This is a structural boundary only. It does not change which labels are available, how any parser matches, the absence of generic fallback after a specialized-parser miss, or the authority of the executed command's exit code. Availability through this registry is distinct from the documented support tier introduced later by ADR-0017.
 
 ### Consequences
 
-- A supported label cannot exist in extraction but be rejected by validation, or the reverse.
+- An available label cannot exist in extraction but be rejected by validation, or the reverse.
 - Adding a parser is one registry entry plus its extractor, instead of four coordinated edits.
 - `internal/config` now depends on `internal/extract`; `internal/rules` already did.
 - The registry is an internal table, not a plugin interface. Parsers stay compiled in, and project-local YAML rules remain the supported extension point for project-specific evidence.
@@ -362,6 +362,36 @@ ADR-0005 remains the boundary for the finished artifacts a listing reads, and AD
 - Listing errors pass through the bounded non-reflective MCP error path, because a status artifact can supply an attacker-controlled summary locator that redaction deliberately leaves literal.
 - MCP inherits the listing's scope — default standalone evidence only — so a server started with a caller-selected output directory rejects the listing rather than returning a result that omits its own runs.
 - Future MCP read tools must pass the same statelessness test; anything that persists state, recovers an invocation, or accumulates cross-session history stays rejected.
+
+## ADR-0017: Parser availability and support maturity are separate contracts
+
+Status: Accepted
+Date: 2026-08-17
+
+### Context
+
+ADR-0013 and `GAORI-REQ-RQEXT-002` established one registry for fifteen selectable parser labels. Repository fixtures prove deterministic behavior for those exact authored shapes, but fixture presence does not prove that a parser covers the normal output of every real runner version. Treating every registry entry as equally supported therefore overstates evidence and makes it impossible to ship a useful bounded parser while honestly recording incomplete ecosystem validation.
+
+External QA on 2026-08-17 provided real failing output from Jest 30.1.3, RSpec 3.13.2, and Gradle 9.1. Jest and RSpec retained the expected file, line, and test name. Gradle found the failure and test name but did not retain the available `BookTest.java:10` location from its default concise output. A real `dotnet test` failure was not available in that environment.
+
+### Decision
+
+Parser **availability** remains a runtime property of the shared registry: an available label is accepted by config, rules, run, summarize, list, and detect. Parser **support maturity** is a documentation contract with two tiers:
+
+- **Supported** means repository regression coverage exists and no known real-runner gap prevents the intended bounded failure evidence.
+- **Experimental** means the label remains implemented, selectable, fixture-backed, and subject to every safety and command-result invariant, but real-project validation is incomplete or a known evidence-metadata gap remains.
+
+`docs/parser-support.md` is the single support-tier matrix. The installed binary's `parsers list` remains the authority for availability and deliberately does not infer, serialize, or enforce maturity. `dotnet-test` and `gradle-test` are Experimental; the other thirteen labels are Supported.
+
+Promotion requires a failing raw log from a real external project, recorded runner and command context, resolution of observed gaps, representative bounded regression coverage, the complete repository gate, and synchronized documentation. Authored examples alone cannot promote a parser.
+
+### Consequences
+
+- Existing config, rules, CLI output, parser discovery, and artifact schemas remain compatible.
+- Experimental extraction never changes the executed command's authoritative result and never gains generic fallback.
+- Operators can select Experimental labels, but must allow for incomplete metadata and bounded manual evidence review.
+- A parser may move between maturity tiers without changing its label or registry entry, but every change must update the matrix and release notes.
+- README and integration documents link to the matrix instead of maintaining competing full support lists.
 
 ## Future ADR candidates
 
