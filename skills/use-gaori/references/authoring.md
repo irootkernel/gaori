@@ -28,6 +28,8 @@ gaori --json config check
 
 This checks the schema and every stored rule but does not verify executable availability or command success. Its output intentionally omits command argv and redaction definitions.
 
+Add `--sample <raw-log>` when changing `redaction.patterns` to verify the patterns actually fire. It reports per pattern the match count and replaced bytes, never the matched text, and creates nothing. Counts come from one ordered pass, so a pattern may report `matches: 0` because an earlier pattern already replaced its input. A `matches: 0` on a pattern you expected to fire is the finding to report. A sample larger than 256 KiB fails closed with exit `2`; narrow it yourself rather than treating a partial count as coverage.
+
 Implemented parser labels are `generic`, `vitest`, `pytest`, `go-test`, `playwright`, `ginkgo`, `godog`, `cargo-test`, `flutter-test`, `bun-test`, `node-test`, `jest`, `rspec`, `dotnet-test`, and `gradle-test`. Unknown labels, schema version 1, and removed `lane` fields fail closed. `gaori --json parsers list` is the authoritative live list for the installed binary.
 
 When a run reports `extractor_status: no_match` or `degraded` and you suspect the wrong label, run `gaori --json parsers detect <raw-log>`. It reads only that log, loads no config, creates nothing, and shows no log content. It reports candidates and never names a recommended label, because several labels can report a candidate for one log. Read it, choose one label yourself and state why, then run `gaori --json summarize --parser <label> <raw-log>` explicitly. Never chain detect into a re-summarize automatically, and never present its ordering as a Gaori decision.

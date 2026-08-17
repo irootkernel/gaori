@@ -124,11 +124,21 @@ Report completed evidence under .gaori/runs/standalone/, newest first, without
 reading raw logs or creating artifacts. --status accepts passed, failed,
 timed_out, killed, or internal_error.
 `,
-	"config": `Usage: gaori config check
+	"config": `Usage: gaori config check [--sample <raw-log>]
 
 Validate project configuration and stored rules without running commands or creating artifacts.
 `,
-	"config check": "Usage: gaori config check\n",
+	"config check": `Usage: gaori config check [--sample <raw-log>]
+
+Validate the selected config and every stored rule. Argv and redaction
+definitions are intentionally omitted from the output.
+
+--sample <raw-log> additionally reports, per configured redaction pattern, how
+many times it matched that log and how many bytes it replaced. Patterns apply in
+sequence, so an earlier pattern can leave a later one at zero. Matched text,
+surrounding lines, and pattern definitions are never printed. A missing,
+unreadable, non-regular, or larger-than-256-KiB sample fails with exit code 2.
+`,
 	"parsers": `Usage: gaori parsers <command>
 
 Commands:

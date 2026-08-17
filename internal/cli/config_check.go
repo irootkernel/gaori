@@ -2,7 +2,10 @@ package cli
 
 import (
 	"encoding/json"
+	"flag"
+	"fmt"
 	"io"
+	"os"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -20,6 +23,25 @@ type configCheckCommand struct {
 	TimeoutSec int      `json:"timeout_sec"`
 }
 
+// configCheckRedactionPattern reports one configured pattern's observed effect.
+// It carries no regex and no replacement, so the deliberate omission of
+// redaction definitions from this command's output is preserved.
+type configCheckRedactionPattern struct {
+	Name    string `json:"name"`
+	Matches int    `json:"matches"`
+	Bytes   int    `json:"bytes"`
+}
+
+// configCheckRedactionSample lists patterns in configured order, because they are
+// applied in sequence and an earlier pattern can consume a later one's input.
+type configCheckRedactionSample struct {
+	SamplePath    string                        `json:"sample_path"`
+	SampleBytes   int                           `json:"sample_bytes"`
+	TotalMatches  int                           `json:"total_matches"`
+	ReplacedBytes int                           `json:"replaced_bytes"`
+	Patterns      []configCheckRedactionPattern `json:"patterns"`
+}
+
 type configCheckResult struct {
 	ConfigPath        string               `json:"config_path"`
 	SchemaVersion     int                  `json:"schema_version"`
@@ -28,18 +50,37 @@ type configCheckResult struct {
 	ActiveRuleCount   int                  `json:"active_rule_count"`
 	DisabledRuleCount int                  `json:"disabled_rule_count"`
 	Commands          []configCheckCommand `json:"commands"`
+	// RedactionSample is a pointer with omitempty so that, without --sample, the
+	// emitted JSON stays byte-identical to the existing preflight shape.
+	RedactionSample *configCheckRedactionSample `json:"redaction_sample,omitempty"`
 }
+
+const configCheckUsage = "usage: gaori config check [--sample <raw-log>]"
 
 func configCommand(opts globalOptions, args []string, stdout, stderr io.Writer) int {
 	if opts.OutputDir != "" || opts.RunID != "" {
 		writeLine(stderr, "config check supports only the --repo, --config, and --json global options")
 		return int(model.ExitCodeConfigError)
 	}
-	if len(args) != 1 || args[0] != "check" {
-		writeLine(stderr, "usage: gaori config check")
+	if len(args) == 0 || args[0] != "check" {
+		writeLine(stderr, configCheckUsage)
 		return int(model.ExitCodeConfigError)
 	}
-	result, err := checkConfig(opts.RepoRoot, opts.ConfigPath)
+
+	fs := flag.NewFlagSet("config check", flag.ContinueOnError)
+	fs.SetOutput(io.Discard)
+	var sample string
+	fs.StringVar(&sample, "sample", "", "raw log to measure redaction coverage against")
+	if err := fs.Parse(args[1:]); err != nil {
+		writeLine(stderr, err)
+		return int(model.ExitCodeConfigError)
+	}
+	if len(fs.Args()) != 0 {
+		writeLine(stderr, configCheckUsage)
+		return int(model.ExitCodeConfigError)
+	}
+
+	result, err := checkConfig(opts.RepoRoot, opts.ConfigPath, sample)
 	if err != nil {
 		writeLine(stderr, err)
 		return model.ExitCodeFor(err)
@@ -61,10 +102,26 @@ func configCommand(opts globalOptions, args []string, stdout, stderr io.Writer) 
 		writef(stdout, "  %s\ttags=%s\tparser=%s\ttimeout_sec=%d\n", command.ID, strings.Join(command.Tags, ","), command.Parser, command.TimeoutSec)
 	}
 	writef(stdout, "Rules: %d (active=%d disabled=%d)\n", result.RuleCount, result.ActiveRuleCount, result.DisabledRuleCount)
+	writeRedactionSample(stdout, result.RedactionSample)
 	return 0
 }
 
-func checkConfig(repoRoot, configPath string) (configCheckResult, error) {
+func writeRedactionSample(stdout io.Writer, sample *configCheckRedactionSample) {
+	if sample == nil {
+		return
+	}
+	writef(stdout, "Redaction sample: %s (%d bytes)\n", sample.SamplePath, sample.SampleBytes)
+	for _, pattern := range sample.Patterns {
+		writef(stdout, "  %s\tmatches=%d\treplaced_bytes=%d\n", pattern.Name, pattern.Matches, pattern.Bytes)
+	}
+	if len(sample.Patterns) == 0 {
+		writeLine(stdout, "Redaction totals: no redaction patterns are configured")
+		return
+	}
+	writef(stdout, "Redaction totals: matches=%d replaced_bytes=%d\n", sample.TotalMatches, sample.ReplacedBytes)
+}
+
+func checkConfig(repoRoot, configPath, samplePath string) (configCheckResult, error) {
 	cfg, resolvedConfig, err := config.Load(repoRoot, configPath, false)
 	if err != nil {
 		return configCheckResult{}, err
@@ -110,7 +167,59 @@ func checkConfig(repoRoot, configPath string) (configCheckResult, error) {
 			result.DisabledRuleCount++
 		}
 	}
+	if samplePath != "" {
+		sample, err := measureRedactionSample(repoRoot, samplePath, redactor)
+		if err != nil {
+			return configCheckResult{}, err
+		}
+		result.RedactionSample = sample
+	}
 	return result, nil
+}
+
+// measureRedactionSample reports how each configured pattern performed against
+// one operator-named raw log. It surfaces only pattern names, counts, and sizes:
+// no matched text, no surrounding line, no offset, and no pattern definition, so
+// the check that looks for leaks cannot become one.
+func measureRedactionSample(repoRoot, samplePath string, redactor safety.Redactor) (*configCheckRedactionSample, error) {
+	resolved := samplePath
+	if !filepath.IsAbs(resolved) {
+		resolved = filepath.Join(repoRoot, samplePath)
+	}
+	// The regular-file check runs before the open because opening a special file
+	// such as a FIFO would block instead of failing closed.
+	info, err := os.Stat(resolved)
+	if err != nil {
+		return nil, model.NewGaoriError(model.ExitCodeConfigError, "read redaction sample", err)
+	}
+	if !info.Mode().IsRegular() {
+		return nil, model.NewGaoriError(model.ExitCodeConfigError, "read redaction sample",
+			fmt.Errorf("path %q is not a regular file", samplePath))
+	}
+	// A partial scan is the worst possible outcome for a leak check: a secret in
+	// the head of an oversized log would be reported as matches=0. Fail closed
+	// instead, matching rules test rather than run and summarize.
+	raw, err := safety.ReadFileLimited(resolved)
+	if err != nil {
+		return nil, model.NewGaoriError(model.ExitCodeConfigError, "read redaction sample", err)
+	}
+
+	_, counts := redactor.ApplyCounted(string(raw))
+	sample := &configCheckRedactionSample{
+		SamplePath:  redactor.Apply(displayConfigPath(repoRoot, resolved)),
+		SampleBytes: len(raw),
+		Patterns:    make([]configCheckRedactionPattern, 0, len(counts)),
+	}
+	for _, count := range counts {
+		sample.Patterns = append(sample.Patterns, configCheckRedactionPattern{
+			Name:    redactor.Apply(count.Name),
+			Matches: count.Matches,
+			Bytes:   count.Bytes,
+		})
+		sample.TotalMatches += count.Matches
+		sample.ReplacedBytes += count.Bytes
+	}
+	return sample, nil
 }
 
 func displayConfigPath(repoRoot, configPath string) string {

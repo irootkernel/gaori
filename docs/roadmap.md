@@ -10,7 +10,7 @@ Task status values: `Planned`, `In Progress`, `Blocked`, `Done`, `Deferred`.
 Existing `Done` entries record completion of the original v0.1 implementation slices. They do not supersede or satisfy the later `HARDE` tasks, which close correctness, safety, verification, and documentation gaps found during repository review.
 
 Current implementation snapshot:
-- `Done`: `SETUP-001` to `SETUP-003`, `RUNNR-001` to `RUNNR-003`, `ARTIF-001` to `ARTIF-003`, `PARSE-001` to `PARSE-007`, `SAFEY-001` to `SAFEY-003`, `CLIUX-001` to `CLIUX-008`, `RULES-001` to `RULES-005`, `DOCUM-001` to `DOCUM-003`, `HARDE-001` to `HARDE-007`, `TAGS-001`, `ADHOC-001`, `ADHOC-002`, `RELRV-001` to `RELRV-009`, `BRAND-001`, `CLEAN-001`, `PORTA-001`, `MCP-001` to `MCP-005`
+- `Done`: `SETUP-001` to `SETUP-003`, `RUNNR-001` to `RUNNR-003`, `ARTIF-001` to `ARTIF-003`, `PARSE-001` to `PARSE-007`, `SAFEY-001` to `SAFEY-004`, `CLIUX-001` to `CLIUX-008`, `RULES-001` to `RULES-005`, `DOCUM-001` to `DOCUM-003`, `HARDE-001` to `HARDE-007`, `TAGS-001`, `ADHOC-001`, `ADHOC-002`, `RELRV-001` to `RELRV-009`, `BRAND-001`, `CLEAN-001`, `PORTA-001`, `MCP-001` to `MCP-005`
 - `In Progress`: none
 - `Deferred`: none
 - `Planned`: none
@@ -58,6 +58,7 @@ Current implementation snapshot:
 | SAFEY-001 | Done | Implement redaction pipeline for summaries, excerpts, status files, and console-safe output, with raw-log handling warnings clearly marked. | `GAORI-REQ-RQSEC-001`, `GAORI-REQ-RQSEC-002`, `ADR-0003` |
 | SAFEY-002 | Done | Implement noise filtering for summaries without altering raw logs. | `GAORI-REQ-RQCFG-004`, `GAORI-REQ-RQSEC-005` |
 | SAFEY-003 | Done | Add RE2-based regex validation plus bounds for regex input size, extracted block size, excerpt size, summary size, and overmatch diagnostics. | `GAORI-REQ-RQSEC-003`, `GAORI-REQ-RQSEC-004`, `GAORI-REQ-RQRUL-006`, `ADR-0007` |
+| SAFEY-004 | Done | Add opt-in `config check --sample <raw-log>` redaction effectiveness measurement that reports per-pattern match and replaced-byte counts from one ordered pass, never emits matched text, lines, or pattern definitions, and fails closed above the 256 KiB input bound. | `GAORI-REQ-RQSEC-006`, `GAORI-REQ-RQCFG-007`, `GAORI-REQ-RQCLI-010`, `ADR-0003`, `ADR-0015` |
 
 ## CLIUX: Direct artifact commands
 

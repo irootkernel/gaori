@@ -18,12 +18,22 @@ const (
 )
 
 type redactionRule struct {
+	name        string
 	re          *regexp.Regexp
 	replacement string
 }
 
 type Redactor struct {
 	rules []redactionRule
+}
+
+// RedactionCount reports how one configured pattern performed during one ordered
+// redaction pass. It deliberately carries no matched text and no location, so it
+// can be surfaced without becoming the leak it is meant to detect.
+type RedactionCount struct {
+	Name    string
+	Matches int
+	Bytes   int
 }
 
 func ValidateRegex(regex string) error {
@@ -54,7 +64,7 @@ func NewRedactor(patterns []model.RedactionPattern) (Redactor, error) {
 		if err != nil {
 			return Redactor{}, model.NewGaoriError(model.ExitCodeConfigError, "validate regex", err)
 		}
-		redactor.rules = append(redactor.rules, redactionRule{re: re, replacement: pattern.Replace})
+		redactor.rules = append(redactor.rules, redactionRule{name: pattern.Name, re: re, replacement: pattern.Replace})
 	}
 	return redactor, nil
 }
@@ -65,6 +75,31 @@ func (r Redactor) Apply(text string) string {
 		redacted = rule.re.ReplaceAllString(redacted, rule.replacement)
 	}
 	return redacted
+}
+
+// ApplyCounted returns the same redacted string as Apply plus, per configured
+// pattern, the matches and matched bytes observed at that pattern's position in
+// the sequence. Counting a pattern independently against the original text would
+// overstate any pattern whose input an earlier pattern already replaced.
+//
+// Apply deliberately does not delegate here: it runs on every surfaced value of
+// every run, and the extra scan belongs only to the preflight that needs counts.
+// Output identity between the two is pinned by test instead.
+func (r Redactor) ApplyCounted(text string) (string, []RedactionCount) {
+	redacted := text
+	counts := make([]RedactionCount, 0, len(r.rules))
+	for _, rule := range r.rules {
+		count := RedactionCount{Name: rule.name}
+		for _, span := range rule.re.FindAllStringIndex(redacted, -1) {
+			count.Matches++
+			count.Bytes += span[1] - span[0]
+		}
+		counts = append(counts, count)
+		// Replace with the same call Apply uses so capture-group expansion in
+		// the replacement stays identical.
+		redacted = rule.re.ReplaceAllString(redacted, rule.replacement)
+	}
+	return redacted, counts
 }
 
 func FilterNoise(text string, filters []string) string {

@@ -362,6 +362,7 @@ When extraction fails internally, Gaori preserves the raw log and writes empty f
 
 - Raw logs are preserved as original source evidence.
 - Raw logs are not redacted by default.
+- The only information Gaori derives from raw-log content into a surface redaction cannot protect is an aggregate match and replaced-byte count per configured pattern, reported by `config check --sample`. Matched text, surrounding lines, byte or line offsets, per-match detail, and pattern definitions are never surfaced (`ADR-0015`).
 - Summaries, excerpts, status JSON, and console-safe surfaced text apply configured redaction to command metadata and extracted evidence, including command argv, identifiers, tags, failure source paths, signatures, test names, stack entries, and warnings.
 - Artifact-reference fields such as `raw_log`, `summary_path`, `raw_log_path`, and excerpt references remain literal locators so watchers, automation, and operators can resolve them. Operators must not place secrets in artifact-bearing identifiers or paths.
 - Status signature hashes and `status_hash` are computed from the final redacted metadata and signatures. Canonical comma-joined tags follow `command_id` in the ordered watcher field set.

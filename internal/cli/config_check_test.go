@@ -7,6 +7,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/irootkernel/gaori/internal/safety"
 )
 
 func TestConfigCheckReportsSafeDeterministicMetadataWithoutArtifacts(t *testing.T) {
@@ -132,4 +134,216 @@ func configCheckRule(id, status, deletionReason string) string {
 		"  test_name:\n" +
 		"    regex: '(?P<test>.+)'\n" +
 		"confidence: medium\n"
+}
+
+// sampleModeConfig plants a distinct sentinel inside the regex, inside the
+// replacement, and inside the pattern name so the non-echo assertions below can
+// tell which surface leaked if one ever does.
+const sampleModeConfig = `version: 2
+commands:
+  unit:
+    command: [sh, test.sh]
+    tags: [generic, unit]
+    parser: generic
+    timeout_sec: 10
+redaction:
+  patterns:
+    - name: token-SENTINELNAME0005
+      regex: 'token=SENTINELREGEX0004[^ ]*'
+      replace: 'token=<SENTINELREPLACE0006>'
+    - name: unused
+      regex: 'AKIA[0-9A-Z]{16}'
+      replace: '<aws-key>'
+`
+
+func writeSampleModeRepo(t *testing.T, sample string) string {
+	t.Helper()
+	repo := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(repo, ".gaori"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(repo, ".gaori", "tester.yaml"), []byte(sampleModeConfig), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(repo, "unit.raw.log"), []byte(sample), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	return repo
+}
+
+// TestConfigCheckSampleReportsPerPatternCountsWithoutEchoingContent is the
+// invariant that makes this feature safe: a command that looks for leaks must not
+// become one.
+func TestConfigCheckSampleReportsPerPatternCountsWithoutEchoingContent(t *testing.T) {
+	t.Parallel()
+	sample := "token=SENTINELREGEX0004MATCHED0001 boom\n" +
+		"SENTINELUNMATCHED0002\n" +
+		"SENTINELCONTEXT0003 ordinary log line\n"
+	repo := writeSampleModeRepo(t, sample)
+	sentinels := []string{
+		"SENTINELREGEX0004MATCHED0001",
+		"SENTINELUNMATCHED0002",
+		"SENTINELCONTEXT0003",
+		"SENTINELREGEX0004[",
+		"SENTINELREPLACE0006",
+	}
+
+	for _, args := range [][]string{
+		{"--repo", repo, "config", "check", "--sample", "unit.raw.log"},
+		{"--repo", repo, "--json", "config", "check", "--sample", "unit.raw.log"},
+	} {
+		var stdout, stderr bytes.Buffer
+		if exitCode := Main(args, &stdout, &stderr); exitCode != 0 {
+			t.Fatalf("exit=%d stderr=%s", exitCode, stderr.String())
+		}
+		combined := stdout.String() + stderr.String()
+		for _, sentinel := range sentinels {
+			if strings.Contains(combined, sentinel) {
+				t.Errorf("output leaked %q: %s", sentinel, combined)
+			}
+		}
+		// Positive control: the sample really was scanned.
+		if !strings.Contains(combined, "SENTINELNAME0005") {
+			t.Errorf("output omits the pattern name: %s", combined)
+		}
+	}
+
+	var stdout, stderr bytes.Buffer
+	if exitCode := Main([]string{"--repo", repo, "--json", "config", "check", "--sample", "unit.raw.log"}, &stdout, &stderr); exitCode != 0 {
+		t.Fatalf("exit=%d stderr=%s", exitCode, stderr.String())
+	}
+	var result configCheckResult
+	if err := json.Unmarshal(stdout.Bytes(), &result); err != nil {
+		t.Fatal(err)
+	}
+	if result.RedactionSample == nil {
+		t.Fatal("redaction_sample is absent with --sample")
+	}
+	if got := result.RedactionSample.SampleBytes; got != len(sample) {
+		t.Errorf("sample_bytes = %d, want %d", got, len(sample))
+	}
+	if len(result.RedactionSample.Patterns) != 2 {
+		t.Fatalf("patterns = %+v, want 2 in configured order", result.RedactionSample.Patterns)
+	}
+	matched := result.RedactionSample.Patterns[0]
+	if matched.Matches != 1 || matched.Bytes != len("token=SENTINELREGEX0004MATCHED0001") {
+		t.Errorf("first pattern = %+v, want one match covering the whole token", matched)
+	}
+	if unused := result.RedactionSample.Patterns[1]; unused.Matches != 0 || unused.Bytes != 0 {
+		t.Errorf("second pattern = %+v, want zero matches", unused)
+	}
+	if result.RedactionSample.TotalMatches != 1 || result.RedactionSample.ReplacedBytes != matched.Bytes {
+		t.Errorf("totals = %+v, want the single match", result.RedactionSample)
+	}
+	if _, err := os.Stat(filepath.Join(repo, ".gaori", "runs")); !os.IsNotExist(err) {
+		t.Fatalf("sample mode created runtime state: %v", err)
+	}
+}
+
+func TestConfigCheckSampleUsesOrderedRedactionPassCounts(t *testing.T) {
+	t.Parallel()
+	repo := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(repo, ".gaori"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	orderedConfig := `version: 2
+commands: {}
+redaction:
+  patterns:
+    - name: broad
+      regex: 'token=\S+'
+      replace: '<gone>'
+    - name: narrow
+      regex: 'secret'
+      replace: '<x>'
+`
+	if err := os.WriteFile(filepath.Join(repo, ".gaori", "tester.yaml"), []byte(orderedConfig), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(repo, "unit.raw.log"), []byte("token=secret\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	var stdout, stderr bytes.Buffer
+	if exitCode := Main([]string{"--repo", repo, "--json", "config", "check", "--sample", "unit.raw.log"}, &stdout, &stderr); exitCode != 0 {
+		t.Fatalf("exit=%d stderr=%s", exitCode, stderr.String())
+	}
+	var result configCheckResult
+	if err := json.Unmarshal(stdout.Bytes(), &result); err != nil {
+		t.Fatal(err)
+	}
+	patterns := result.RedactionSample.Patterns
+	if patterns[0].Name != "broad" || patterns[0].Matches != 1 {
+		t.Errorf("broad = %+v, want one match", patterns[0])
+	}
+	if patterns[1].Name != "narrow" || patterns[1].Matches != 0 {
+		t.Errorf("narrow = %+v, want zero because the broad pattern replaced its input first", patterns[1])
+	}
+}
+
+func TestConfigCheckWithoutSampleOmitsRedactionSampleField(t *testing.T) {
+	t.Parallel()
+	repo := writeSampleModeRepo(t, "token=SENTINELREGEX0004MATCHED0001\n")
+
+	var stdout, stderr bytes.Buffer
+	if exitCode := Main([]string{"--repo", repo, "--json", "config", "check"}, &stdout, &stderr); exitCode != 0 {
+		t.Fatalf("exit=%d stderr=%s", exitCode, stderr.String())
+	}
+	var fields map[string]json.RawMessage
+	if err := json.Unmarshal(stdout.Bytes(), &fields); err != nil {
+		t.Fatal(err)
+	}
+	if _, present := fields["redaction_sample"]; present {
+		t.Fatalf("redaction_sample must be absent without --sample: %s", stdout.String())
+	}
+}
+
+func TestConfigCheckSampleReportsNoConfiguredPatterns(t *testing.T) {
+	t.Parallel()
+	repo := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(repo, ".gaori"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(repo, ".gaori", "tester.yaml"), []byte("version: 2\ncommands: {}\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(repo, "unit.raw.log"), []byte("token=secret\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	var stdout, stderr bytes.Buffer
+	if exitCode := Main([]string{"--repo", repo, "config", "check", "--sample", "unit.raw.log"}, &stdout, &stderr); exitCode != 0 {
+		t.Fatalf("exit=%d stderr=%s", exitCode, stderr.String())
+	}
+	if !strings.Contains(stdout.String(), "no redaction patterns are configured") {
+		t.Fatalf("stdout omits the empty-pattern notice: %s", stdout.String())
+	}
+}
+
+func TestConfigCheckSampleFailsClosedOnUnusableSample(t *testing.T) {
+	t.Parallel()
+	repo := writeSampleModeRepo(t, "token=SENTINELREGEX0004MATCHED0001\n")
+	if err := os.MkdirAll(filepath.Join(repo, "adir"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	oversized := strings.Repeat("x", safety.MaxConfigRuleInputBytes+1)
+	if err := os.WriteFile(filepath.Join(repo, "big.raw.log"), []byte(oversized), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	for _, sample := range []string{"missing.raw.log", "adir", "big.raw.log"} {
+		t.Run(sample, func(t *testing.T) {
+			var stdout, stderr bytes.Buffer
+			exitCode := Main([]string{"--repo", repo, "config", "check", "--sample", sample}, &stdout, &stderr)
+			if exitCode != 2 {
+				t.Fatalf("exit=%d, want 2 (stdout=%s stderr=%s)", exitCode, stdout.String(), stderr.String())
+			}
+			if stdout.Len() != 0 {
+				t.Fatalf("stdout = %q, want empty", stdout.String())
+			}
+			if _, err := os.Stat(filepath.Join(repo, ".gaori", "runs")); !os.IsNotExist(err) {
+				t.Fatalf("rejected sample created runtime state: %v", err)
+			}
+		})
+	}
 }

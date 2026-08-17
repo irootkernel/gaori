@@ -310,6 +310,31 @@ Discovery output must never be wired into extraction as a fallback or used to re
 - Candidate counts are computed inside the bounded scan window while heuristics read the complete log, so a label may report a positive verdict with zero candidates.
 - Adding a parser remains one registry entry plus its extractor; discovery follows automatically.
 
+## ADR-0015: Redaction effectiveness is reported as ordered-pass counts only
+
+Status: Accepted
+Date: 2026-08-17
+
+### Context
+
+Gaori's worst failure mode is a secret surviving into a summary that a project commits or an agent pastes. That was unverifiable in advance: config validation only checks that pattern names are non-empty and regexes compile, and `config check` deliberately omits redaction definitions from its output. An operator learned a pattern was dead by finding a leaked value in a written summary.
+
+Any check for this must not itself become the leak. Until now Gaori's disclosure rule was binary: raw logs are unredacted local evidence, and derived surfaced evidence is redacted. A match count is neither. It is non-redactable metadata *about* raw content, a class ADR-0003 and the raw-log handling policy do not anticipate.
+
+### Decision
+
+Gaori may derive exactly one class of information from raw-log content into a surface that redaction cannot protect: **aggregate match and replaced-byte counts per configured pattern, measured during one ordered redaction pass.** It must never surface matched text, surrounding lines, byte or line offsets, per-match detail, or pattern regexes and replacements. Pattern names are surfaced through the configured redactor, the same treatment command IDs and tags already receive.
+
+The measurement is opt-in on the existing `config check` preflight, stays read-only, creates no artifacts, and fails closed above the 256 KiB input bound rather than reporting a partial count.
+
+### Consequences
+
+- Counts are defined against sequential application, so a pattern may report zero because an earlier pattern already replaced its input.
+- A report is not a guarantee that unmatched secrets are absent; it states only that configured patterns fired *n* times on that sample.
+- Adding any locality to the report — line numbers, offsets, per-match detail, a prefix of a match — requires a new ADR.
+- An oversized sample fails closed because a partial scan could report `matches: 0` for a pattern whose input the scan never saw, which is the most harmful possible output for a leak check.
+- `config check` now reads one operator-named raw log, bounded by the same 256 KiB limit as `rules test` and `rules propose --raw-log`.
+
 ## Future ADR candidates
 
 - CI integration surface.

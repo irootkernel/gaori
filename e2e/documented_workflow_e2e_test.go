@@ -130,6 +130,15 @@ func TestDocumentedCLIWorkflowAgainstFreshFixture(t *testing.T) {
 		}
 	}
 
+	redactionSample := runDocumentationBlock(t, bin, repo, 0,
+		markdownCodeBlockAfter(t, userInterface, "Measure redaction coverage against an existing raw log", "bash"))
+	if !strings.Contains(redactionSample, "token\tmatches=1") {
+		t.Fatalf("documented redaction sample did not report counts: %s", redactionSample)
+	}
+	if strings.Contains(redactionSample, "token=secret") {
+		t.Fatalf("documented redaction sample echoed sample content: %s", redactionSample)
+	}
+
 	parserDiscovery := runDocumentationBlock(t, bin, repo, 0,
 		markdownCodeBlockAfter(t, userInterface, "Enumerate parser labels and diagnose an existing raw log", "bash"))
 	for _, want := range []string{"vitest\tfailures=1\tindicates=true", "recognized=1", "does not select a parser"} {

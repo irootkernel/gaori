@@ -28,7 +28,7 @@ gaori summarize [--parser <parser>] [--tag <tag> ...] <raw-log>
 gaori excerpt --summary <summary-path> <failure-id>
 gaori clean (--older-than <Nd> | --all) [--dry-run]
 gaori runs list [--tag <tag> ...] [--status <status>] [--limit <count>]
-gaori config check
+gaori config check [--sample <raw-log>]
 gaori parsers list
 gaori parsers detect <raw-log>
 gaori mcp
@@ -63,6 +63,8 @@ Use the explicit operand boundary when a search query is also a global option na
 ## Configuration preflight
 
 `gaori config check` loads and validates the selected schema-v2 config plus every stored project rule. It writes no runtime artifacts and does not execute commands or resolve executables. Human output reports the selected config, schema, safe sorted command metadata, and active/disabled rule counts. `--json` provides the same data structurally; argv and redaction definitions are intentionally omitted. Missing or invalid config/rules fail with exit code `2`.
+
+Add `--sample <raw-log>` to also measure whether the configured redaction patterns actually fire against a real log. For each pattern it reports the match count and the number of bytes replaced, plus the sample size and totals; `--json` adds a `redaction_sample` object and omits that key entirely without the option, so existing consumers see an unchanged shape. Matched text, surrounding lines, byte or line offsets, pattern regexes, and replacements are never printed — the check must not become the leak it looks for. Patterns are reported in configured order and counted during one ordered pass, so a pattern can legitimately report `matches: 0` because an earlier pattern already replaced its input. A configuration with no redaction patterns still exits `0` and says so explicitly, because an empty pattern list is valid configuration. Sample mode remains read-only and creates nothing. A missing, unreadable, non-regular, or larger-than-256-KiB sample fails with exit code `2`; a partial scan is refused because it could report `matches: 0` for a pattern whose input the scan never reached, so narrow an oversized log yourself with something like `head -c 262144 big.log > sample.log`.
 
 ## Supported parser labels
 
@@ -298,6 +300,12 @@ gaori --output-dir evidence --json summarize fixtures/unit.raw.log
 
 Run and summarize JSON expose `summary_markdown`, `summary_json`, `status_json`, `raw_log`, and `extractor_status`. Use `summary_json` with `excerpt --summary`. The legacy `summary` and `extractor` fields remain aliases for `summary_markdown` and `extractor_status`; artifact JSON and watcher-hash inputs are unchanged.
 
+Measure redaction coverage against an existing raw log without creating evidence:
+
+```bash
+gaori config check --sample fixtures/unit.raw.log
+```
+
 Enumerate parser labels and diagnose an existing raw log without creating evidence:
 
 ```bash
@@ -407,6 +415,7 @@ Tags are rule selectors, not command selectors or automatic rule generators. The
 | Successful `summarize`, `excerpt`, or `clean` | `0` |
 | Successful `parsers list` or `parsers detect`, including when no label reports a candidate | `0` |
 | Missing, unreadable, or non-regular `parsers detect` raw log | `2` |
+| Missing, unreadable, non-regular, or oversized `config check --sample` raw log | `2` |
 | Missing, conflicting, or invalid cleanup selector | `2`, with no cleanup side effect |
 | Unsafe cleanup target or cleanup filesystem failure | `3` |
 
