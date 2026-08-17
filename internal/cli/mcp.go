@@ -332,24 +332,49 @@ type listRunsOutput struct {
 	RunsTruncated bool                   `json:"runs_truncated" jsonschema:"true when the record cap or byte budget dropped a run these selectors would otherwise report"`
 }
 
-// boundMCPRunListings returns the longest prefix of runs that fits both the
-// record cap and the surfaced-evidence byte budget. The record cap alone is not a
-// bound: listing copies command IDs, tags, and extractor status out of a status
-// artifact without validating their length, so one hand-edited artifact could
-// otherwise produce a very large response.
-func boundMCPRunListings(runs []artifacts.RunListing, limit int) ([]artifacts.RunListing, bool) {
-	budget := safety.MaxSummaryBytes
-	for index, run := range runs {
-		if index == limit {
-			return runs[:index], true
-		}
-		encoded, err := json.Marshal(run)
-		if err != nil || len(encoded) > budget {
-			return runs[:index], true
-		}
-		budget -= len(encoded)
+// mcpResponseEnvelopeBytes covers the transport wrapper the SDK adds around a
+// tool result: the content array, the text-block object, the structured-content
+// key, and their separators.
+const mcpResponseEnvelopeBytes = 1024
+
+// mcpResponseSize estimates the bytes a client receives for one tool result. The
+// SDK carries a typed output twice, once as structured content and once as a JSON
+// text fallback, and the text copy is escaped as a JSON string, so it is larger
+// than the structured copy rather than equal to it.
+func mcpResponseSize(out listRunsOutput) (int, error) {
+	structured, err := json.Marshal(out)
+	if err != nil {
+		return 0, err
 	}
-	return runs, false
+	fallback, err := json.Marshal(string(structured))
+	if err != nil {
+		return 0, err
+	}
+	return len(structured) + len(fallback) + mcpResponseEnvelopeBytes, nil
+}
+
+// boundMCPRunListings returns the longest prefix of runs whose response fits both
+// the record cap and the surfaced-evidence byte budget.
+//
+// The record cap alone is not a bound: listing copies command IDs, tags, and
+// extractor status out of a status artifact without validating their length, so
+// one hand-edited artifact could otherwise produce a very large response. The
+// budget applies to the response a client receives, not to the sum of the record
+// payloads, so it is measured through mcpResponseSize.
+func boundMCPRunListings(runs []artifacts.RunListing, limit int) ([]artifacts.RunListing, bool) {
+	if limit > len(runs) {
+		limit = len(runs)
+	}
+	for count := limit; count > 0; count-- {
+		size, err := mcpResponseSize(listRunsOutput{Runs: runs[:count], RunsTruncated: count < len(runs)})
+		if err != nil {
+			continue
+		}
+		if size <= safety.MaxSummaryBytes {
+			return runs[:count], count < len(runs)
+		}
+	}
+	return runs[:0], len(runs) > 0
 }
 
 func newMCPServer(manager *mcpManager, info BuildInfo) *mcp.Server {

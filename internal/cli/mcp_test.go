@@ -732,17 +732,12 @@ func TestMCPListRunsBoundsAndReportsTruncation(t *testing.T) {
 	}
 	session := newMCPTestSession(t, newMCPManager(globalOptions{RepoRoot: repo}))
 
-	capped := decodeListRuns(t, callListRuns(t, session, map[string]any{}))
+	result := callListRuns(t, session, map[string]any{})
+	capped := decodeListRuns(t, result)
 	if len(capped.Runs) != maxMCPListedRuns || !capped.RunsTruncated {
 		t.Fatalf("runs=%d truncated=%v, want %d and true", len(capped.Runs), capped.RunsTruncated, maxMCPListedRuns)
 	}
-	encoded, err := json.Marshal(capped)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(encoded) > safety.MaxSummaryBytes*2 {
-		t.Fatalf("response is %d bytes, which exceeds the intended bound", len(encoded))
-	}
+	assertListRunsResponseWithinBudget(t, result)
 
 	exact := decodeListRuns(t, callListRuns(t, session, map[string]any{"limit": 3}))
 	if len(exact.Runs) != 3 || !exact.RunsTruncated {
@@ -835,5 +830,47 @@ func TestMCPListRunsRejectsCallerSelectedOutputDirectory(t *testing.T) {
 	result := callListRuns(t, session, map[string]any{})
 	if !result.IsError {
 		t.Fatalf("expected a caller-selected output directory to fail closed: %+v", result)
+	}
+}
+
+// assertListRunsResponseWithinBudget measures the response a client actually
+// receives. The SDK serializes a typed result twice, as structured content and as
+// its JSON text fallback, so measuring only the output struct understates the
+// wire size by about half.
+func assertListRunsResponseWithinBudget(t *testing.T, result *mcp.CallToolResult) {
+	t.Helper()
+	wire, err := json.Marshal(result)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(wire) > safety.MaxSummaryBytes {
+		t.Fatalf("list_runs response is %d bytes, want at most %d", len(wire), safety.MaxSummaryBytes)
+	}
+}
+
+// TestMCPListRunsBoundsOversizedListingsToTheResponseBudget uses listings whose
+// own JSON is large enough that the record cap alone would not keep the response
+// within the byte budget.
+func TestMCPListRunsBoundsOversizedListingsToTheResponseBudget(t *testing.T) {
+	t.Parallel()
+	repo := t.TempDir()
+	fat := make([]string, 0, 12)
+	for i := 0; i < 12; i++ {
+		fat = append(fat, fmt.Sprintf("tag-%02d-%s", i, strings.Repeat("a", 48)))
+	}
+	for i := 0; i < maxMCPListedRuns; i++ {
+		writeRunsListStatus(t, repo, fmt.Sprintf("20260801T00%02d00", i),
+			"unit-with-a-very-long-command-identifier-for-size", fat, model.RunStatusPassed, 0)
+	}
+	session := newMCPTestSession(t, newMCPManager(globalOptions{RepoRoot: repo}))
+
+	result := callListRuns(t, session, map[string]any{})
+	bounded := decodeListRuns(t, result)
+	assertListRunsResponseWithinBudget(t, result)
+	if !bounded.RunsTruncated {
+		t.Fatal("expected the byte budget to report truncation")
+	}
+	if len(bounded.Runs) == 0 || len(bounded.Runs) >= maxMCPListedRuns {
+		t.Fatalf("runs=%d, want a non-empty prefix shorter than the record cap", len(bounded.Runs))
 	}
 }
