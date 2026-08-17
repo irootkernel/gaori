@@ -21,6 +21,9 @@ func TestHelpSurfacesExitSuccessfully(t *testing.T) {
 		{args: []string{"run", "--help", "--json"}, want: "Arguments after -- belong to the child"},
 		{args: []string{"config", "check", "--help"}, want: "gaori config check"},
 		{args: []string{"rules", "-h"}, want: "gaori rules <command>"},
+		{args: []string{"parsers", "-h"}, want: "gaori parsers <command>"},
+		{args: []string{"help", "parsers", "detect"}, want: "<raw-log>"},
+		{args: []string{"parsers", "detect", "--help"}, want: "never names a recommended label"},
 		{args: []string{"help", "rules", "propose"}, want: "--raw-log <raw-log>"},
 		{args: []string{"rules", "propose", "--help"}, want: "--span <start:end>"},
 	}

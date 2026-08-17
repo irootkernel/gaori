@@ -1,6 +1,8 @@
 package extract
 
 import (
+	"maps"
+	"slices"
 	"strings"
 
 	"github.com/irootkernel/gaori/internal/model"
@@ -39,6 +41,13 @@ var parserRegistry = map[string]parserDescriptor{
 func IsKnown(label string) bool {
 	_, ok := parserRegistry[label]
 	return ok
+}
+
+// SupportedParsers returns every supported parser label in ascending order. It
+// exposes only the registry's keys for read-only discovery; the table itself
+// stays internal and parsers remain compiled in.
+func SupportedParsers() []string {
+	return slices.Sorted(maps.Keys(parserRegistry))
 }
 
 func genericParserFailures(lines []lineIndex, _ string) []model.Failure {

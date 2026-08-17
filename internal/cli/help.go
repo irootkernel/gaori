@@ -45,6 +45,9 @@ func helpCommandPath(args []string) []string {
 	if args[0] == "runs" && len(args) > 1 {
 		return append(path, args[1])
 	}
+	if args[0] == "parsers" && len(args) > 1 {
+		return append(path, args[1])
+	}
 	return path
 }
 
@@ -70,6 +73,7 @@ Commands:
   runs        List completed standalone run evidence
   config      Validate project configuration and rules
   rules       Inspect and manage project extraction rules
+  parsers     List supported parser labels and diagnose a raw log
   mcp         Serve asynchronous Gaori tools over STDIO MCP
 
 Global options:
@@ -125,6 +129,28 @@ timed_out, killed, or internal_error.
 Validate project configuration and stored rules without running commands or creating artifacts.
 `,
 	"config check": "Usage: gaori config check\n",
+	"parsers": `Usage: gaori parsers <command>
+
+Commands:
+  list      List every supported parser label
+  detect    Report per-label candidates for an existing raw log
+
+Use "gaori help parsers <command>" for command details.
+`,
+	"parsers list": "Usage: gaori parsers list\n\nList every supported parser label in ascending order. Reads no config and\ncreates nothing.\n",
+	"parsers detect": `Usage: gaori parsers detect <raw-log>
+
+Report, for every supported parser label, how many candidate failure records it
+would extract from one existing raw log and whether that label's own summary
+heuristic recognizes the log. Reads no config, applies no project rules, and
+creates nothing. Output carries only label names, counts, and verdicts, never
+text from the log.
+
+Detect reports candidates only. Several labels can legitimately report a
+candidate for one log, so it never names a recommended label: select one
+explicitly with "--parser <label>" on run or summarize. Exits 0 even when no
+label reports a candidate.
+`,
 	"mcp": `Usage: gaori [--repo <path>] [--config <path>] [--output-dir <path>] mcp
 
 Serve session-local asynchronous Gaori run, wait, cancel, and excerpt tools over STDIO MCP.

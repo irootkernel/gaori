@@ -25,7 +25,7 @@ internal/runner/
 internal/artifacts/
   path planner, artifact writers, completed-run cleanup and byte accounting
 internal/extract/
-  generic parser, parser registry, parser-specific modules, span utilities
+  generic parser, parser registry, parser-specific modules, read-only parser discovery, span utilities
 internal/rules/
   rule model, YAML load/save, CRUD, validation, test/propose
 internal/safety/

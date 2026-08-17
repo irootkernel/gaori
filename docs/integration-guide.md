@@ -34,6 +34,7 @@ The default adoption model is selective: route commands through Gaori when their
 | Existing-log processing | Yes | `summarize [--parser <label>] <raw-log>` copies and summarizes a log without rerunning the command. Its inferred result is not authoritative execution metadata. |
 | Failure excerpt lookup | Yes | `excerpt --summary <path> <failure-id>` validates contained references and the 16 KiB bound before reading; MCP additionally binds excerpts to the finalized invocation checksum. |
 | Parsers | Yes | `generic`, `vitest`, `pytest`, `go-test`, `playwright`, `ginkgo`, `godog`, `cargo-test`, `flutter-test`, `bun-test`, `node-test`, `jest`, `rspec`, `dotnet-test`, and `gradle-test`. |
+| Parser discovery | Yes | `parsers list` and `parsers detect <raw-log>` report supported labels and per-label candidate counts from an existing log without executing anything, loading config, creating artifacts, or selecting a parser. |
 | Project extraction rules | Yes | Strict YAML CRUD, provenance, fixture testing, and local proposals from a verified summary failure or explicit bounded raw span. |
 | Rule proposal review | Yes | `rules proposals` and `rules show --proposal <name>` list and read local candidates under `.gaori/rule-proposals/`. Promotion remains the explicit `rules create --file <path>`; nothing is activated automatically. |
 | Standalone artifacts | Yes | Collision-free `.gaori/runs/standalone/<UTC-timestamp>[-NNN]/` or `<output-dir>/runs/...`. |
@@ -61,6 +62,7 @@ These are current boundaries, not hidden partial features:
 - A resident watcher daemon, filesystem running-state heartbeat, or durable progress service. CLI runs still write only final `status.json`; an attached MCP client may use the ephemeral session-local lifecycle instead of process polling.
 - Automatic issue creation, release, push, install, update, or runtime activation.
 - Automatic generic-parser fallback after a specialized parser misses.
+- Automatic parser selection or reparsing. `parsers detect` reports candidates for a log; the operator or agent still passes `--parser <label>` explicitly, and Gaori never re-summarizes a completed run on its own.
 - Redaction of the original raw log or of literal artifact-reference paths.
 - Automatic promotion of `.gaori/rule-proposals/` into active project rules.
 - Automatic retention, scheduled cleanup, cleanup of incomplete or scoped runs, and cleanup of caller-selected output directories.

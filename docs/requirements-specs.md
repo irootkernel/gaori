@@ -28,6 +28,7 @@ Implementation note: the original v0.1 roadmap and the recorded `RQHAR` hardenin
 - [x] `GAORI-REQ-RQCLI-011` Accept global options before or after subcommands and operands while preserving command-option values, allowing `rules search -- <query>` to escape global-option names as literal queries, and passing every argument after an ad-hoc `--` boundary to the child unchanged.
 - [x] `GAORI-REQ-RQCLI-012` Allow tagged ad-hoc runs to select one `--timeout-sec` value from 1 through 86400 before the explicit child boundary, default to 600 seconds, reject configured-run use before side effects, and preserve child-side timeout arguments.
 - [x] `GAORI-REQ-RQCLI-013` Provide `gaori runs list` as a side-effect-free listing of completed `.gaori/runs/standalone/` evidence, sourced only from redacted status artifacts, ordered newest first, filterable by repeatable `--tag`, one `--status`, and a non-negative `--limit`, applying the same recognition and completeness rules as cleanup, skipping unrecognized or incomplete runs, and failing closed on unsafe or unreadable evidence without executing commands, opening raw logs, or creating artifacts.
+- [x] `GAORI-REQ-RQCLI-014` Provide side-effect-free parser discovery through `gaori parsers list` and `gaori parsers detect <raw-log>`, where `list` enumerates every supported parser label in ascending order and `detect` reports, per label, the candidate failure count and that label's own summary-heuristic verdict for one caller-named raw log in a deterministic order that never names a recommended label, accepting only the `--repo` and `--json` global options, exiting `0` even when no label reports a candidate, and creating no artifacts.
 
 ## RQCFG: Project configuration
 
@@ -76,6 +77,7 @@ Implementation note: the original v0.1 roadmap and the recorded `RQHAR` hardenin
 - [x] `GAORI-REQ-RQEXT-005` Report `extractor_status` as `precise`, `partial`, `degraded`, or `no_match`, with degraded evidence when surfaced records are truncated.
 - [x] `GAORI-REQ-RQEXT-006` Report degraded extraction when a failed, timed-out, or killed command has no useful failure span.
 - [x] `GAORI-REQ-RQEXT-007` Never use extraction rules, parser matches, or parser misses to override the executed command's exit code or authoritative non-pass status.
+- [x] `GAORI-REQ-RQEXT-008` Evaluate every supported parser label against one raw log through the shared parser registry using the same bounded 256 KiB complete-line tail and ANSI handling as extraction, surfacing only label names, candidate counts, heuristic verdicts, and scan bounds; parser discovery never applies project rules, selects a parser, creates artifacts, or changes any run's status, exit code, or `extractor_status`.
 
 ## RQRUL: Rule lifecycle and CRUD
 

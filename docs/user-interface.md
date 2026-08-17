@@ -29,6 +29,8 @@ gaori excerpt --summary <summary-path> <failure-id>
 gaori clean (--older-than <Nd> | --all) [--dry-run]
 gaori runs list [--tag <tag> ...] [--status <status>] [--limit <count>]
 gaori config check
+gaori parsers list
+gaori parsers detect <raw-log>
 gaori mcp
 ```
 
@@ -93,6 +95,8 @@ Existing-log summarization also defaults to `generic`; add exactly one `--parser
 An unknown, missing, empty, or repeated parser value, a parser without the explicit ad-hoc `--` boundary, or `--parser` used with a configured command fails with config exit code `2` before config/rule loading, artifact creation, or child execution. Arguments after the boundary belong to the child, so `gaori run --parser generic --tag unit -- my-command --parser child-value` passes the child `--parser` argument through unchanged.
 
 Parser-specific examples in this repository are backed by fixture logs under `internal/extract/testdata/`.
+
+`gaori parsers list` prints the same labels in ascending order from the shared registry, so it is the authoritative list for an installed binary. `gaori parsers detect <raw-log>` reports, per label, the candidate failure count and that label's own summary-heuristic verdict for an existing log. It reports candidates; it never selects a parser and never adds generic fallback.
 
 
 ## Global options
@@ -199,6 +203,17 @@ src/foo.test.ts:42:13
 
 LOG
 
+cat > fixtures/vitest.raw.log <<'LOG'
+ RUN  v1.6.0 /repo
+
+ ❯ src/foo.test.ts (1)
+   × renders empty state 8ms
+
+ FAIL  src/foo.test.ts > renders empty state
+ AssertionError: expected false to be true
+ ❯ src/foo.ts:42:13
+LOG
+
 cat > fixtures/generic-v1.yaml <<'YAML'
 id: generic-v1
 tags: [generic, unit]
@@ -283,6 +298,13 @@ gaori --output-dir evidence --json summarize fixtures/unit.raw.log
 
 Run and summarize JSON expose `summary_markdown`, `summary_json`, `status_json`, `raw_log`, and `extractor_status`. Use `summary_json` with `excerpt --summary`. The legacy `summary` and `extractor` fields remain aliases for `summary_markdown` and `extractor_status`; artifact JSON and watcher-hash inputs are unchanged.
 
+Enumerate parser labels and diagnose an existing raw log without creating evidence:
+
+```bash
+gaori parsers list
+gaori parsers detect fixtures/vitest.raw.log
+```
+
 Preview completed standalone evidence cleanup:
 
 ```bash
@@ -336,6 +358,21 @@ Tags are rule selectors, not command selectors or automatic rule generators. The
 - `--json` emits `runs` and `skipped_runs`. Each run carries `run_dir`, `command_id`, `tags`, `status`, `exit_code`, `extractor_status`, `failure_count`, `updated_at`, `summary_markdown`, `summary_json`, and `status_json`. `failure_count` is the number of retained failure signatures in the status artifact.
 - Listing reports what evidence exists. It does not decide whether a check was required, whether a result is accepted, or whether evidence may be deleted.
 
+## Parser discovery notes
+
+- `parsers list` and `parsers detect` are read-only. They execute no command, resolve no executable, load no config, load no project rules, and create no artifacts. They accept only the `--repo` and `--json` global options; `--config`, `--output-dir`, and `--run-id` fail with config exit code `2`.
+- `parsers list` prints every supported label in ascending order, then a total. `--json` emits `parsers`.
+- `parsers detect` opens only the raw log named on the command line. A relative path resolves against the selected repository root; an absolute path is used as given. A missing, unreadable, or non-regular path fails with config exit code `2`.
+- Output contains only label names, counts, verdicts, and byte totals. It never contains matched text, signatures, test names, file paths from inside the log, spans, or line numbers, so no redaction is applied and no config is required. To see what a label actually extracts, run `gaori summarize --parser <label> <raw-log>`.
+- `failures` counts candidate failure records inside the bounded scan window. `indicates` is the label's own summary heuristic over the complete log and is `false` for a label that has no heuristic, which is the case for `generic`. A label may therefore report `indicates: true` with `failures: 0`.
+- Results are ordered by positive verdict, then descending `failures`, then label. **This is display order only.** Several labels can legitimately report a candidate or a positive verdict for one log — `--- FAIL:` appears in both Go test and Godog output, and Vitest's failure heuristic matches Go's `FAIL\t<package>` lines — so `detect` never names a recommended label. The operator or agent still selects `--parser <label>` explicitly. Because `generic` has no heuristic, it can never outrank a label that recognized the log.
+- `detect` does not apply project rules. At run time applicable rules are evaluated before the selected parser, so a rule may produce evidence that a candidate count does not predict.
+- A log larger than 256 KiB is scanned from the first complete line of the final 256 KiB and reports `truncated: true`, the same window and degradation that `extractor_status: degraded` reports for a run over the same log.
+- `detect` exits `0` even when every label reports zero candidates, and says so explicitly. It reports observations, not a result.
+- `--json` emits `parsers`, `recognized`, `scanned_bytes`, `total_bytes`, and `truncated`; each entry carries `parser`, `failures`, and `indicates`.
+- A run that reported `extractor_status: no_match` means the selected label produced no candidate span. Running `parsers detect` on that run's `<command-id>.raw.log` shows which other labels would have produced candidates. It does not re-run the command, re-summarize, or change the completed run's artifacts.
+- Discovery reports what each label would find. It does not decide which parser is correct, which check was required, or whether a result is accepted.
+
 ## Summarize mode notes
 
 - `summarize <raw-log>` uses the `generic` parser plus any matching project rules.
@@ -368,6 +405,8 @@ Tags are rule selectors, not command selectors or automatic rule generators. The
 | Extraction internal error during `summarize` | CLI and artifact exit code `4` with `status: internal_error` |
 | Other Gaori parser/rule internal error | documented internal code, recommended `4` |
 | Successful `summarize`, `excerpt`, or `clean` | `0` |
+| Successful `parsers list` or `parsers detect`, including when no label reports a candidate | `0` |
+| Missing, unreadable, or non-regular `parsers detect` raw log | `2` |
 | Missing, conflicting, or invalid cleanup selector | `2`, with no cleanup side effect |
 | Unsafe cleanup target or cleanup filesystem failure | `3` |
 

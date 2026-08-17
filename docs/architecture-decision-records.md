@@ -283,6 +283,33 @@ This is a structural boundary only. It does not change which labels are supporte
 - `internal/config` now depends on `internal/extract`; `internal/rules` already did.
 - The registry is an internal table, not a plugin interface. Parsers stay compiled in, and project-local YAML rules remain the supported extension point for project-specific evidence.
 
+## ADR-0014: Parser discovery reports candidates and never selects a parser
+
+Status: Accepted
+Date: 2026-08-17
+
+### Context
+
+Fifteen parser labels are chosen by hand from a documentation table. ADR-0002 and ADR-0008 deliberately forbid automatic generic extraction after a specialized parser misses, so a wrong `--parser` choice ends at `extractor_status: no_match` with no next clue. A command that evaluates every label against one log sits directly on that boundary and needs its limits recorded, because the obvious way to "finish" such a command is to wire its top candidate into extraction as the fallback those ADRs reject. ADR-0013 also declared the registry an internal table, and enumerating its labels moves it closer to a public surface.
+
+Observed registry behavior makes a single recommendation unsound. Several labels legitimately claim one log: `--- FAIL:` appears in both Go test and Godog output, Vitest's failure heuristic `^\s*FAIL\s+` matches Go's `FAIL\tpackage` lines, and the Flutter load pattern matches any line containing `Error:`. On the Ginkgo fixture three labels report a positive verdict. Raw candidate counts are also not a cross-label quality signal, because `generic` can produce more spans than the matching specialized parser.
+
+### Decision
+
+`gaori parsers list` enumerates registry keys in ascending order. `gaori parsers detect <raw-log>` evaluates every registry entry against one caller-named log and reports each label's candidate count, that label's own summary-heuristic verdict, and the scan bounds. It loads no config, applies no project rules, writes nothing, surfaces no text taken from the log, and names no recommended label.
+
+Results are ordered by positive verdict, then descending candidate count, then label. That is display order only. Because the generic descriptor exposes no heuristic, generic cannot outrank a label that recognized the log.
+
+Discovery output must never be wired into extraction as a fallback or used to reparse a completed run automatically. The registry stays internal: only key enumeration and whole-registry read-only evaluation are exported, parsers stay compiled in, and project-local YAML rules remain the supported extension point.
+
+### Consequences
+
+- Label selection becomes informed without adding fallback or changing pass/fail.
+- Detect reports observations, so it exits `0` even when every label reports zero candidates.
+- Emitting no log-derived text is stronger than redacting it, so detect needs no redactor and works without project config.
+- Candidate counts are computed inside the bounded scan window while heuristics read the complete log, so a label may report a positive verdict with zero candidates.
+- Adding a parser remains one registry entry plus its extractor; discovery follows automatically.
+
 ## Future ADR candidates
 
 - CI integration surface.

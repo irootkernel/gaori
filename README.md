@@ -227,6 +227,15 @@ Choose the parser that matches the command output:
 | `dotnet test` | `dotnet-test` |
 | Gradle test | `gradle-test` |
 
+Not sure which label matches an existing log? Enumerate the labels and see what each one would find, without creating any evidence:
+
+```bash
+gaori parsers list
+gaori parsers detect .gaori/runs/standalone/<run>/unit.raw.log
+```
+
+`detect` reports candidates only. More than one label can report a candidate for the same log, so it never names a recommended label — you still pass `--parser <label>` yourself. It reads no config, creates nothing, and never prints text from the log.
+
 Run a configured command by ID:
 
 ```bash

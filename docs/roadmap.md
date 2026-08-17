@@ -10,7 +10,7 @@ Task status values: `Planned`, `In Progress`, `Blocked`, `Done`, `Deferred`.
 Existing `Done` entries record completion of the original v0.1 implementation slices. They do not supersede or satisfy the later `HARDE` tasks, which close correctness, safety, verification, and documentation gaps found during repository review.
 
 Current implementation snapshot:
-- `Done`: `SETUP-001` to `SETUP-003`, `RUNNR-001` to `RUNNR-003`, `ARTIF-001` to `ARTIF-003`, `PARSE-001` to `PARSE-006`, `SAFEY-001` to `SAFEY-003`, `CLIUX-001` to `CLIUX-008`, `RULES-001` to `RULES-005`, `DOCUM-001` to `DOCUM-003`, `HARDE-001` to `HARDE-007`, `TAGS-001`, `ADHOC-001`, `ADHOC-002`, `RELRV-001` to `RELRV-009`, `BRAND-001`, `CLEAN-001`, `PORTA-001`, `MCP-001` to `MCP-005`
+- `Done`: `SETUP-001` to `SETUP-003`, `RUNNR-001` to `RUNNR-003`, `ARTIF-001` to `ARTIF-003`, `PARSE-001` to `PARSE-007`, `SAFEY-001` to `SAFEY-003`, `CLIUX-001` to `CLIUX-008`, `RULES-001` to `RULES-005`, `DOCUM-001` to `DOCUM-003`, `HARDE-001` to `HARDE-007`, `TAGS-001`, `ADHOC-001`, `ADHOC-002`, `RELRV-001` to `RELRV-009`, `BRAND-001`, `CLEAN-001`, `PORTA-001`, `MCP-001` to `MCP-005`
 - `In Progress`: none
 - `Deferred`: none
 - `Planned`: none
@@ -49,6 +49,7 @@ Current implementation snapshot:
 | PARSE-004 | Done | Add fixture-backed Ginkgo, Godog, Cargo test, Flutter test, Bun test, and Node.js test parsers and harden Go test, Vitest, and Playwright matching without generic fallback. | `GAORI-REQ-RQEXT-002`, `GAORI-REQ-RQEXT-004`, `GAORI-REQ-RQSEC-005` |
 | PARSE-005 | Done | Replace the duplicated parser-label declarations with one registry in `internal/extract` that config and rule validation resolve through, without changing supported labels or matching behavior. | `GAORI-REQ-RQEXT-002`, `GAORI-REQ-RQCFG-006`, `GAORI-REQ-RQRUL-008`, `ADR-0013` |
 | PARSE-006 | Done | Add fixture-backed Jest, RSpec, `dotnet test`, and Gradle test parsers for ecosystems that previously fell back to `generic`, preserving the no-generic-fallback contract. | `GAORI-REQ-RQEXT-002`, `GAORI-REQ-RQEXT-004`, `GAORI-REQ-RQSEC-005` |
+| PARSE-007 | Done | Add read-only `parsers list` and `parsers detect <raw-log>` so label selection is informed by registry enumeration and per-label candidate counts, without adding fallback, parser selection, config loading, artifacts, or surfaced log text. | `GAORI-REQ-RQCLI-014`, `GAORI-REQ-RQEXT-008`, `ADR-0002`, `ADR-0013`, `ADR-0014` |
 
 ## SAFEY: Safety and filtering
 

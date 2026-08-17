@@ -130,6 +130,14 @@ func TestDocumentedCLIWorkflowAgainstFreshFixture(t *testing.T) {
 		}
 	}
 
+	parserDiscovery := runDocumentationBlock(t, bin, repo, 0,
+		markdownCodeBlockAfter(t, userInterface, "Enumerate parser labels and diagnose an existing raw log", "bash"))
+	for _, want := range []string{"vitest\tfailures=1\tindicates=true", "recognized=1", "does not select a parser"} {
+		if !strings.Contains(parserDiscovery, want) {
+			t.Fatalf("parser discovery output missing %q: %s", want, parserDiscovery)
+		}
+	}
+
 	cleanPreview := runDocumentationBlock(t, bin, repo, 0,
 		markdownCodeBlockAfter(t, userInterface, "Preview completed standalone evidence cleanup", "bash"))
 	if !strings.HasPrefix(cleanPreview, "Would remove ") {

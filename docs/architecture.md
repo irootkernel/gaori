@@ -42,6 +42,7 @@ CLI
  ├─ Extraction Engine
  │   ├─ Generic Parser
  │   ├─ Parser Registry
+ │   ├─ Parser Discovery
  │   ├─ Project Rules
  │   ├─ Noise Filter
  │   └─ Redactor
@@ -177,6 +178,19 @@ Cleanup does not load project config and does not infer retention. It cannot tar
 ```
 
 Listing shares the cleanup selector so both commands agree on what "completed standalone evidence" means. It reports the already redacted status fields and literal artifact references without opening summaries, excerpts, or raw logs, and it writes nothing. It is an evidence index, not a gate, a retention decision, or an acceptance record.
+
+## Data flow: detect parser candidates
+
+```text
+1. User runs `gaori parsers detect <raw-log>`, or `gaori parsers list` for labels only.
+2. CLI rejects `--config`, `--output-dir`, and `--run-id` before filesystem access, and requires a regular file so a special file fails closed instead of blocking the open.
+3. Discovery reads only the named raw log. No config, redaction, noise filter, or project rule is loaded.
+4. The log is scanned through the same bounded complete-line tail and ANSI handling as extraction, and the line index is built once for every label.
+5. Each registry entry reports its candidate failure count over the scanned window and its own summary heuristic over the complete log.
+6. Candidates are ordered by positive verdict, then descending count, then label, and reported with the scan bounds and a truncation flag.
+```
+
+Discovery shares the parser registry with extraction so a supported label cannot exist in one and be missing from the other. It reports only label names, counts, verdicts, and byte totals, never text taken from the log, so it needs no redactor and writes nothing. It is a selection aid, not a parser selector, not generic fallback, and not a decision about which parser is correct.
 
 ## Config model
 
@@ -339,6 +353,8 @@ Command execution status is authoritative. Parser quality only affects evidence 
 | Extraction internal error after command pass | `internal_error` / `0` | `degraded` | `4` |
 | Extraction internal error after command failure, timeout, or kill | original status / original exit code | `degraded` | original exit code |
 | Extraction internal error during standalone summarize | `internal_error` / `4` | `degraded` | `4` |
+
+Parser discovery reports per-label candidate counts and heuristic verdicts for an existing raw log. It does not change this policy, does not apply project rules, and does not select a parser; a specialized parser still never retries generic extraction.
 
 When extraction fails internally, Gaori preserves the raw log and writes empty failure/warning collections plus summary and status artifacts whenever those writes remain safe. The bounded, configured-redaction-aware diagnostic is emitted on stderr and is not added to the JSON schemas. Configuration, pre-execution, and artifact-write failures retain their existing fatal-error behavior.
 
