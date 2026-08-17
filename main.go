@@ -1,3 +1,8 @@
+// Package main at the module root exists so that `go install
+// github.com/irootkernel/gaori@<version>` with no subpath resolves a main
+// package; the documented network install depends on it. `make build` and `make
+// install` use ./cmd/gaori instead. Keep both entrypoints identical, including
+// the version default, because `go install` supplies no linker values.
 package main
 
 import (

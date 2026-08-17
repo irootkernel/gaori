@@ -71,10 +71,32 @@ func DiscoverProposals(repoRoot string) ([]string, error) {
 		if entry.IsDir() || filepath.Ext(entry.Name()) != ".yaml" {
 			continue
 		}
-		paths = append(paths, filepath.Join(proposalsDir, entry.Name()))
+		path := filepath.Join(proposalsDir, entry.Name())
+		if err := requireRegularFile(repoRoot, path, "discover rule proposals"); err != nil {
+			return nil, err
+		}
+		paths = append(paths, path)
 	}
 	sort.Strings(paths)
 	return paths, nil
+}
+
+// requireRegularFile rejects a discovered entry that is not a regular file, so a
+// special file such as a FIFO fails closed instead of blocking the later open.
+// It resolves through safety.StatWithin rather than the directory entry's own
+// mode because the rules boundary deliberately allows an internal symlink whose
+// canonical target stays inside the repository; StatWithin follows that link
+// while still failing closed on an escaping or dangling one.
+func requireRegularFile(repoRoot, path, operation string) error {
+	info, err := safety.StatWithin(repoRoot, path)
+	if err != nil {
+		return model.NewGaoriError(model.ExitCodeConfigError, operation, err)
+	}
+	if !info.Mode().IsRegular() {
+		return model.NewGaoriError(model.ExitCodeConfigError, operation,
+			fmt.Errorf("path %q is not a regular file", filepath.Base(path)))
+	}
+	return nil
 }
 
 // LoadProposals reads every local rule proposal. Unlike LoadAll it does not

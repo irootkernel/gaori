@@ -24,7 +24,7 @@ import (
 
 func rulesCommand(opts globalOptions, args []string, stdout, stderr io.Writer) int {
 	if len(args) == 0 {
-		writeLine(stderr, "usage: gaori rules <list|search|show|create|update|delete|test|propose>")
+		writeLine(stderr, "usage: gaori rules <list|search|show|create|update|delete|test|propose|proposals>")
 		return int(model.ExitCodeConfigError)
 	}
 	switch args[0] {

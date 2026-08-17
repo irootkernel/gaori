@@ -45,7 +45,7 @@ Open implementation items are recorded in `todo.md`, including the four newest p
 | [Requirements-to-test matrix](requirements-test-matrix.md) | Maintainers and auditors | Primary evidence for each completed requirement |
 | [Implementation note](implementation-note.md) | Contributors | Package boundaries, risk areas, tests, release checklist |
 | [Roadmap](roadmap.md) | Project maintainers | Completed delivery history and integration-contract tasks |
-| [Todo](todo.md) | Project maintainers | Explicitly accepted open work; currently empty |
+| [Todo](todo.md) | Project maintainers | Explicitly accepted open work |
 | [v0.1.5 release notes](releases/v0.1.5.md) | Users and maintainers | Previous published changes and known limitations |
 | [v0.1.6 release notes](releases/v0.1.6.md) | Users and maintainers | Previous identity migration, compatibility notes, and known limitations |
 | [v0.1.7 release notes](releases/v0.1.7.md) | Users and maintainers | Previous coding-agent guidance, compatibility notes, and known limitations |

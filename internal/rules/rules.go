@@ -25,9 +25,14 @@ func Discover(repoRoot string) ([]string, error) {
 	}
 	matches := make([]string, 0, len(entries))
 	for _, entry := range entries {
-		if !entry.IsDir() && filepath.Ext(entry.Name()) == ".yaml" {
-			matches = append(matches, filepath.Join(rulesDir, entry.Name()))
+		if entry.IsDir() || filepath.Ext(entry.Name()) != ".yaml" {
+			continue
 		}
+		path := filepath.Join(rulesDir, entry.Name())
+		if err := requireRegularFile(repoRoot, path, "discover rule files"); err != nil {
+			return nil, err
+		}
+		matches = append(matches, path)
 	}
 	return matches, nil
 }

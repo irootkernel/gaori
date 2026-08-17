@@ -40,6 +40,70 @@ func TestHelpSurfacesExitSuccessfully(t *testing.T) {
 	}
 }
 
+// TestRootUsageListsEveryDispatchedCommand and its rules counterpart compare the
+// bare-invocation usage line against helpText rather than a hard-coded list, so a
+// command can never be added to one surface and forgotten in the other.
+func TestRootUsageListsEveryDispatchedCommand(t *testing.T) {
+	t.Parallel()
+	assertUsageMatchesHelpTopics(t, nil, "")
+}
+
+func TestRulesUsageListsEveryDispatchedSubcommand(t *testing.T) {
+	t.Parallel()
+	assertUsageMatchesHelpTopics(t, []string{"rules"}, "rules ")
+}
+
+// assertUsageMatchesHelpTopics runs args, which must fail with the usage line, and
+// checks that the `<a|b|c>` group in that line is exactly the set of helpText keys
+// carrying prefix. An empty prefix selects the single-word root topics.
+func assertUsageMatchesHelpTopics(t *testing.T, args []string, prefix string) {
+	t.Helper()
+	var stdout, stderr bytes.Buffer
+	if exitCode := Main(args, &stdout, &stderr); exitCode != 2 {
+		t.Fatalf("exit = %d, want 2 (stderr = %q)", exitCode, stderr.String())
+	}
+	listed := usageCommandTokens(t, stderr.String())
+	expected := map[string]bool{}
+	for key := range helpText {
+		if key == "" {
+			continue
+		}
+		if prefix == "" {
+			if !strings.Contains(key, " ") {
+				expected[key] = true
+			}
+			continue
+		}
+		if name, ok := strings.CutPrefix(key, prefix); ok && !strings.Contains(name, " ") {
+			expected[name] = true
+		}
+	}
+	for name := range expected {
+		if !listed[name] {
+			t.Errorf("usage line omits help topic %q: %s", prefix+name, stderr.String())
+		}
+	}
+	for name := range listed {
+		if !expected[name] {
+			t.Errorf("usage line lists %q, which has no %q help topic", name, prefix+name)
+		}
+	}
+}
+
+func usageCommandTokens(t *testing.T, usage string) map[string]bool {
+	t.Helper()
+	open := strings.Index(usage, "<")
+	closing := strings.Index(usage, ">")
+	if open < 0 || closing < open {
+		t.Fatalf("usage line has no command group: %q", usage)
+	}
+	tokens := map[string]bool{}
+	for _, token := range strings.Split(usage[open+1:closing], "|") {
+		tokens[strings.TrimSpace(token)] = true
+	}
+	return tokens
+}
+
 func TestHelpDoesNotConsumeChildArguments(t *testing.T) {
 	t.Parallel()
 	path, ok := helpRequest([]string{"run", "--tag", "unit", "--", "tool", "--help"})

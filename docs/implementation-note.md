@@ -34,6 +34,8 @@ internal/cli/mcp.go
   STDIO MCP tools, session-local invocation registry, revision waits, cancellation, shutdown drain
 ```
 
+The module root also holds a `main.go` identical to `cmd/gaori/main.go`. `go install github.com/irootkernel/gaori@<version>` with no subpath resolves the module-root package, so the documented network install depends on it, while `make build` and `make install` use `./cmd/gaori`. `go install` supplies no linker values, so each file's `version` default is what a network install reports. Change both files together.
+
 ## Agent skills
 
 `skills/use-gaori/` is optional, source-distributed AI-agent guidance (a `SKILL.md` plus `references/`). It is not linked into the binary or installed by any Make target. Unlike the illustrative package names above, the `skills/use-gaori/` path is fixed: the Agent Skills convention and the README install URLs depend on it, so do not rename it.
