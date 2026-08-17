@@ -119,6 +119,8 @@ func Run(args []string, stdout, stderr io.Writer, info BuildInfo) int {
 		return summarizeCommand(opts, remaining[1:], stdout, stderr)
 	case "clean":
 		return cleanCommand(opts, remaining[1:], stdout, stderr, time.Now().UTC())
+	case "runs":
+		return runsCommand(opts, remaining[1:], stdout, stderr)
 	case "config":
 		return configCommand(opts, remaining[1:], stdout, stderr)
 	case "rules":

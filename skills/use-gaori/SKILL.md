@@ -22,7 +22,7 @@ Use `gaori --help`, `gaori help <command>`, or `gaori help rules <subcommand>` t
 
    If `gaori` is missing, or its reported version does not match the version the project pins, run the project's own documented test command instead and report that Gaori evidence compression was unavailable and why. Never install Gaori or change toolchain state to make it available.
 
-2. Discover integration from the current repository rather than conversation memory. Inspect `.gaori/tester.yaml`, optional `.gaori/toolchain.yaml`, `.gaori/tester/rules/`, and relevant `.gaori/runs/` artifacts when they exist. The parent project may track portable `.gaori/tester.yaml` and reviewed `.gaori/tester/rules/*.yaml`; treat toolchain metadata, proposals, runs, and every other `.gaori/` path as local-only. Do not stage or commit any file without explicit user intent.
+2. Discover integration from the current repository rather than conversation memory. Inspect `.gaori/tester.yaml`, optional `.gaori/toolchain.yaml`, `.gaori/tester/rules/`, and relevant `.gaori/runs/` artifacts when they exist; `gaori --json runs list` is the supported read-only index of completed standalone evidence. The parent project may track portable `.gaori/tester.yaml` and reviewed `.gaori/tester/rules/*.yaml`; treat toolchain metadata, proposals, runs, and every other `.gaori/` path as local-only. Do not stage or commit any file without explicit user intent.
 
 3. Know the artifact layout. Every run or summarize writes, per command ID:
 
@@ -34,7 +34,7 @@ Use `gaori --help`, `gaori help <command>`, or `gaori help rules <subcommand>` t
    <base>/excerpts/<failure-id>.log   # one per retained failure (F001, F002, ...)
    ```
 
-   `<base>` is `.gaori/runs/standalone/<UTC-timestamp>[-NNN]/` for a standalone run, or `.gaori/runs/scoped/<run-id>/artifacts/test/` when `--run-id` is set. Always use the paths the invocation printed; never glob for the newest run directory when a specific path or run ID is available. The final `<command-id>.status.json` appears only after execution and extraction finish — its absence is not a Gaori "running" state.
+   `<base>` is `.gaori/runs/standalone/<UTC-timestamp>[-NNN]/` for a standalone run, or `.gaori/runs/scoped/<run-id>/artifacts/test/` when `--run-id` is set. Always use the paths the invocation printed; never glob for the newest run directory when a specific path or run ID is available. When the printed paths are no longer available, use `gaori --json runs list` instead of a shell listing: it reports completed standalone runs newest first with their status, extractor status, and artifact paths, and creates nothing. The final `<command-id>.status.json` appears only after execution and extraction finish — its absence is not a Gaori "running" state.
 
 4. Read the most authoritative machine-readable surface available:
    - before a run or after config/rule edits: `gaori --json config check` for a read-only validation of the selected config and every stored rule;

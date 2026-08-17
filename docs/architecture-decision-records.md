@@ -261,7 +261,28 @@ This live channel is scoped to one MCP server process. It does not persist runni
 - Invocation revisions and phases form a new public interface, but status JSON and watcher hashes remain unchanged.
 - A test failure is a successful MCP exchange containing a non-pass command result, not a protocol failure.
 
+## ADR-0013: One parser registry owns every supported parser label
+
+Status: Accepted
+Date: 2026-08-17
+
+### Context
+
+The eleven built-in parser labels were declared in four places: a `switch` selecting failure extraction, a second `switch` selecting the summarize failure heuristic, a `[]string` allow-list in config validation, and a `map[string]bool` allow-list in rule validation. Nothing tied the four together, so adding or renaming a label required four coordinated edits, and updating only one allow-list would let config validation and rule validation disagree about the same label. ADR-0008 deferred this boundary until specialized parsers actually existed; they now do.
+
+### Decision
+
+`internal/extract` will own one `parserRegistry` table keyed by parser label. Each entry binds the label to its failure extractor and its optional summarize heuristic. `internal/config` and `internal/rules` will validate labels through the exported `extract.IsKnown` rather than keeping their own copies.
+
+This is a structural boundary only. It does not change which labels are supported, how any parser matches, the absence of generic fallback after a specialized-parser miss, or the authority of the executed command's exit code.
+
+### Consequences
+
+- A supported label cannot exist in extraction but be rejected by validation, or the reverse.
+- Adding a parser is one registry entry plus its extractor, instead of four coordinated edits.
+- `internal/config` now depends on `internal/extract`; `internal/rules` already did.
+- The registry is an internal table, not a plugin interface. Parsers stay compiled in, and project-local YAML rules remain the supported extension point for project-specific evidence.
+
 ## Future ADR candidates
 
-- Built-in parser module boundary after specialized parsers exist.
 - CI integration surface.

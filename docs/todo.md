@@ -1,6 +1,6 @@
 # Gaori Todo
 
-Status: No open implementation items
+Status: Two open implementation items
 Scope: Documentation and implementation follow-up notes
 
 ## Todo status legend
@@ -11,7 +11,8 @@ Scope: Documentation and implementation follow-up notes
 
 ## Active items
 
-None.
+- `Open` — The four parsers added by `PARSE-006` (`jest`, `rspec`, `dotnet-test`, `gradle-test`) are backed only by authored fixtures. Validate each against real runner output from an actual project before treating its evidence quality as equivalent to the earlier fixture-and-field-tested parsers.
+- `Open` — `rules.Discover` and `rules.DiscoverProposals` filter directories and the `.yaml` extension but do not require a regular file before reading. A special file such as a FIFO placed in `.gaori/tester/rules/` or `.gaori/rule-proposals/` would block on open instead of failing closed. This predates the proposal listing; fix both call sites together.
 
 ## Out-of-scope reminder
 

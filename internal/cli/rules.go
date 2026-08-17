@@ -42,6 +42,8 @@ func rulesCommand(opts globalOptions, args []string, stdout, stderr io.Writer) i
 		return rulesDeleteCommand(opts, args[1:], stdout, stderr)
 	case "test":
 		return rulesTestCommand(opts, args[1:], stdout, stderr)
+	case "proposals":
+		return rulesProposalsCommand(opts, args[1:], stdout, stderr)
 	case "propose":
 		return rulesProposeCommand(opts, args[1:], stdout, stderr)
 	default:
@@ -97,9 +99,55 @@ func rulesSearchCommand(opts globalOptions, args []string, stdout, stderr io.Wri
 	return 0
 }
 
+type ruleProposalListing struct {
+	Proposal string     `json:"proposal"`
+	Path     string     `json:"path"`
+	Rule     model.Rule `json:"rule"`
+}
+
+func rulesProposalsCommand(opts globalOptions, args []string, stdout, stderr io.Writer) int {
+	fs := flag.NewFlagSet("rules proposals", flag.ContinueOnError)
+	fs.SetOutput(io.Discard)
+	if err := fs.Parse(args); err != nil {
+		writeLine(stderr, err)
+		return int(model.ExitCodeConfigError)
+	}
+	if len(fs.Args()) != 0 {
+		writeLine(stderr, "usage: gaori rules proposals")
+		return int(model.ExitCodeConfigError)
+	}
+	loaded, err := rules.LoadProposals(opts.RepoRoot)
+	if err != nil {
+		writeLine(stderr, err)
+		return model.ExitCodeFor(err)
+	}
+	listings := make([]ruleProposalListing, 0, len(loaded))
+	for _, proposal := range loaded {
+		listings = append(listings, ruleProposalListing{
+			Proposal: rules.ProposalName(proposal),
+			Path:     artifacts.Rel(opts.RepoRoot, proposal.SourcePath),
+			Rule:     proposal,
+		})
+	}
+	if opts.JSON {
+		data, _ := json.Marshal(listings)
+		writeLine(stdout, string(data))
+		return 0
+	}
+	for _, listing := range listings {
+		writef(stdout, "%s\ttags=%s\tparser=%s\tconfidence=%s\t%s\n",
+			listing.Proposal, strings.Join(listing.Rule.Tags, ","), listing.Rule.Parser, listing.Rule.Confidence, listing.Path)
+	}
+	writef(stdout, "Proposals: %d\n", len(listings))
+	return 0
+}
+
 func rulesShowCommand(opts globalOptions, args []string, stdout, stderr io.Writer) int {
+	if len(args) == 2 && args[0] == "--proposal" {
+		return rulesShowProposal(opts, args[1], stdout, stderr)
+	}
 	if len(args) != 1 {
-		writeLine(stderr, "usage: gaori rules show <rule-id>")
+		writeLine(stderr, "usage: gaori rules show (<rule-id> | --proposal <name>)")
 		return int(model.ExitCodeConfigError)
 	}
 	rule, err := rules.LoadByID(opts.RepoRoot, args[0])
@@ -117,6 +165,31 @@ func rulesShowCommand(opts globalOptions, args []string, stdout, stderr io.Write
 		writeLine(stderr, err)
 		return int(model.ExitCodeArtifactError)
 	}
+	writeString(stdout, string(data))
+	return 0
+}
+
+func rulesShowProposal(opts globalOptions, name string, stdout, stderr io.Writer) int {
+	proposal, err := rules.LoadProposalByName(opts.RepoRoot, name)
+	if err != nil {
+		writeLine(stderr, err)
+		return model.ExitCodeFor(err)
+	}
+	if opts.JSON {
+		data, _ := json.Marshal(ruleProposalListing{
+			Proposal: rules.ProposalName(proposal),
+			Path:     artifacts.Rel(opts.RepoRoot, proposal.SourcePath),
+			Rule:     proposal,
+		})
+		writeLine(stdout, string(data))
+		return 0
+	}
+	data, err := yaml.Marshal(&proposal)
+	if err != nil {
+		writeLine(stderr, err)
+		return int(model.ExitCodeArtifactError)
+	}
+	writef(stdout, "# proposal: %s\n", artifacts.Rel(opts.RepoRoot, proposal.SourcePath))
 	writeString(stdout, string(data))
 	return 0
 }

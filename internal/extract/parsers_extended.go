@@ -2,10 +2,12 @@ package extract
 
 import (
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 
 	"github.com/irootkernel/gaori/internal/model"
+	"github.com/irootkernel/gaori/internal/safety"
 )
 
 var (
@@ -37,6 +39,34 @@ var (
 	nodeLocationRE       = regexp.MustCompile(`(?m)^\s*location:\s*['"](?:file://)?(.+?):(\d+):\d+['"]\s*$`)
 	nodeFailureSummaryRE = regexp.MustCompile(`(?m)^not ok \d+ - `)
 
+	jestBulletRE = regexp.MustCompile(`^\s*●\s+(.+?)\s*$`)
+	// An optional drive prefix keeps Windows frames such as
+	// "(C:\repo\tests\book.test.js:42:28)" from losing their drive letter.
+	jestFrameRE          = regexp.MustCompile(`(?m)^\s*at\s+(?:.*?\()?((?:[A-Za-z]:)?[^\s():]+\.[A-Za-z0-9]+):(\d+):\d+\)?\s*$`)
+	jestReportRE         = regexp.MustCompile(`^(?:Test Suites|Tests|Snapshots|Time|Ran all test suites):`)
+	jestFailureSummaryRE = regexp.MustCompile(`(?m)^(?:Test Suites|Tests):\s+.*\b[1-9]\d*\s+failed\b`)
+
+	rspecSectionRE = regexp.MustCompile(`^Failures:\s*$`)
+	// RSpec indents a failure header by exactly two spaces. Anchoring the indent
+	// keeps a numbered line inside a failure message from opening a new failure.
+	rspecFailureRE        = regexp.MustCompile(`^ {2}\d+\)\s+(.+?)\s*$`)
+	rspecFrameRE          = regexp.MustCompile(`(?m)^\s*#\s+(\S+?):(\d+)(?::in\b.*)?$`)
+	rspecReportRE         = regexp.MustCompile(`^(?:Finished in\b|Failed examples:|Top \d+ slowest)`)
+	rspecFailureSummaryRE = regexp.MustCompile(`(?m)^\d+\s+examples?,\s+[1-9]\d*\s+failures?\b`)
+
+	// The duration suffix is required so captured application output such as
+	// "Failed to connect to the cache" is not mistaken for a runner result line.
+	dotnetFailureRE        = regexp.MustCompile(`^\s*Failed\s+(.+?)\s+\[[^\]]*\]\s*$`)
+	dotnetFrameRE          = regexp.MustCompile(`(?m)^\s*at\s+.+?\sin\s+(.+?):line\s+(\d+)\s*$`)
+	dotnetReportRE         = regexp.MustCompile(`^(?:Failed!|Passed!|Test Run\b)`)
+	dotnetFailureSummaryRE = regexp.MustCompile(`(?m)^(?:Failed!\s|\s*Failed\s+.+?\s+\[[^\]]*\]\s*$)`)
+
+	gradleTaskRE           = regexp.MustCompile(`^>\s`)
+	gradleFailureRE        = regexp.MustCompile(`^(.+)\s+>\s+(.+?)\s+FAILED\s*$`)
+	gradleFrameRE          = regexp.MustCompile(`(?m)^\s*at\s+.*?\(([^\s()]+):(\d+)\)\s*$`)
+	gradleReportRE         = regexp.MustCompile(`^(?:\d+\s+tests?\s+completed|FAILURE:|BUILD |> )`)
+	gradleFailureSummaryRE = regexp.MustCompile(`(?m)^\d+\s+tests?\s+completed,\s+[1-9]\d*\s+failed\b`)
+
 	vitestFailureSummaryRE     = regexp.MustCompile(`(?m)^\s*FAIL\s+`)
 	pytestFailureSummaryRE     = regexp.MustCompile(`(?m)^(?:=+\s+FAILURES\s+=+|FAILED\s+)`)
 	goTestFailureSummaryRE     = regexp.MustCompile(`(?m)^\s*--- FAIL:`)
@@ -63,6 +93,192 @@ func spanUntilNext(lines []lineIndex, start, maxAhead int, next *regexp.Regexp) 
 		}
 	}
 	return end
+}
+
+// spanUntilMarker returns the last line of a block that starts at start and ends
+// before the next marker line. Unlike spanUntilNext it keeps blank lines inside
+// the block, because several runners separate a failure header from the stack
+// frame that carries its file and line.
+func spanUntilMarker(lines []lineIndex, start int, markers []*regexp.Regexp) int {
+	end := min(len(lines)-1, start+safety.MaxBlockLines-1)
+	for idx := start + 1; idx <= end; idx++ {
+		if matchesAny(lines[idx].text, markers) {
+			return max(start, idx-1)
+		}
+	}
+	return end
+}
+
+func lastSegment(text, separator string) string {
+	if idx := strings.LastIndex(text, separator); idx >= 0 {
+		return strings.TrimSpace(text[idx+len(separator):])
+	}
+	return strings.TrimSpace(text)
+}
+
+// jestReportBullets are the bullet headings Jest uses for output that is not a
+// failed test. Treating them as failures would inflate the surfaced failure
+// count and evidence quality of an otherwise passing run.
+var jestReportBullets = map[string]bool{
+	"Console":             true,
+	"Deprecation Warning": true,
+	"Validation Error":    true,
+	"Validation Warning":  true,
+}
+
+func jestFailures(lines []lineIndex, text string) []model.Failure {
+	markers := []*regexp.Regexp{jestBulletRE, jestReportRE}
+	failures := make([]model.Failure, 0)
+	for idx, line := range lines {
+		match := jestBulletRE.FindStringSubmatch(line.text)
+		if len(match) == 0 {
+			continue
+		}
+		if jestReportBullets[strings.TrimSpace(match[1])] {
+			continue
+		}
+		span := spanFor(lines, idx, spanUntilMarker(lines, idx, markers))
+		segment := visibleText(sliceText(text, span))
+		failure := model.Failure{
+			Signature: firstMeaningfulLine(segment, line.text),
+			TestName:  lastSegment(strings.TrimSpace(match[1]), " › "),
+			RawSpan:   span,
+			StackTop:  stackTop(segment),
+		}
+		captureFileLine(jestFrameRE, segment, &failure)
+		failures = append(failures, failure)
+	}
+	return dedupeFailures(failures)
+}
+
+func rspecFailures(lines []lineIndex, text string) []model.Failure {
+	markers := []*regexp.Regexp{rspecFailureRE, rspecReportRE}
+	failures := make([]model.Failure, 0)
+	inFailures := false
+	for idx, line := range lines {
+		if rspecSectionRE.MatchString(line.text) {
+			inFailures = true
+			continue
+		}
+		if !inFailures {
+			continue
+		}
+		if rspecReportRE.MatchString(line.text) {
+			break
+		}
+		match := rspecFailureRE.FindStringSubmatch(line.text)
+		if len(match) == 0 {
+			continue
+		}
+		span := spanFor(lines, idx, spanUntilMarker(lines, idx, markers))
+		segment := visibleText(sliceText(text, span))
+		failure := model.Failure{
+			Signature: firstMeaningfulLine(segment, line.text),
+			TestName:  strings.TrimSpace(match[1]),
+			RawSpan:   span,
+			StackTop:  stackTop(segment),
+		}
+		captureFileLine(rspecFrameRE, segment, &failure)
+		failures = append(failures, failure)
+	}
+	return dedupeFailures(failures)
+}
+
+func dotnetTestFailures(lines []lineIndex, text string) []model.Failure {
+	markers := []*regexp.Regexp{dotnetFailureRE, dotnetReportRE}
+	failures := make([]model.Failure, 0)
+	for idx, line := range lines {
+		match := dotnetFailureRE.FindStringSubmatch(line.text)
+		if len(match) == 0 {
+			continue
+		}
+		span := spanFor(lines, idx, spanUntilMarker(lines, idx, markers))
+		segment := visibleText(sliceText(text, span))
+		failure := model.Failure{
+			Signature: firstMeaningfulLine(segment, line.text),
+			TestName:  strings.TrimSpace(match[1]),
+			RawSpan:   span,
+			StackTop:  stackTop(segment),
+		}
+		captureFileLine(dotnetFrameRE, segment, &failure)
+		failures = append(failures, failure)
+	}
+	return dedupeFailures(failures)
+}
+
+func gradleTestFailures(lines []lineIndex, text string) []model.Failure {
+	markers := []*regexp.Regexp{gradleFailureRE, gradleReportRE}
+	failures := make([]model.Failure, 0)
+	for idx, line := range lines {
+		if gradleTaskRE.MatchString(line.text) {
+			continue
+		}
+		match := gradleFailureRE.FindStringSubmatch(line.text)
+		if len(match) == 0 {
+			continue
+		}
+		span := spanFor(lines, idx, spanUntilMarker(lines, idx, markers))
+		segment := visibleText(sliceText(text, span))
+		failure := model.Failure{
+			Signature: firstMeaningfulLine(segment, line.text),
+			TestName:  strings.TrimSpace(match[2]),
+			RawSpan:   span,
+			StackTop:  stackTop(segment),
+		}
+		captureGradleFrame(segment, match[1], &failure)
+		failures = append(failures, failure)
+	}
+	return dedupeFailures(failures)
+}
+
+// captureGradleFrame prefers the stack frame whose source file belongs to the
+// reporting test class, because JUnit prints assertion-framework frames above
+// the frame that actually located the failure. The header may carry a
+// fully-qualified name and nested class segments, while the frame carries only
+// a source file name, so both are reduced to simple names before comparison.
+func captureGradleFrame(segment, classChain string, failure *model.Failure) {
+	candidates := gradleClassCandidates(classChain)
+	for _, frame := range gradleFrameRE.FindAllStringSubmatch(segment, -1) {
+		if !slices.Contains(candidates, sourceFileBaseName(frame[1])) {
+			continue
+		}
+		failure.File = frame[1]
+		if value, err := strconv.Atoi(frame[2]); err == nil {
+			failure.Line = value
+		}
+		return
+	}
+	captureFileLine(gradleFrameRE, segment, failure)
+}
+
+func gradleClassCandidates(classChain string) []string {
+	candidates := make([]string, 0, 2)
+	for _, part := range strings.Split(classChain, " > ") {
+		if simple := simpleClassName(part); simple != "" {
+			candidates = append(candidates, simple)
+		}
+	}
+	return candidates
+}
+
+// simpleClassName reduces "com.example.BookTest" and "BookTest$Nested" to the
+// name Gradle would report as the source file stem.
+func simpleClassName(class string) string {
+	class = strings.TrimSpace(class)
+	if idx := strings.LastIndex(class, "."); idx >= 0 {
+		class = class[idx+1:]
+	}
+	if idx := strings.Index(class, "$"); idx >= 0 {
+		class = class[:idx]
+	}
+	return class
+}
+
+func sourceFileBaseName(file string) string {
+	if idx := strings.LastIndex(file, "."); idx >= 0 {
+		return file[:idx]
+	}
+	return file
 }
 
 func ginkgoFailures(lines []lineIndex, text string) []model.Failure {
@@ -318,28 +534,9 @@ func removeGoParentFailures(failures []model.Failure) []model.Failure {
 }
 
 func ParserIndicatesFailure(parser, text string) bool {
-	visible := visibleText(text)
-	switch parser {
-	case "vitest":
-		return vitestFailureSummaryRE.MatchString(visible)
-	case "pytest":
-		return pytestFailureSummaryRE.MatchString(visible)
-	case "go-test":
-		return goTestFailureSummaryRE.MatchString(visible) || goTestBuildSummaryRE.MatchString(visible) || strings.Contains(visible, "panic:") || strings.Contains(visible, "WARNING: DATA RACE")
-	case "playwright":
-		return playwrightFailureSummaryRE.MatchString(visible)
-	case "ginkgo":
-		return containsAny(visible, []string{"FAIL! --", "Test Suite Failed", "[FAILED]", "[PANICKED"})
-	case "godog":
-		return strings.Contains(visible, "Failed steps:") || strings.Contains(visible, "--- FAIL:") || godogFailureSummaryRE.MatchString(visible)
-	case "cargo-test":
-		return containsAny(visible, []string{"test result: FAILED", "error: test failed", "could not compile"})
-	case "flutter-test":
-		return containsAny(visible, []string{"Some tests failed.", "[E]", "Failed to load"})
-	case "bun-test":
-		return strings.Contains(visible, "(fail)") || bunFailureSummaryRE.MatchString(visible)
-	case "node-test":
-		return nodeFailureSummaryRE.MatchString(visible)
+	descriptor, ok := parserRegistry[parser]
+	if !ok || descriptor.indicates == nil {
+		return false
 	}
-	return false
+	return descriptor.indicates(visibleText(text))
 }

@@ -28,7 +28,7 @@ gaori --json config check
 
 This checks the schema and every stored rule but does not verify executable availability or command success. Its output intentionally omits command argv and redaction definitions.
 
-Implemented parser labels are `generic`, `vitest`, `pytest`, `go-test`, `playwright`, `ginkgo`, `godog`, `cargo-test`, `flutter-test`, `bun-test`, and `node-test`. Unknown labels, schema version 1, and removed `lane` fields fail closed.
+Implemented parser labels are `generic`, `vitest`, `pytest`, `go-test`, `playwright`, `ginkgo`, `godog`, `cargo-test`, `flutter-test`, `bun-test`, `node-test`, `jest`, `rspec`, `dotnet-test`, and `gradle-test`. Unknown labels, schema version 1, and removed `lane` fields fail closed.
 
 ## Project extraction rules
 
@@ -57,7 +57,7 @@ gaori --json rules show generic-v1
 gaori --json rules test --rule generic-v1 --log fixtures/unit.raw.log --expect-span 2:5
 ```
 
-Summary-based proposal fails closed when redaction or malformed evidence leaves invalid selector metadata; do not guess replacements. It also rejects missing, stale, symlinked, relocated, or metadata-inconsistent summary/status/raw-log evidence. Large matching raw logs are verified with one full streaming checksum pass that also captures the selected bounded failure span and its boundary bytes. `rules propose` writes only a local ignored candidate under `.gaori/rule-proposals/`; it does not activate the rule. Read the proposal path returned by its JSON output before continuing. `rules create` and `rules update` require reviewed YAML and explicit user intent; the resulting `.gaori/tester/rules/*.yaml` may be tracked project policy, but do not stage or commit it without separate explicit user intent. Re-read `rules show` after either mutation. `rules delete` disables a rule with a reason and also requires explicit user intent:
+Summary-based proposal fails closed when redaction or malformed evidence leaves invalid selector metadata; do not guess replacements. It also rejects missing, stale, symlinked, relocated, or metadata-inconsistent summary/status/raw-log evidence. Large matching raw logs are verified with one full streaming checksum pass that also captures the selected bounded failure span and its boundary bytes. `rules propose` writes only a local ignored candidate under `.gaori/rule-proposals/`; it does not activate the rule. Read the proposal path returned by its JSON output before continuing. When that path is no longer at hand, use `gaori --json rules proposals` to list the candidates and `gaori rules show --proposal <name>` to read one; a proposal is addressed by its file name without `.yaml`, since repeating a proposal keeps the same rule ID in a new file. Neither command activates anything. `rules create` and `rules update` require reviewed YAML and explicit user intent; the resulting `.gaori/tester/rules/*.yaml` may be tracked project policy, but do not stage or commit it without separate explicit user intent. Re-read `rules show` after either mutation. `rules delete` disables a rule with a reason and also requires explicit user intent:
 
 ```bash
 gaori --json rules delete generic-v1 --reason "superseded by v2"

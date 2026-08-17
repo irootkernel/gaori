@@ -1,0 +1,14 @@
+Determining projects to restore...
+  Domain.Tests -> /repo/tests/bin/Debug/net8.0/Domain.Tests.dll
+Test run for /repo/tests/bin/Debug/net8.0/Domain.Tests.dll (.NETCoreApp,Version=v8.0)
+Starting test execution, please wait...
+A total of 1 test files matched the specified pattern.
+  Failed Book.RejectsEmptyTitle [3 ms]
+  Error Message:
+   Assert.False() Failure
+Expected: False
+Actual:   True
+  Stack Trace:
+     at Domain.Tests.BookTests.RejectsEmptyTitle() in /repo/tests/BookTests.cs:line 42
+
+Failed!  - Failed:     1, Passed:     1, Skipped:     0, Total:     2, Duration: 5 ms

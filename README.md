@@ -159,8 +159,8 @@ gaori run demo
 The command exits `1`, and Gaori prints the paths of the generated evidence. Open the latest human-readable summary:
 
 ```bash
-latest_run="$(ls -dt .gaori/runs/standalone/* | head -1)"
-sed -n '1,120p' "$latest_run/demo.summary.md"
+gaori runs list --limit 1
+sed -n '1,120p' "$(gaori runs list --limit 1 | sed -n 's/^  summary: //p')"
 ```
 
 The summary contains `token=<redacted>`. The corresponding `demo.raw.log` intentionally retains the original `token=secret` value, so treat raw logs as sensitive local evidence.
@@ -222,6 +222,10 @@ Choose the parser that matches the command output:
 | Flutter test | `flutter-test` |
 | Bun test | `bun-test` |
 | Node.js test runner | `node-test` |
+| Jest | `jest` |
+| RSpec | `rspec` |
+| `dotnet test` | `dotnet-test` |
+| Gradle test | `gradle-test` |
 
 Run a configured command by ID:
 
@@ -261,6 +265,15 @@ gaori run --timeout-sec 1800 --parser go-test --tag go --tag integration -- \
 For `run`, `--parser` applies only to the tagged ad-hoc `-- <command...>` form; it does not override a configured command. `summarize` also accepts one explicit parser and otherwise defaults to `generic`. Tags select which local extraction rules may inspect a raw log; they do not select the parser or change pass/fail. A rule applies only when its parser matches and all of its tags are present on the run. This lets a `tags: [go]` rule apply to both Go unit and integration runs while a `tags: [go, unit]` rule remains unit-specific. Multiple applicable rules may run against the same log. Specialized parsers use only their own patterns and do not retry generic extraction after a miss.
 
 ## Work with existing evidence
+
+List the completed standalone evidence Gaori already wrote, newest first:
+
+```bash
+gaori runs list --limit 10
+gaori --json runs list --tag go --status failed
+```
+
+The listing reads only the redacted `status.json` of each completed run, never a raw log, and creates no artifacts. `--status` accepts `passed`, `failed`, `timed_out`, `killed`, or `internal_error`; `--tag` may repeat and requires every named tag to be present on the run. Runs whose directory name is not a Gaori timestamp, and runs with no status artifact yet, are reported only in the skipped count.
 
 Summarize an existing raw log without rerunning its command:
 
@@ -326,6 +339,15 @@ gaori rules propose \
   --summary .gaori/runs/scoped/local-check/artifacts/test/unit.summary.json \
   --failure F001
 ```
+
+List the candidates that produced, then read one before deciding whether to promote it:
+
+```bash
+gaori rules proposals
+gaori rules show --proposal <name>
+```
+
+A proposal is named by its file name without `.yaml`, because repeating a proposal writes a new file that keeps the original rule ID. Promotion stays explicit: review the YAML, then `gaori rules create --file .gaori/rule-proposals/<name>.yaml`. Nothing is activated automatically.
 
 Gaori verifies that the matching adjacent status artifact binds the exact summary checksum, locators, metadata, and signatures before confirming the adjacent raw log and capturing the bounded selected span during the full raw-log checksum stream. The summary supplies the parser, tags, command, checksum, and exact line/byte provenance. This mode is mutually exclusive with the legacy `--tag ... --parser ... --raw-log ... --span ...` form. Both forms create only an ignored local candidate; neither activates a rule.
 

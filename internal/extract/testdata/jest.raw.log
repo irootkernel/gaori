@@ -1,0 +1,24 @@
+ FAIL  tests/book.test.js
+  Book
+    ✓ accepts a non-empty title (2 ms)
+    ✕ rejects empty title (3 ms)
+
+  ● Book › rejects empty title
+
+    expect(received).toBe(expected)
+
+    Expected: false
+    Received: true
+
+      40 |   it('rejects empty title', () => {
+      41 |     const book = new Book('');
+    > 42 |     expect(book.isValid()).toBe(false);
+         |                            ^
+      43 |   });
+
+      at Object.<anonymous> (tests/book.test.js:42:28)
+
+Test Suites: 1 failed, 1 total
+Tests:       1 failed, 1 passed, 2 total
+Snapshots:   0 total
+Time:        0.512 s

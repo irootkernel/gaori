@@ -6,29 +6,15 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
-	"slices"
 	"strings"
 
+	"github.com/irootkernel/gaori/internal/extract"
 	"github.com/irootkernel/gaori/internal/model"
 	"github.com/irootkernel/gaori/internal/safety"
 	"github.com/irootkernel/gaori/internal/tagset"
 )
 
 const DefaultConfigPath = ".gaori/tester.yaml"
-
-var knownParsers = []string{
-	"generic",
-	"vitest",
-	"pytest",
-	"go-test",
-	"playwright",
-	"ginkgo",
-	"godog",
-	"cargo-test",
-	"flutter-test",
-	"bun-test",
-	"node-test",
-}
 
 func ResolveConfigPath(repoRoot, override string) string {
 	if override != "" {
@@ -114,7 +100,7 @@ func ValidateTags(values []string, operation string) ([]string, error) {
 }
 
 func validateParserLabel(label string, requireSupported bool) error {
-	if !slices.Contains(knownParsers, label) {
+	if !extract.IsKnown(label) {
 		return model.NewGaoriError(model.ExitCodeConfigError, "validate parser", fmt.Errorf("unsupported parser label %q", label))
 	}
 	_ = requireSupported

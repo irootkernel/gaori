@@ -1,0 +1,18 @@
+Book
+  accepts a non-empty title
+  rejects empty title (FAILED - 1)
+
+Failures:
+
+  1) Book rejects empty title
+     Failure/Error: expect(book).not_to be_valid
+
+       expected `Book#valid?` to return false, got true
+     # ./spec/book_spec.rb:42:in `block (2 levels) in <top (required)>'
+
+Finished in 0.01234 seconds (files took 0.09 seconds to load)
+2 examples, 1 failure
+
+Failed examples:
+
+rspec ./spec/book_spec.rb:42 # Book rejects empty title

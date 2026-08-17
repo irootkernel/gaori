@@ -69,6 +69,8 @@ The skill hardcodes the CLI and MCP surfaces (subcommands, tools, phases, flags,
 - Resolve every artifact read, write, directory creation, stat, and discovery operation against its allowed boundary; reject traversal, dangling links, and symlinks that resolve outside that boundary.
 - Treat excerpt IDs like `F001` as summary-local. Store excerpt references as summary-directory-relative paths such as `excerpts/F001.log`, and resolve them through the summary path plus failure ID.
 - If any required artifact cannot be written, report an internal error and do not claim success.
+- Cleanup and listing share one definition of a completed standalone run: a valid UTC directory name plus a regular top-level `<command-id>.status.json`. Change `parseStandaloneRunTime` or `isStatusArtifact` only with both callers in mind, or the two commands will disagree about which evidence exists.
+- Listing must not trust a decoded status artifact. Decoding alone accepts an empty object and any `summary_path`, and redaction deliberately leaves artifact references literal, so an escaping locator would be surfaced verbatim. Validate the decoded status against the layout its own file name implies. The command ID inside the artifact is redacted while the file name is not, so compare through the derived summary locator rather than the ID.
 
 ## Extraction guidance
 
@@ -85,6 +87,12 @@ Current supported parser labels:
 - `flutter-test`
 - `bun-test`
 - `node-test`
+- `jest`
+- `rspec`
+- `dotnet-test`
+- `gradle-test`
+
+Every label above is declared once in the `internal/extract` parser registry; config and rule validation resolve labels through `extract.IsKnown` rather than keeping their own allow-lists. Adding a parser means adding one registry entry, its extractor, and its fixture.
 
 Generic extraction is used only for the `generic` parser label. Every specialized parser is fixture-backed and fails closed when its own patterns do not match; specialized parsers do not retry generic extraction. ANSI control sequences are ignored for parser matching while original raw spans continue to reference the unchanged raw log.
 
@@ -130,6 +138,10 @@ Current fixture logs live under `internal/extract/testdata/`:
 - `flutter-test.raw.log`
 - `bun-test.raw.log`
 - `node-test.raw.log`
+- `jest.raw.log`
+- `rspec.raw.log`
+- `dotnet-test.raw.log`
+- `gradle-test.raw.log`
 
 These fixtures back automated extraction tests and should remain the source of truth for parser-specific documentation.
 
@@ -180,6 +192,8 @@ confidence: medium
 Validation rejects unknown YAML fields, extra YAML documents, missing IDs or provenance, duplicate IDs, negative or oversized context, a combined matched-block/context budget above 160 lines, excessive `max_block_lines`, invalid capture groups, invalid or unsupported regex, inconsistent active/disabled deletion reasons, and rule overmatch during rule-only `rules test` extraction. Config, stored rule, and imported rule YAML are limited to 256 KiB before decoding.
 
 Summary-based proposal accepts only matching regular summary, status, and raw-log artifacts. Verify the status hash, exact summary checksum, locators, surfaced metadata, and signature hashes before streaming the complete raw log and capturing the selected bounded span. Keep the legacy manual metadata/span form separate and limited to its 256 KiB raw-log input contract.
+
+Rule proposals are addressed by file name, not rule ID. `Propose` deliberately reuses the same generated ID when the same span is proposed again, so proposal loading must not apply the duplicate-ID rejection that active-rule loading applies. Keep proposal listing read-only: it must not promote, rewrite, or reorder candidates, and a proposal must never enter extraction selection.
 
 ## Regex safety guidance
 

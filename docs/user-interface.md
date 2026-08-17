@@ -27,6 +27,7 @@ gaori run [--parser <parser>] [--timeout-sec <seconds>] --tag <tag> [--tag <tag>
 gaori summarize [--parser <parser>] [--tag <tag> ...] <raw-log>
 gaori excerpt --summary <summary-path> <failure-id>
 gaori clean (--older-than <Nd> | --all) [--dry-run]
+gaori runs list [--tag <tag> ...] [--status <status>] [--limit <count>]
 gaori config check
 gaori mcp
 ```
@@ -43,6 +44,8 @@ The server exposes `start_configured_run`, `start_ad_hoc_run`, `get_run`, `wait_
 gaori rules list
 gaori rules search [--] <query>
 gaori rules show <rule-id>
+gaori rules show --proposal <name>
+gaori rules proposals
 gaori rules create --file <rule.yaml>
 gaori rules update <rule-id> --file <rule.yaml>
 gaori rules delete <rule-id> --reason <reason>
@@ -52,6 +55,8 @@ gaori rules propose --tag <tag> [--tag <tag> ...] --parser <parser> --raw-log <r
 ```
 
 Use the explicit operand boundary when a search query is also a global option name. For example, `gaori rules search -- --json` searches for the literal `--json`; without the boundary, `--json` selects JSON output as usual.
+
+`rules list`, `rules search`, and `rules show <rule-id>` cover active and disabled project rules under `.gaori/tester/rules/`. `rules proposals` and `rules show --proposal <name>` cover local candidates under `.gaori/rule-proposals/`; the two sets never mix. A proposal is addressed by its file name without the `.yaml` extension, because repeating the same proposal produces a new file that deliberately keeps the original rule ID. Listing a proposal does not activate it: promotion stays the existing explicit `gaori rules create --file <proposal-path>` after review. Human output reports the proposal name, tags, parser, confidence, and path, then a total; `--json` returns `proposal`, `path`, and the full `rule`.
 
 ## Configuration preflight
 
@@ -72,6 +77,10 @@ Implemented parser labels:
 - `flutter-test`
 - `bun-test`
 - `node-test`
+- `jest`
+- `rspec`
+- `dotnet-test`
+- `gradle-test`
 
 Applicable project rules are evaluated first. The selected parser is a fallback and runs only when no rule produces a failure. The `generic` label uses generic extraction patterns; specialized labels use only their own parser patterns and never retry generic extraction. A specialized-parser miss reports `no_match` after a pass and `degraded` after a non-pass result.
 
@@ -315,6 +324,17 @@ Tags are rule selectors, not command selectors or automatic rule generators. The
 - Cleanup is limited to `.gaori/runs/standalone/`. It never removes `.gaori/tester.yaml`, rules, proposals, toolchain metadata, `.gaori/runs/scoped/`, or artifacts created through `--output-dir`.
 - Candidate trees are fully inspected before deletion. Symlinks, special files, containment failures, and unsafe path changes fail with artifact exit code `3`; `--dry-run` performs the same selection and validation without deletion.
 - Human output reports selected or removed runs, regular-file bytes, and skipped entries. `--json` emits exactly `dry_run`, `selected_runs`, `selected_bytes`, `removed_runs`, `removed_bytes`, and `skipped_runs`.
+
+## Run listing notes
+
+- `runs list` is read-only. It creates no artifacts, executes no command, resolves no executable, and never opens a raw log. It accepts only the `--repo` and `--json` global options; `--config`, `--output-dir`, and `--run-id` fail with config exit code `2`.
+- It reports completed evidence under `.gaori/runs/standalone/` only. Scoped `--run-id` runs and caller-selected `--output-dir` evidence are outside its scope, matching `clean`.
+- Completeness and recognition use the same rules as cleanup: a directory must have a valid UTC `YYYYMMDDTHHMMSS[-NNN]` name and a regular top-level `<command-id>.status.json`. Anything else is counted in `skipped_runs`.
+- A symbolic link, special file, containment failure, or unreadable/malformed status artifact fails with artifact exit code `3` rather than being silently omitted.
+- Every reported field is copied from the already redacted status artifact, so command IDs and tags appear exactly as they were surfaced when the run finished. Artifact reference paths remain literal.
+- Runs are reported newest first by run directory. `--limit <count>` truncates after selection and rejects a negative value. `--status` accepts exactly `passed`, `failed`, `timed_out`, `killed`, or `internal_error`. `--tag` may repeat and requires every named tag to be present on the run, matching rule tag selection.
+- `--json` emits `runs` and `skipped_runs`. Each run carries `run_dir`, `command_id`, `tags`, `status`, `exit_code`, `extractor_status`, `failure_count`, `updated_at`, `summary_markdown`, `summary_json`, and `status_json`. `failure_count` is the number of retained failure signatures in the status artifact.
+- Listing reports what evidence exists. It does not decide whether a check was required, whether a result is accepted, or whether evidence may be deleted.
 
 ## Summarize mode notes
 

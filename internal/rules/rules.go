@@ -8,24 +8,11 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/irootkernel/gaori/internal/extract"
 	"github.com/irootkernel/gaori/internal/model"
 	"github.com/irootkernel/gaori/internal/safety"
 	"github.com/irootkernel/gaori/internal/tagset"
 )
-
-var knownRuleParsers = map[string]bool{
-	"generic":      true,
-	"vitest":       true,
-	"pytest":       true,
-	"go-test":      true,
-	"playwright":   true,
-	"ginkgo":       true,
-	"godog":        true,
-	"cargo-test":   true,
-	"flutter-test": true,
-	"bun-test":     true,
-	"node-test":    true,
-}
 
 func Discover(repoRoot string) ([]string, error) {
 	rulesDir := RulesDir(repoRoot)
@@ -92,7 +79,7 @@ func ValidateApplicable(rule model.Rule) error {
 	if strings.TrimSpace(rule.Parser) == "" {
 		return model.NewGaoriError(model.ExitCodeConfigError, "validate rule file", fmt.Errorf("rule %q must define parser", rule.ID))
 	}
-	if !knownRuleParsers[rule.Parser] {
+	if !extract.IsKnown(rule.Parser) {
 		return model.NewGaoriError(model.ExitCodeConfigError, "validate rule file", fmt.Errorf("rule %q has unsupported parser label %q", rule.ID, rule.Parser))
 	}
 	if err := tagset.Validate(rule.Tags); err != nil {

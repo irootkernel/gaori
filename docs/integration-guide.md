@@ -33,11 +33,13 @@ The default adoption model is selective: route commands through Gaori when their
 | Ad-hoc execution | Yes | `run [--parser <label>] [--timeout-sec <seconds>] --tag <tag> [--tag <tag> ...] -- <argv...>` can run without configured commands. |
 | Existing-log processing | Yes | `summarize [--parser <label>] <raw-log>` copies and summarizes a log without rerunning the command. Its inferred result is not authoritative execution metadata. |
 | Failure excerpt lookup | Yes | `excerpt --summary <path> <failure-id>` validates contained references and the 16 KiB bound before reading; MCP additionally binds excerpts to the finalized invocation checksum. |
-| Parsers | Yes | `generic`, `vitest`, `pytest`, `go-test`, `playwright`, `ginkgo`, `godog`, `cargo-test`, `flutter-test`, `bun-test`, and `node-test`. |
+| Parsers | Yes | `generic`, `vitest`, `pytest`, `go-test`, `playwright`, `ginkgo`, `godog`, `cargo-test`, `flutter-test`, `bun-test`, `node-test`, `jest`, `rspec`, `dotnet-test`, and `gradle-test`. |
 | Project extraction rules | Yes | Strict YAML CRUD, provenance, fixture testing, and local proposals from a verified summary failure or explicit bounded raw span. |
+| Rule proposal review | Yes | `rules proposals` and `rules show --proposal <name>` list and read local candidates under `.gaori/rule-proposals/`. Promotion remains the explicit `rules create --file <path>`; nothing is activated automatically. |
 | Standalone artifacts | Yes | Collision-free `.gaori/runs/standalone/<UTC-timestamp>[-NNN]/` or `<output-dir>/runs/...`. |
 | Parent run artifacts | Yes | `--run-id <id>` writes only under `.gaori/runs/scoped/<id>/artifacts/test/`. |
 | Standalone cleanup | Yes | `clean (--older-than <Nd> \| --all) [--dry-run]` applies an explicit operator policy only to completed default standalone runs. |
+| Standalone run listing | Yes | `runs list [--tag <tag> ...] [--status <status>] [--limit <count>]` reports completed default standalone evidence from redacted status artifacts without executing anything or opening raw logs. |
 | Human output | Yes | Compact console output, Markdown summary, and bounded excerpts. |
 | Machine output | Yes | `--json` with explicit Markdown/JSON artifact paths, summary JSON, and deterministic status JSON. |
 | Redacted derived evidence | Yes | Configured redaction covers surfaced metadata, summaries, status, warnings, failures, and excerpts. |
@@ -65,7 +67,7 @@ These are current boundaries, not hidden partial features:
 - Consumer-specific evidence snapshots. Consumers should use or normalize the existing status, summary, and raw-log references.
 - A bundled CI-provider workflow or a cross-platform release matrix. The repository tests platform-neutral behavior plus additional Unix-only install, process-group, and signal behavior.
 
-No open implementation items are currently recorded in `todo.md`. The boundaries above are not future commitments; a new requirement and roadmap item should be approved before broadening them.
+Open implementation items are recorded in `todo.md`; none of them broaden the boundaries above. The boundaries are not future commitments; a new requirement and roadmap item should be approved before broadening them.
 
 ## Portable config and local state
 

@@ -14,7 +14,7 @@ Gaori is a deterministic test and log-evidence tool. It should run test commands
 - Implementation language: Go.
 - Packaging target: standalone single binary named `gaori`.
 - Regex engine baseline: Go `regexp` (RE2 semantics) only.
-- Current supported parser labels: `generic`, `vitest`, `pytest`, `go-test`, `playwright`, `ginkgo`, `godog`, `cargo-test`, `flutter-test`, `bun-test`, and `node-test`.
+- Current supported parser labels: `generic`, `vitest`, `pytest`, `go-test`, `playwright`, `ginkgo`, `godog`, `cargo-test`, `flutter-test`, `bun-test`, `node-test`, `jest`, `rspec`, `dotnet-test`, and `gradle-test`.
 - Unknown parser labels fail closed.
 
 ## Non-goals
@@ -54,6 +54,9 @@ CLI
  │   ├─ Completed-run selector
  │   ├─ Contained tree inspector
  │   └─ Contained remover
+ ├─ Listing Engine
+ │   ├─ Completed-run selector
+ │   └─ Status artifact reader
  └─ Rule Manager
      ├─ CRUD
      ├─ Rule Test
@@ -161,6 +164,19 @@ Absolute `--output-dir` and `--summary` inputs remain valid where documented; th
 ```
 
 Cleanup does not load project config and does not infer retention. It cannot target scoped runs or caller-selected output directories. Raw-log preservation remains mandatory during evidence creation; explicit operator cleanup ends retention only for successfully removed completed standalone runs.
+
+## Data flow: list standalone evidence
+
+```text
+1. User runs `gaori runs list`, optionally with `--tag`, `--status`, and `--limit`.
+2. CLI rejects `--config`, `--output-dir`, `--run-id`, unknown status values, and negative limits before filesystem inspection.
+3. Listing reads direct `.gaori/runs/standalone/` entries and reuses the cleanup recognition and completeness rules.
+4. Unrecognized directory names and runs with no regular top-level status artifact are counted as skipped.
+5. Each completed status artifact is read through the repository-root `os.Root` boundary under the summary byte bound and decoded.
+6. Selectors filter the decoded records, results are ordered newest first, and `--limit` truncates after selection.
+```
+
+Listing shares the cleanup selector so both commands agree on what "completed standalone evidence" means. It reports the already redacted status fields and literal artifact references without opening summaries, excerpts, or raw logs, and it writes nothing. It is an evidence index, not a gate, a retention decision, or an acceptance record.
 
 ## Config model
 

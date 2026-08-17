@@ -1,0 +1,15 @@
+> Task :compileJava UP-TO-DATE
+> Task :compileTestJava
+> Task :test FAILED
+
+BookTest > rejects empty title FAILED
+    org.opentest4j.AssertionFailedError: expected: <false> but was: <true>
+        at app//org.junit.jupiter.api.AssertionFailureBuilder.build(AssertionFailureBuilder.java:151)
+        at app//com.example.BookTest.rejectsEmptyTitle(BookTest.java:42)
+
+2 tests completed, 1 failed
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Execution failed for task ':test'.

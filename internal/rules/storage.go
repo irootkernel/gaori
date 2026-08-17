@@ -55,6 +55,73 @@ func LoadAll(repoRoot string) ([]model.Rule, error) {
 	return rules, nil
 }
 
+// DiscoverProposals lists the local rule proposal files. A missing proposal
+// directory is not an error, because proposals are created on demand.
+func DiscoverProposals(repoRoot string) ([]string, error) {
+	proposalsDir := ProposedRulesDir(repoRoot)
+	entries, err := safety.ReadDirWithin(repoRoot, proposalsDir)
+	if os.IsNotExist(err) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, model.NewGaoriError(model.ExitCodeConfigError, "discover rule proposals", err)
+	}
+	paths := make([]string, 0, len(entries))
+	for _, entry := range entries {
+		if entry.IsDir() || filepath.Ext(entry.Name()) != ".yaml" {
+			continue
+		}
+		paths = append(paths, filepath.Join(proposalsDir, entry.Name()))
+	}
+	sort.Strings(paths)
+	return paths, nil
+}
+
+// LoadProposals reads every local rule proposal. Unlike LoadAll it does not
+// reject repeated rule IDs, because proposing the same span twice is expected
+// and each proposal is addressed by its unique file name instead.
+func LoadProposals(repoRoot string) ([]model.Rule, error) {
+	paths, err := DiscoverProposals(repoRoot)
+	if err != nil {
+		return nil, err
+	}
+	proposals := make([]model.Rule, 0, len(paths))
+	for _, path := range paths {
+		rule, err := readRuleFile(repoRoot, path)
+		if err != nil {
+			return nil, err
+		}
+		if err := ValidateStoredRule(rule); err != nil {
+			return nil, err
+		}
+		rule.Tags = tagset.Normalize(rule.Tags)
+		proposals = append(proposals, rule)
+	}
+	return proposals, nil
+}
+
+// ProposalName is the stable handle for one proposal: its file name without the
+// YAML extension. Rule IDs repeat across proposals, so they cannot address one.
+func ProposalName(rule model.Rule) string {
+	return strings.TrimSuffix(filepath.Base(rule.SourcePath), ".yaml")
+}
+
+func LoadProposalByName(repoRoot, name string) (model.Rule, error) {
+	if err := safety.ValidateArtifactIdentifier("proposal name", name); err != nil {
+		return model.Rule{}, model.NewGaoriError(model.ExitCodeConfigError, "load rule proposal", err)
+	}
+	proposals, err := LoadProposals(repoRoot)
+	if err != nil {
+		return model.Rule{}, err
+	}
+	for _, proposal := range proposals {
+		if ProposalName(proposal) == name {
+			return proposal, nil
+		}
+	}
+	return model.Rule{}, model.NewGaoriError(model.ExitCodeConfigError, "load rule proposal", fmt.Errorf("unknown proposal %q", name))
+}
+
 func LoadByID(repoRoot, id string) (model.Rule, error) {
 	if err := safety.ValidateArtifactIdentifier("rule id", id); err != nil {
 		return model.Rule{}, model.NewGaoriError(model.ExitCodeConfigError, "load rule", err)
@@ -238,7 +305,7 @@ func validateProposalSource(tags []string, parser string, startLine, endLine int
 	if strings.TrimSpace(parser) == "" {
 		return nil, model.NewGaoriError(model.ExitCodeConfigError, "propose rule", fmt.Errorf("--parser is required"))
 	}
-	if !knownRuleParsers[parser] {
+	if !extract.IsKnown(parser) {
 		return nil, model.NewGaoriError(model.ExitCodeConfigError, "propose rule", fmt.Errorf("unsupported parser label %q", parser))
 	}
 	if startLine <= 0 || endLine < startLine {

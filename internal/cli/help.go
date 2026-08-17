@@ -42,6 +42,9 @@ func helpCommandPath(args []string) []string {
 	if args[0] == "config" && len(args) > 1 {
 		return append(path, args[1])
 	}
+	if args[0] == "runs" && len(args) > 1 {
+		return append(path, args[1])
+	}
 	return path
 }
 
@@ -64,6 +67,7 @@ Commands:
   summarize   Create evidence artifacts from an existing raw log
   excerpt     Read one bounded failure excerpt
   clean       Remove explicitly selected standalone evidence
+  runs        List completed standalone run evidence
   config      Validate project configuration and rules
   rules       Inspect and manage project extraction rules
   mcp         Serve asynchronous Gaori tools over STDIO MCP
@@ -103,6 +107,19 @@ Read one bounded excerpt referenced by a Gaori summary JSON artifact.
 
 Remove explicitly selected completed standalone evidence. Use --dry-run first.
 `,
+	"runs": `Usage: gaori runs <command>
+
+Commands:
+  list      List completed standalone run evidence
+
+Use "gaori help runs list" for command details.
+`,
+	"runs list": `Usage: gaori runs list [--tag <tag> ...] [--status <status>] [--limit <count>]
+
+Report completed evidence under .gaori/runs/standalone/, newest first, without
+reading raw logs or creating artifacts. --status accepts passed, failed,
+timed_out, killed, or internal_error.
+`,
 	"config": `Usage: gaori config check
 
 Validate project configuration and stored rules without running commands or creating artifacts.
@@ -123,15 +140,17 @@ Commands:
   delete    Disable a rule with a reason
   test      Test a stored rule against a raw log
   propose   Create a local rule proposal from verified evidence
+  proposals List local rule proposals awaiting review
 
 Use "gaori help rules <command>" for command details.
 `,
-	"rules list":    "Usage: gaori rules list\n",
-	"rules search":  "Usage: gaori rules search [--] <query>\n\nUse -- before a query that is also a Gaori global option name.\n",
-	"rules show":    "Usage: gaori rules show <rule-id>\n",
-	"rules create":  "Usage: gaori rules create --file <rule.yaml>\n",
-	"rules update":  "Usage: gaori rules update <rule-id> --file <rule.yaml>\n",
-	"rules delete":  "Usage: gaori rules delete <rule-id> --reason <reason>\n",
-	"rules test":    "Usage: gaori rules test --rule <rule-id> --log <raw-log> --expect-span <start:end>\n",
-	"rules propose": "Usage: gaori rules propose (--summary <summary.json> --failure <failure-id> | --tag <tag> [--tag <tag> ...] --parser <parser> --raw-log <raw-log> --span <start:end>)\n",
+	"rules list":      "Usage: gaori rules list\n",
+	"rules search":    "Usage: gaori rules search [--] <query>\n\nUse -- before a query that is also a Gaori global option name.\n",
+	"rules show":      "Usage: gaori rules show (<rule-id> | --proposal <name>)\n",
+	"rules proposals": "Usage: gaori rules proposals\n\nList local candidates under .gaori/rule-proposals/. Proposals never participate in\nextraction; promote a reviewed one with \"gaori rules create --file <path>\".\n",
+	"rules create":    "Usage: gaori rules create --file <rule.yaml>\n",
+	"rules update":    "Usage: gaori rules update <rule-id> --file <rule.yaml>\n",
+	"rules delete":    "Usage: gaori rules delete <rule-id> --reason <reason>\n",
+	"rules test":      "Usage: gaori rules test --rule <rule-id> --log <raw-log> --expect-span <start:end>\n",
+	"rules propose":   "Usage: gaori rules propose (--summary <summary.json> --failure <failure-id> | --tag <tag> [--tag <tag> ...] --parser <parser> --raw-log <raw-log> --span <start:end>)\n",
 }

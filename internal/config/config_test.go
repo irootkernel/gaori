@@ -13,7 +13,7 @@ import (
 
 func TestValidateAcceptsImplementedParsers(t *testing.T) {
 	t.Parallel()
-	for _, parser := range []string{"generic", "vitest", "pytest", "go-test", "playwright", "ginkgo", "godog", "cargo-test", "flutter-test", "bun-test", "node-test"} {
+	for _, parser := range []string{"generic", "vitest", "pytest", "go-test", "playwright", "ginkgo", "godog", "cargo-test", "flutter-test", "bun-test", "node-test", "jest", "rspec", "dotnet-test", "gradle-test"} {
 		parser := parser
 		t.Run(parser, func(t *testing.T) {
 			t.Parallel()

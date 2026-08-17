@@ -10,7 +10,7 @@ Task status values: `Planned`, `In Progress`, `Blocked`, `Done`, `Deferred`.
 Existing `Done` entries record completion of the original v0.1 implementation slices. They do not supersede or satisfy the later `HARDE` tasks, which close correctness, safety, verification, and documentation gaps found during repository review.
 
 Current implementation snapshot:
-- `Done`: `SETUP-001` to `SETUP-003`, `RUNNR-001` to `RUNNR-003`, `ARTIF-001` to `ARTIF-003`, `PARSE-001` to `PARSE-004`, `SAFEY-001` to `SAFEY-003`, `CLIUX-001` to `CLIUX-007`, `RULES-001` to `RULES-004`, `DOCUM-001` to `DOCUM-003`, `HARDE-001` to `HARDE-007`, `TAGS-001`, `ADHOC-001`, `ADHOC-002`, `RELRV-001` to `RELRV-009`, `BRAND-001`, `CLEAN-001`, `PORTA-001`, `MCP-001` to `MCP-005`
+- `Done`: `SETUP-001` to `SETUP-003`, `RUNNR-001` to `RUNNR-003`, `ARTIF-001` to `ARTIF-003`, `PARSE-001` to `PARSE-006`, `SAFEY-001` to `SAFEY-003`, `CLIUX-001` to `CLIUX-008`, `RULES-001` to `RULES-005`, `DOCUM-001` to `DOCUM-003`, `HARDE-001` to `HARDE-007`, `TAGS-001`, `ADHOC-001`, `ADHOC-002`, `RELRV-001` to `RELRV-009`, `BRAND-001`, `CLEAN-001`, `PORTA-001`, `MCP-001` to `MCP-005`
 - `In Progress`: none
 - `Deferred`: none
 - `Planned`: none
@@ -47,6 +47,8 @@ Current implementation snapshot:
 | PARSE-002 | Done | Implement parser registry and parser labels while requiring only `generic` in the first runnable slice and failing closed on unsupported specialized labels. | `GAORI-REQ-RQEXT-002`, `ADR-0008`, `GAORI-REQ-RQSEC-003` |
 | PARSE-003 | Done | Implement extractor status computation and degraded extraction signals for non-zero exits with missing or overly broad spans. | `GAORI-REQ-RQEXT-005`, `GAORI-REQ-RQEXT-006`, `GAORI-REQ-RQEXT-007` |
 | PARSE-004 | Done | Add fixture-backed Ginkgo, Godog, Cargo test, Flutter test, Bun test, and Node.js test parsers and harden Go test, Vitest, and Playwright matching without generic fallback. | `GAORI-REQ-RQEXT-002`, `GAORI-REQ-RQEXT-004`, `GAORI-REQ-RQSEC-005` |
+| PARSE-005 | Done | Replace the duplicated parser-label declarations with one registry in `internal/extract` that config and rule validation resolve through, without changing supported labels or matching behavior. | `GAORI-REQ-RQEXT-002`, `GAORI-REQ-RQCFG-006`, `GAORI-REQ-RQRUL-008`, `ADR-0013` |
+| PARSE-006 | Done | Add fixture-backed Jest, RSpec, `dotnet test`, and Gradle test parsers for ecosystems that previously fell back to `generic`, preserving the no-generic-fallback contract. | `GAORI-REQ-RQEXT-002`, `GAORI-REQ-RQEXT-004`, `GAORI-REQ-RQSEC-005` |
 
 ## SAFEY: Safety and filtering
 
@@ -67,6 +69,7 @@ Current implementation snapshot:
 | CLIUX-005 | Done | Make console JSON artifact paths and extractor status self-describing while retaining the existing compatibility fields. | `GAORI-REQ-RQCLI-009`, `GAORI-REQ-RQWAT-002` |
 | CLIUX-006 | Done | Add a read-only config and stored-rule preflight with deterministic safe metadata and no runtime artifacts. | `GAORI-REQ-RQCLI-010`, `GAORI-REQ-RQCFG-007` |
 | CLIUX-007 | Done | Accept global options throughout the Gaori portion of argv without changing command-option values or child argv after `--`. | `GAORI-REQ-RQCLI-011` |
+| CLIUX-008 | Done | Add read-only `runs list` so completed standalone evidence is discoverable through the CLI instead of a shell listing, reusing the cleanup completeness selector and surfacing only redacted status fields. | `GAORI-REQ-RQCLI-013`, `GAORI-REQ-RQCLE-003`, `GAORI-REQ-RQHAR-001`, `ADR-0010` |
 
 ## RULES: Rule management
 
@@ -76,6 +79,7 @@ Current implementation snapshot:
 | RULES-002 | Done | Implement create/update validation with provenance requirements, RE2-safe matching config, and capture group diagnostics. | `GAORI-REQ-RQRUL-003`, `GAORI-REQ-RQRUL-006`, `ADR-0007` |
 | RULES-003 | Done | Implement rule test and rule propose from raw-log span, including run-local proposed rule separation. | `GAORI-REQ-RQRUL-005`, `GAORI-REQ-RQRUL-007`, `GAORI-REQ-RQDOC-003` |
 | RULES-004 | Done | Propose a local rule candidate from one status-bound summary failure with matching-artifact validation, checksum-stream-bound span capture, and preserved provenance. | `GAORI-REQ-RQRUL-003`, `GAORI-REQ-RQRUL-009`, `GAORI-REQ-RQSEC-004` |
+| RULES-005 | Done | Make local rule proposals discoverable through `rules proposals` and `rules show --proposal <name>` without adding automatic promotion or letting a proposal participate in extraction. | `GAORI-REQ-RQRUL-001`, `GAORI-REQ-RQRUL-007`, `GAORI-REQ-RQRUL-010` |
 
 ## DOCUM: Documentation and release readiness
 

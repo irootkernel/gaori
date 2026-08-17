@@ -1,6 +1,6 @@
 # Gaori lifecycle and destructive actions
 
-Load for installation diagnostics, initialization, run start or fixed-path replacement, cancellation, cleanup, or any request involving a session, service, or reset. Covers install and version checks, the no-`init` boundary, run start and `--run-id` replacement, signal cancellation, and standalone cleanup.
+Load for installation diagnostics, initialization, run start or fixed-path replacement, cancellation, cleanup, or any request involving a session, service, or reset. Covers install and version checks, the no-`init` boundary, run start and `--run-id` replacement, signal cancellation, completed run inventory, and standalone cleanup.
 
 ## Installation diagnostics
 
@@ -47,6 +47,17 @@ The final `<command-id>.status.json` appears only after execution and extraction
 `cancel_run` is the MCP-only explicit cancellation surface and requires user intent. Its `accepted: true` means that call recorded the first cancellation request for an unfinished invocation; it does not guarantee a `killed` final result or stop evidence materialization. Repeated requests and requests after `finished` return false. Always wait for `finished` and use its authoritative status and exit code. Cancelling or timing out `wait_run` does not cancel execution. CLI invocations still use SIGINT or SIGTERM. On Unix, Gaori forwards cancellation to the child process group; MCP context cancellation records `killed` with exit `137` when materialization succeeds, while SIGINT/SIGTERM use `130`/`143`. Configured timeout remains `timed_out` with exit `124`.
 
 `gaori mcp` is an attached STDIO server, not a daemon or service controller. Explicit cancellation and shutdown are serialized with process start: cancellation that wins prevents child creation, while an established child is terminated through its process group. Closing client input after a complete newline-delimited frame is a clean server shutdown. After every in-flight process-start gate resolves and cancellation is delivered, the server drains evidence for at most three seconds, exits `0`, and discards the registry. The gate wait is outside that drain budget because Gaori prioritizes preventing a late child start over an absolute server-exit deadline. A malformed or truncated final frame is an operational failure with exit `4`; do not reinterpret it as a clean disconnect. SIGINT/SIGTERM follow the same cancellation ordering but the server exits `130`/`143`. It cannot restart or recover those invocations.
+
+## Completed run inventory
+
+`runs list` reports the same completed standalone runs that cleanup would consider, but reads instead of deletes. It never opens a raw log and never writes an artifact, so it is safe without user intent:
+
+```bash
+gaori --json runs list --limit 10
+gaori --json runs list --tag go --status failed
+```
+
+It accepts only the global `--repo` and `--json` flags. `--status` takes one of `passed`, `failed`, `timed_out`, `killed`, or `internal_error`; `--tag` may repeat and requires every named tag on the run. Directories that are not Gaori timestamps, and runs with no status artifact yet, appear only in `skipped_runs`. Unsafe or malformed evidence fails with exit `3` rather than being silently omitted — report that instead of reading around it. Use this before proposing cleanup so the user can see exactly what a selector would remove.
 
 ## Cleanup, reset, and repair
 

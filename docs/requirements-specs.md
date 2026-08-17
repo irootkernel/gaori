@@ -27,6 +27,7 @@ Implementation note: the original v0.1 roadmap and the recorded `RQHAR` hardenin
 - [x] `GAORI-REQ-RQCLI-010` Provide `gaori config check` as a side-effect-free human and JSON preflight for the selected schema-v2 config and every stored project rule, without executing commands, resolving executables, or creating runtime artifacts.
 - [x] `GAORI-REQ-RQCLI-011` Accept global options before or after subcommands and operands while preserving command-option values, allowing `rules search -- <query>` to escape global-option names as literal queries, and passing every argument after an ad-hoc `--` boundary to the child unchanged.
 - [x] `GAORI-REQ-RQCLI-012` Allow tagged ad-hoc runs to select one `--timeout-sec` value from 1 through 86400 before the explicit child boundary, default to 600 seconds, reject configured-run use before side effects, and preserve child-side timeout arguments.
+- [x] `GAORI-REQ-RQCLI-013` Provide `gaori runs list` as a side-effect-free listing of completed `.gaori/runs/standalone/` evidence, sourced only from redacted status artifacts, ordered newest first, filterable by repeatable `--tag`, one `--status`, and a non-negative `--limit`, applying the same recognition and completeness rules as cleanup, skipping unrecognized or incomplete runs, and failing closed on unsafe or unreadable evidence without executing commands, opening raw logs, or creating artifacts.
 
 ## RQCFG: Project configuration
 
@@ -69,7 +70,7 @@ Implementation note: the original v0.1 roadmap and the recorded `RQHAR` hardenin
 ## RQEXT: Extraction and parser behavior
 
 - [x] `GAORI-REQ-RQEXT-001` Provide a generic parser that can identify common failure and warning patterns.
-- [x] `GAORI-REQ-RQEXT-002` Support the exact built-in parser labels `generic`, `vitest`, `pytest`, `go-test`, `playwright`, `ginkgo`, `godog`, `cargo-test`, `flutter-test`, `bun-test`, and `node-test`; each specialized parser uses bounded fixture-backed patterns without automatic generic fallback.
+- [x] `GAORI-REQ-RQEXT-002` Support the exact built-in parser labels `generic`, `vitest`, `pytest`, `go-test`, `playwright`, `ginkgo`, `godog`, `cargo-test`, `flutter-test`, `bun-test`, `node-test`, `jest`, `rspec`, `dotnet-test`, and `gradle-test`, resolved through one parser registry that config and rule validation share; each specialized parser uses bounded fixture-backed patterns without automatic generic fallback.
 - [x] `GAORI-REQ-RQEXT-003` Extract bounded failure spans with start/end line and byte offsets.
 - [x] `GAORI-REQ-RQEXT-004` Extract signature, file, line, test name, stack-top entries, and excerpt path when available.
 - [x] `GAORI-REQ-RQEXT-005` Report `extractor_status` as `precise`, `partial`, `degraded`, or `no_match`, with degraded evidence when surfaced records are truncated.
@@ -78,7 +79,7 @@ Implementation note: the original v0.1 roadmap and the recorded `RQHAR` hardenin
 
 ## RQRUL: Rule lifecycle and CRUD
 
-- [x] `GAORI-REQ-RQRUL-001` Provide `rules list`, `rules search`, `rules show`, `rules create`, `rules update`, `rules delete`, `rules test`, and `rules propose` command surfaces.
+- [x] `GAORI-REQ-RQRUL-001` Provide `rules list`, `rules search`, `rules show`, `rules create`, `rules update`, `rules delete`, `rules test`, `rules propose`, and `rules proposals` command surfaces.
 - [x] `GAORI-REQ-RQRUL-002` Store project rules in `.gaori/tester/rules/*.yaml`; allow reviewed active rules to be committed as portable project policy.
 - [x] `GAORI-REQ-RQRUL-003` Preserve rule provenance: source run, command, raw-log checksum, source span, reason, creator, and status.
 - [x] `GAORI-REQ-RQRUL-004` Support disabled rules and deletion reasons.
@@ -87,6 +88,7 @@ Implementation note: the original v0.1 roadmap and the recorded `RQHAR` hardenin
 - [x] `GAORI-REQ-RQRUL-007` Keep run-local proposed rules separate from project-local active rules.
 - [x] `GAORI-REQ-RQRUL-008` Select rules only when the parser matches and every canonical rule tag is present on the run, allowing multiple active rules to inspect one raw log.
 - [x] `GAORI-REQ-RQRUL-009` Allow a rule proposal to select one failure from a summary, fail closed unless the adjacent status artifact binds the exact summary checksum and metadata and the adjacent raw log matches its locator and checksum, preserve summary and span provenance, and capture only the bounded selected span while streaming the full raw-log checksum. Keep this mode mutually exclusive with legacy manual metadata and span selection.
+- [x] `GAORI-REQ-RQRUL-010` Provide read-only `rules proposals` and `rules show --proposal <name>` over `.gaori/rule-proposals/`, addressing each candidate by its unique file name because proposal rule IDs repeat, preserving provenance, keeping proposals out of `rules list` and out of extraction selection, and requiring the existing explicit `rules create --file` for promotion.
 
 ## RQSEC: Safety, redaction, and fail-closed behavior
 

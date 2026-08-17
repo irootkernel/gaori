@@ -25,30 +25,11 @@ var (
 
 func parserFailures(parser string, lines []lineIndex, text string) []model.Failure {
 	lines = parserVisibleLines(lines)
-	switch parser {
-	case "vitest":
-		return vitestFailures(lines, text)
-	case "pytest":
-		return pytestFailures(lines, text)
-	case "go-test":
-		return goTestFailures(lines, text)
-	case "playwright":
-		return playwrightFailures(lines, text)
-	case "ginkgo":
-		return ginkgoFailures(lines, text)
-	case "godog":
-		return godogFailures(lines, text)
-	case "cargo-test":
-		return cargoTestFailures(lines, text)
-	case "flutter-test":
-		return flutterTestFailures(lines, text)
-	case "bun-test":
-		return bunTestFailures(lines, text)
-	case "node-test":
-		return nodeTestFailures(lines, text)
-	default:
+	descriptor, ok := parserRegistry[parser]
+	if !ok {
 		return genericFailures(lines)
 	}
+	return descriptor.failures(lines, text)
 }
 
 func vitestFailures(lines []lineIndex, text string) []model.Failure {

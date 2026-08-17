@@ -37,6 +37,10 @@ func frameworkParserIntegrationCases() []parserIntegrationCase {
 		{parser: "flutter-test", file: "test/book_test.dart", line: 42, testName: "rejects empty title", failureCount: 1},
 		{parser: "bun-test", file: "tests/book.test.ts", line: 42, testName: "rejects empty title", failureCount: 1},
 		{parser: "node-test", file: "/repo/tests/book.test.js", line: 42, testName: "rejects empty title", failureCount: 1},
+		{parser: "jest", file: "tests/book.test.js", line: 42, testName: "rejects empty title", failureCount: 1},
+		{parser: "rspec", file: "./spec/book_spec.rb", line: 42, testName: "Book rejects empty title", failureCount: 1},
+		{parser: "dotnet-test", file: "/repo/tests/BookTests.cs", line: 42, testName: "Book.RejectsEmptyTitle", failureCount: 1},
+		{parser: "gradle-test", file: "BookTest.java", line: 42, testName: "rejects empty title", failureCount: 1},
 	}
 }
 
