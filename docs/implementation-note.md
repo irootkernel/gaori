@@ -1,6 +1,6 @@
 # Gaori Implementation Note
 
-Status: Current for `gaori v0.1.13`; complete through `MCP-006`
+Status: Current source-tree guidance; complete through `AWAIT-004`
 Scope: Maintainer guidance for standalone execution, evidence artifacts, parser/rule behavior, operator-directed cleanup, and session-local STDIO MCP execution
 
 This document explains implementation constraints and verification expectations for contributors. It is not the parent-project adoption contract; integrators should start with the [integration guide](integration-guide.md).
@@ -11,13 +11,13 @@ Keep Gaori a small deterministic Go CLI with one attached, session-local STDIO M
 
 The post-baseline HARDE sequence is complete. Preserve the contracts in `roadmap.md#harde-post-baseline-hardening-and-contract-closure` and `requirements-specs.md#rqhar-post-baseline-hardening-and-contract-closure`, and rerun affected roadmap verification for future changes.
 
-## AWAIT implementation and remaining hardening
+## AWAIT terminal waiting
 
 `GAORI-REQ-RQMCP-008` and `ADR-0018` define the AWAIT contract. `await_run` waits on the invocation's existing immutable `done` channel rather than adding a timer, polling loop, heartbeat, second registry, or persisted state. It checks the terminal state before waiting so an already-finished invocation returns immediately, then selects only between `done` and the handler context. Reading the snapshot after `done` closes reuses the same synchronization and result surface as `get_run` and `wait_run`.
 
 Do not pass the handler context into command execution and do not call the invocation cancel function when an await request ends. A timed-out or cancelled tool request must leave the run available to `get_run`, `wait_run`, another `await_run`, or explicit `cancel_run` in the same server session. Cover already-finished and normal completion, multiple concurrent awaiters, handler cancellation before completion, a later successful await of that same invocation, explicit run cancellation, server shutdown, and every terminal command status. Register the tool as read-only and idempotent, accept only `invocation_id`, and keep lookup and run errors bounded and non-reflective.
 
-README, `docs/user-interface.md`, `docs/integration-guide.md`, the architecture description, and `skills/use-gaori/**` must stay synchronized with the executable source interface. Add the requirements-to-test mapping only after the named built-binary hardening tests exist. Do not promote document status headers or mark `GAORI-REQ-RQMCP-008` complete before the full AWAIT gate passes.
+README, `docs/user-interface.md`, `docs/integration-guide.md`, the architecture description, and `skills/use-gaori/**` must stay synchronized with the executable source interface. The completed requirement-to-test mapping cites the named focused and built-binary hardening tests; preserve that traceability when the contract changes.
 
 ## Suggested package boundaries
 

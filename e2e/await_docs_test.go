@@ -16,7 +16,6 @@ func TestAwaitRunDocumentationContract(t *testing.T) {
 		"docs/architecture.md",
 		"docs/implementation-note.md",
 		"docs/integration-guide.md",
-		"docs/todo.md",
 		"docs/user-interface.md",
 		"skills/use-gaori/SKILL.md",
 		"skills/use-gaori/references/lifecycle.md",
@@ -44,8 +43,8 @@ func TestAwaitRunDocumentationContract(t *testing.T) {
 
 	for _, relative := range []string{"docs/user-interface.md", "docs/implementation-note.md"} {
 		content := readAwaitDocument(t, root, relative)
-		if !strings.Contains(content, "complete through `MCP-006`") {
-			t.Errorf("%s promoted its status header before the full AWAIT gate", relative)
+		if !strings.Contains(content, "complete through `AWAIT-004`") {
+			t.Errorf("%s does not record the completed AWAIT gate", relative)
 		}
 	}
 }

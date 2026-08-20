@@ -411,8 +411,8 @@ func TestMCPDocumentationAndSkillContract(t *testing.T) {
 		"skills/use-gaori/SKILL.md", "skills/use-gaori/references/lifecycle.md", "skills/use-gaori/references/recovery.md",
 	}
 	completionStatus := map[string]string{
-		"docs/architecture.md":   "Status: Complete through `MCP-006`",
-		"docs/user-interface.md": "complete through `MCP-006`",
+		"docs/architecture.md":   "Status: Complete through `AWAIT-004`",
+		"docs/user-interface.md": "complete through `AWAIT-004`",
 	}
 	drainContractPaths := map[string]bool{
 		"README.md":                                true,

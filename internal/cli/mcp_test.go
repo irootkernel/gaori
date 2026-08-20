@@ -165,12 +165,20 @@ func TestMCPAwaitRunReturnsTerminalSnapshotAndSupportsFinishedFastPath(t *testin
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer serverSession.Close()
+	defer func() {
+		if err := serverSession.Close(); err != nil {
+			t.Errorf("close server session: %v", err)
+		}
+	}()
 	clientSession, err := client.Connect(context.Background(), clientTransport, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer clientSession.Close()
+	defer func() {
+		if err := clientSession.Close(); err != nil {
+			t.Errorf("close client session: %v", err)
+		}
+	}()
 
 	started, err := clientSession.CallTool(context.Background(), &mcp.CallToolParams{Name: "start_ad_hoc_run", Arguments: map[string]any{
 		"argv": []string{"sh", "-c", "true"}, "tags": []string{"unit"},

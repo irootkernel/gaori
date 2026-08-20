@@ -1,7 +1,7 @@
 # Gaori Architecture
 
-Status: Complete through `MCP-006`
-Scope: Standalone Gaori v0.1 architecture, including session-local STDIO MCP execution
+Status: Complete through `AWAIT-004`
+Scope: Standalone Gaori v0.1 architecture, including session-local STDIO MCP execution and terminal awaiting
 
 This document defines Gaori's technical and artifact contracts. See the [integration guide](integration-guide.md) for parent-project ownership, supported capability status, and rollout guidance.
 

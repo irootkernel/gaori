@@ -1,6 +1,6 @@
 # Gaori Parent-Project Integration Guide
 
-Status: Current for `gaori v0.1.13`
+Status: Current source-tree integration contract; published release notes identify released behavior
 Audience: Projects that invoke Gaori or consume Gaori evidence
 
 Gaori is an optional standalone execution and evidence-compression adapter for long or noisy test commands. It lets coding agents and other consumers inspect bounded evidence without pulling complete raw output into their working context. A parent project owns which tests are required and when and why they run; Gaori owns command execution, raw-log preservation, bounded extraction, and factual artifacts for an invocation routed through it.

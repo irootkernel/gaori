@@ -1,6 +1,6 @@
 # Gaori User Interface
 
-Status: Current for `gaori v0.1.13`; complete through `MCP-006`
+Status: Current source-tree interface; complete through `AWAIT-004`
 Scope: CLI and local STDIO MCP interfaces for Gaori v0.1
 
 This is the complete command reference. First-time users should begin with the repository [README](../README.md); parent-project owners should use the [integration guide](integration-guide.md) for ownership boundaries and adoption steps.
