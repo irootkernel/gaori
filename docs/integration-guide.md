@@ -26,7 +26,7 @@ The default adoption model is selective: route commands through Gaori when their
 
 ## Supported capability matrix
 
-| Area | Supported in v0.1.13 | Integration note |
+| Area | Supported in v0.1.14 | Integration note |
 |---|---|---|
 | Configured execution | Yes | `run <command-id>` reads `.gaori/tester.yaml`. |
 | Configuration preflight | Yes | `config check` validates config and all stored rules without execution or artifacts. `--sample <raw-log>` additionally reports per-pattern redaction match and replaced-byte counts without echoing sample content. |
@@ -47,7 +47,7 @@ The default adoption model is selective: route commands through Gaori when their
 | Original raw evidence | Yes | Raw logs are preserved and intentionally not redacted. |
 | Timeout | Yes | A timed-out command retains partial evidence and uses status `timed_out` with exit code `124`. |
 | Operator interruption | Yes | Unix SIGINT/SIGTERM process-group behavior is covered by built-binary tests; non-Unix builds signal the direct child and have a narrower guarantee. |
-| Local MCP lifecycle | Yes | `gaori mcp` provides session-local asynchronous start, revision wait, explicit cancel, bounded excerpt, and read-only completed-evidence listing tools over STDIO. |
+| Local MCP lifecycle | Yes | `gaori mcp` provides session-local asynchronous start, bounded revision wait, terminal await, explicit cancel, bounded excerpt, and read-only completed-evidence listing tools over STDIO. |
 | Deterministic binary selection | Yes | The bundled Python 3 resolver selects an explicit environment, metadata, or versioned toolchain binary and never falls back to `PATH`. |
 
 Global options are position-independent within the Gaori-owned argument prefix. Integrations may use either `gaori --json run unit` or `gaori run unit --json`; arguments after an ad-hoc `--` boundary are never interpreted as Gaori globals.
@@ -94,7 +94,7 @@ Gaori does not create this ignore policy, distribute config, or stage files. The
 For ordinary local use, install and verify the pinned release:
 
 ```bash
-go install github.com/irootkernel/gaori@v0.1.13
+go install github.com/irootkernel/gaori@v0.1.14
 gaori --version
 ```
 
@@ -109,7 +109,7 @@ Example portable version selection:
 ```yaml
 schema_version: "gaori.toolchain.v1"
 gaori:
-  cli_version: "0.1.13"
+  cli_version: "0.1.14"
 ```
 
 Validate selection before invoking Gaori:

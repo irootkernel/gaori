@@ -35,7 +35,7 @@ Gaori is not a test gate or verification authority. The parent project decides w
 Install the current release with Go. Command surfaces added since that release are documented here as they land, and the release notes under [docs/releases/](docs/releases/) record what each published version actually contains, so build from source when you need a surface the pinned release does not have yet:
 
 ```bash
-go install github.com/irootkernel/gaori@v0.1.13
+go install github.com/irootkernel/gaori@v0.1.14
 gaori --version
 ```
 
@@ -47,10 +47,10 @@ From a source checkout, use:
 make install
 ```
 
-Projects that pin a local Gaori toolchain can install the versioned binary at `~/.local/gaori/toolchains/v0.1.13/bin/`:
+Projects that pin a local Gaori toolchain can install the versioned binary at `~/.local/gaori/toolchains/v0.1.14/bin/`:
 
 ```bash
-VERSION=0.1.13 make install-toolchain
+VERSION=0.1.14 make install-toolchain
 ```
 
 ## Optional: configure an AI coding agent
@@ -80,7 +80,7 @@ only the skill directory into that agent-specific location:
 (
   set -eu
   gaori_skill_parent="${HOME}/.agents/skills"
-  gaori_skill_ref=v0.1.13
+  gaori_skill_ref=v0.1.14
   mkdir -p "$gaori_skill_parent"
   gaori_skill_target="$gaori_skill_parent/use-gaori"
   test ! -e "$gaori_skill_target" && test ! -L "$gaori_skill_target"
@@ -97,11 +97,11 @@ only the skill directory into that agent-specific location:
 )
 ```
 
-The skill is source-distributed in the v0.1.13 GitHub source archive. `go install`, `make install`, and `make install-toolchain` install only the Gaori binary and do not copy or activate the skill.
+The skill is source-distributed in the v0.1.14 GitHub source archive. `go install`, `make install`, and `make install-toolchain` install only the Gaori binary and do not copy or activate the skill.
 
 ## Use the local MCP server
 
-Gaori v0.1.13 includes the STDIO MCP server for local coding agents. Register the selected v0.1.13 binary from the repository that should own test artifacts:
+Gaori v0.1.14 includes the STDIO MCP server and terminal-only `await_run` for local coding agents. Register the selected v0.1.14 binary from the repository that should own test artifacts:
 
 ```bash
 make build
