@@ -11,6 +11,14 @@ Keep Gaori a small deterministic Go CLI with one attached, session-local STDIO M
 
 The post-baseline HARDE sequence is complete. Preserve the contracts in `roadmap.md#harde-post-baseline-hardening-and-contract-closure` and `requirements-specs.md#rqhar-post-baseline-hardening-and-contract-closure`, and rerun affected roadmap verification for future changes.
 
+## Planned AWAIT implementation
+
+`GAORI-REQ-RQMCP-008` and `ADR-0018` define planned work; `await_run` is not part of the current seven-tool MCP surface. Implement it by waiting on the invocation's existing immutable `done` channel rather than adding a timer, polling loop, heartbeat, second registry, or persisted state. Check the terminal state before waiting so an already-finished invocation returns immediately, then select only between `done` and the handler context. Reading the snapshot after `done` closes must reuse the same synchronization and result surface as `get_run` and `wait_run`.
+
+Do not pass the handler context into command execution and do not call the invocation cancel function when an await request ends. A timed-out or cancelled tool request must leave the run available to `get_run`, `wait_run`, another `await_run`, or explicit `cancel_run` in the same server session. Cover already-finished and normal completion, multiple concurrent awaiters, handler cancellation before completion, a later successful await of that same invocation, explicit run cancellation, server shutdown, and every terminal command status. Register the tool as read-only and idempotent, accept only `invocation_id`, and keep lookup and run errors bounded and non-reflective.
+
+When the tool becomes executable, update README, `docs/user-interface.md`, `docs/integration-guide.md`, this architecture description, and `skills/use-gaori/**` in the same change. Add the requirements-to-test mapping only after the named tests exist. Do not promote the document status headers or claim current support before the full AWAIT gate passes.
+
 ## Suggested package boundaries
 
 Names are illustrative; adapt them to the selected language and layout.

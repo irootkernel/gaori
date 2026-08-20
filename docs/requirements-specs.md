@@ -1,7 +1,7 @@
 # Gaori Requirement Specs
 
-Status: Current for `gaori v0.1.13`; all listed requirements complete
-Scope: Gaori v0.1 standalone baseline, post-baseline hardening, portable project configuration, CLI usability, verified rule proposals, operator-directed cleanup, and session-local STDIO MCP execution
+Status: Current for `gaori v0.1.13`; `GAORI-REQ-RQMCP-008` planned, with every other listed requirement complete
+Scope: Gaori v0.1 standalone baseline, post-baseline hardening, portable project configuration, CLI usability, verified rule proposals, operator-directed cleanup, session-local STDIO MCP execution, and the planned terminal-await extension
 Source context: deterministic Gaori v0.1 CLI, evidence, and attached MCP behavior.
 
 ## Requirement status legend
@@ -118,6 +118,7 @@ Implementation note: the original v0.1 roadmap and the recorded `RQHAR` hardenin
 - [x] `GAORI-REQ-RQMCP-005` Return authoritative command status and exit code independently from extractor quality, expose only redacted bounded derived evidence, and never return raw-log contents through MCP.
 - [x] `GAORI-REQ-RQMCP-006` Keep MCP invocation state ephemeral to one server process; do not provide restart recovery, a durable job ledger, acceptance state, or workflow orchestration.
 - [x] `GAORI-REQ-RQMCP-007` Provide a read-only MCP listing of completed `.gaori/runs/standalone/` evidence that reuses the `runs list` recognition, completeness, ordering, and selector semantics for repeatable tags, one terminal status, and an optional limit from 1 through 50; source every field from redacted status artifacts, bound the serialized response a client receives — including every copy the transport carries — by both that record cap and the surfaced-evidence byte budget while reporting skipped and truncated runs explicitly, reject a caller-selected output directory that relocates standalone evidence, fail closed without reflecting request or artifact text, and return no invocation identifier, live phase, revision, or raw-log contents so the tool adds no durable job ledger, restart recovery, acceptance state, or workflow orchestration.
+- [ ] `GAORI-REQ-RQMCP-008` Provide a read-only, idempotent `await_run` operation that accepts only a session-local invocation identifier, returns the existing terminal snapshot immediately when the invocation is already finished, otherwise waits for that invocation's `finished` event, and treats request cancellation or host tool timeout as cancellation of the waiter only. It must not cancel or alter the test command, add a Gaori-owned await timeout, expose raw-log content, widen surfaced errors, persist live state, detach execution, recover an invocation after server restart, or change the authoritative command result; only the existing explicit cancellation operation or MCP server shutdown may cancel an active run.
 
 ## RQDOC: Documentation and operator guidance
 

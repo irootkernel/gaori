@@ -393,6 +393,35 @@ Promotion requires a failing raw log from a real external project, recorded runn
 - A parser may move between maturity tiers without changing its label or registry entry, but every change must update the matrix and release notes.
 - README and integration documents link to the matrix instead of maintaining competing full support lists.
 
+## ADR-0018: Terminal await reduces model-driven polling without adding durable execution
+
+Status: Accepted
+Date: 2026-08-20
+
+### Context
+
+ADR-0012 introduced asynchronous MCP start plus revision-based `wait_run` because the default MCP tool deadline made one foreground tool call unsuitable for commands that may run for minutes or hours. The implementation wakes waits from invocation events, but each wait is capped at 50 seconds. A long command therefore requires an attached coding agent to issue repeated tool calls even when no state changed. That avoids operating-system process polling but still spends model turns and context on unchanged snapshots.
+
+MCP progress notifications do not solve terminal waiting portably: they belong to an active request, are optional for receivers and hosts, and may themselves become surfaced context. The MCP Tasks protocol introduced in specification version 2025-11-25 models deferred results, but it is experimental and the selected Go SDK and documented Codex integration do not yet establish an interoperable Tasks path.
+
+### Decision
+
+Gaori will add a read-only, idempotent `await_run` MCP tool that accepts only an invocation ID. It returns immediately with the existing terminal snapshot when the invocation is already `finished`; otherwise it waits on that invocation's immutable completion event until `finished` or until the tool request context ends. The tool adds no Gaori-owned timeout argument. Hosts that want one uninterrupted wait must configure their MCP tool deadline to cover the selected command timeout and expected local evidence materialization time.
+
+Cancelling or timing out the `await_run` request cancels only that waiter. The invocation keeps running and the same session-local ID may be awaited again. Only `cancel_run` or MCP server shutdown cancels the run context. `wait_run` remains the bounded revision/phase-observation interface; `await_run` is the terminal-only interface. Both return the same authoritative final command status and bounded redacted derived evidence, and neither changes artifact, watcher, or extractor semantics.
+
+Although `await_run` is annotated read-only, it is a live session-registry operation governed by ADR-0012, not the stateless finished-evidence read described by ADR-0016. It cannot address an invocation from another MCP server process or recover one after restart.
+
+Standard MCP Tasks migration is deferred until Tasks is no longer experimental, a stable Go SDK supports the complete server lifecycle, and the documented host can return control to the model and later deliver the result without repeated model-driven polling. When activated, standard Tasks will be the preferred path while the Gaori-specific lifecycle tools remain available for one release. Their removal requires a separate decision. Tasks adoption must preserve the session-local, non-recoverable boundary unless another approved requirement and ADR explicitly change it.
+
+### Consequences
+
+- A normal agent flow becomes start once, await once, then inspect bounded evidence; no model turn is needed for unchanged 50-second wait expiries.
+- A host deadline can still end the waiter, but it cannot silently cancel the command; the caller reconciles the same invocation before retrying.
+- Gaori does not add progress heartbeats, a resident service, detached execution, restart recovery, or a durable job ledger.
+- Current CLI, status JSON, artifact layouts, watcher hashes, command-result authority, and explicit cancellation behavior remain unchanged.
+- Deferred MCP Tasks work does not block delivery or completion of the terminal-await extension.
+
 ## Future ADR candidates
 
 - CI integration surface.

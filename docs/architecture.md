@@ -70,6 +70,12 @@ CLI
 
 `list_runs` deliberately bypasses that registry. It shares the Listing Engine with `gaori runs list`, so both surfaces agree on which evidence exists, and it returns no invocation identifier, phase, or revision: a listed run is finished on-disk evidence rather than session state, which is what keeps the ephemeral-state boundary intact (`ADR-0016`). Responses are bounded by a record cap and the surfaced-evidence byte budget because listing copies command IDs, tags, and extractor status out of a status artifact without validating their length. The bound is measured against the serialized response, which carries the typed output twice — as structured content and as an escaped JSON text fallback — so measuring only the record payloads would understate it by more than half. Listing errors pass through the same bounded non-reflective error path as invocation lookups, since a status artifact can supply a summary locator that redaction leaves literal.
 
+## Planned AWAIT extension (not implemented)
+
+`GAORI-REQ-RQMCP-008` and `ADR-0018` approve a terminal-only `await_run` addition without changing the current `MCP-006` implementation status. The target flow reuses each session-local invocation's immutable completion event: an already-finished invocation returns its existing terminal snapshot immediately, while an unfinished invocation blocks one tool request until the event closes or the request context ends. The waiter context never becomes the run context, so a host tool timeout or cancelled await cannot cancel, reclassify, or otherwise alter the command. The existing `cancel_run` and server-shutdown paths retain exclusive cancellation authority.
+
+The planned tool accepts only `invocation_id`, adds no heartbeat, progress stream, or Gaori-owned await timeout, and preserves the existing bounded error and terminal snapshot surfaces. Hosts own their tool-call deadline. `wait_run` remains available for callers that need revision or phase observation. This section must be merged into the current MCP lifecycle description only after the AWAIT implementation and executable evidence are complete; until then, `docs/user-interface.md`, the integration guide, README, and the source-distributed skill remain authoritative for the seven currently implemented MCP tools.
+
 ## Data flow: configured command
 
 ```text
