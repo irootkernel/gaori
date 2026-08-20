@@ -513,6 +513,105 @@ func TestMCPWaitCancellationDoesNotCancelRun(t *testing.T) {
 	manager.close()
 }
 
+func TestMCPManagerAwaitReturnsFinishedSnapshot(t *testing.T) {
+	manager := newMCPManager(globalOptions{RepoRoot: t.TempDir()})
+	initial := manager.start(model.RunRequest{
+		Mode: model.RunModeAdHoc, Tags: []string{"unit"}, CommandArgv: []string{"sh", "-c", "true"}, TimeoutSec: 30,
+	})
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	finished, err := manager.await(ctx, initial.InvocationID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if finished.Phase != mcpPhaseFinished || finished.Result == nil || finished.Result.Status != model.RunStatusPassed {
+		t.Fatalf("finished snapshot = %+v", finished)
+	}
+
+	fastPath, err := manager.await(context.Background(), initial.InvocationID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if fastPath.Phase != mcpPhaseFinished || fastPath.Revision != finished.Revision || fastPath.Changed {
+		t.Fatalf("fast-path snapshot = %+v, want revision %d", fastPath, finished.Revision)
+	}
+}
+
+func TestMCPAwaitCancellationDoesNotCancelRunAndLaterAwaitSucceeds(t *testing.T) {
+	manager := newMCPManager(globalOptions{RepoRoot: t.TempDir()})
+	initial := manager.start(model.RunRequest{
+		Mode: model.RunModeAdHoc, Tags: []string{"unit"}, CommandArgv: []string{"sh", "-c", "sleep 30"}, TimeoutSec: 30,
+	})
+	executing, err := manager.wait(context.Background(), initial.InvocationID, initial.Revision, 5*time.Second)
+	if err != nil || executing.Phase != mcpPhaseExecuting {
+		t.Fatalf("wait for executing: snapshot=%+v err=%v", executing, err)
+	}
+
+	waiterCtx, cancelWaiter := context.WithCancel(context.Background())
+	cancelWaiter()
+	if _, err := manager.await(waiterCtx, initial.InvocationID); !errors.Is(err, context.Canceled) {
+		t.Fatalf("cancelled await error = %v", err)
+	}
+	current := mustMCPInvocation(t, manager, initial.InvocationID).read()
+	if current.CancellationRequested || current.Phase != mcpPhaseExecuting {
+		t.Fatalf("cancelled await changed execution: %+v", current)
+	}
+
+	if !mustMCPInvocation(t, manager, initial.InvocationID).requestCancel() {
+		t.Fatal("explicit cancellation was not accepted")
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	finished, err := manager.await(ctx, initial.InvocationID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if finished.Result == nil || finished.Result.Status != model.RunStatusKilled || finished.Result.ExitCode != 137 {
+		t.Fatalf("finished snapshot = %+v", finished)
+	}
+}
+
+func TestMCPAwaitSupportsConcurrentWaiters(t *testing.T) {
+	manager := newMCPManager(globalOptions{RepoRoot: t.TempDir()})
+	now := time.Now().UTC()
+	inv := &mcpInvocation{
+		snapshot: mcpSnapshot{InvocationID: "run-000001", Revision: 2, Phase: mcpPhaseMaterializing, CreatedAt: now, UpdatedAt: now},
+		changed:  make(chan struct{}),
+		cancel:   func() {},
+		done:     make(chan struct{}),
+	}
+	manager.invocations[inv.snapshot.InvocationID] = inv
+
+	const waiterCount = 8
+	results := make(chan mcpSnapshot, waiterCount)
+	errors := make(chan error, waiterCount)
+	for range waiterCount {
+		go func() {
+			snapshot, err := manager.await(context.Background(), inv.snapshot.InvocationID)
+			if err != nil {
+				errors <- err
+				return
+			}
+			results <- snapshot
+		}()
+	}
+	inv.finish(&runResult{Status: model.RunStatusPassed, ExitCode: 0}, nil, nil, manager.repoRoot)
+
+	for range waiterCount {
+		select {
+		case err := <-errors:
+			t.Fatal(err)
+		case snapshot := <-results:
+			if snapshot.Phase != mcpPhaseFinished || snapshot.Revision != 3 || snapshot.Result == nil || snapshot.Result.Status != model.RunStatusPassed {
+				t.Fatalf("concurrent waiter snapshot = %+v", snapshot)
+			}
+		case <-time.After(time.Second):
+			t.Fatal("concurrent waiter did not return")
+		}
+	}
+}
+
 func TestMCPMaterializingTransitionWakesRevisionWait(t *testing.T) {
 	manager := newMCPManager(globalOptions{RepoRoot: t.TempDir()})
 	now := time.Now().UTC()

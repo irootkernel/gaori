@@ -257,6 +257,28 @@ func (m *mcpManager) wait(ctx context.Context, id string, after int64, timeout t
 	}
 }
 
+func (m *mcpManager) await(ctx context.Context, id string) (mcpSnapshot, error) {
+	inv, err := m.lookup(id)
+	if err != nil {
+		return mcpSnapshot{}, err
+	}
+	inv.mu.Lock()
+	if inv.snapshot.Phase == mcpPhaseFinished {
+		snapshot := inv.snapshot
+		snapshot.Changed = false
+		inv.mu.Unlock()
+		return snapshot, nil
+	}
+	done := inv.done
+	inv.mu.Unlock()
+	select {
+	case <-done:
+		return inv.read(), nil
+	case <-ctx.Done():
+		return mcpSnapshot{}, ctx.Err()
+	}
+}
+
 func (m *mcpManager) close() {
 	m.mu.Lock()
 	all := make([]*mcpInvocation, 0, len(m.invocations))

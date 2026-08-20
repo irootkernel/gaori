@@ -1,6 +1,6 @@
 # Gaori Roadmap
 
-Status: Completed through `MCP-006`; `AWAIT-001` to `AWAIT-004` planned and `AWAIT-005` deferred
+Status: Completed through `AWAIT-001`; `AWAIT-002` to `AWAIT-004` planned and `AWAIT-005` deferred
 Scope: Implementation tracking for the Gaori v0.1 standalone baseline, hardening, tag and parser selection, release readiness, identity migration, operator-directed standalone evidence cleanup, portable project config, CLI usability improvements, session-local MCP execution, and token-efficient terminal waiting
 
 This roadmap is a delivery record, not an operator guide or a promise that out-of-scope capabilities will be added. See the [integration guide](integration-guide.md) for the current supported/unsupported capability boundary and `todo.md` for explicitly accepted open work.
@@ -10,10 +10,10 @@ Task status values: `Planned`, `In Progress`, `Blocked`, `Done`, `Deferred`.
 Existing `Done` entries record completion of the original v0.1 implementation slices. They do not supersede or satisfy the later `HARDE` tasks, which close correctness, safety, verification, and documentation gaps found during repository review.
 
 Current implementation snapshot:
-- `Done`: `SETUP-001` to `SETUP-003`, `RUNNR-001` to `RUNNR-003`, `ARTIF-001` to `ARTIF-003`, `PARSE-001` to `PARSE-007`, `SAFEY-001` to `SAFEY-004`, `CLIUX-001` to `CLIUX-008`, `RULES-001` to `RULES-005`, `DOCUM-001` to `DOCUM-003`, `HARDE-001` to `HARDE-007`, `TAGS-001`, `ADHOC-001`, `ADHOC-002`, `RELRV-001` to `RELRV-009`, `BRAND-001`, `CLEAN-001`, `PORTA-001`, `MCP-001` to `MCP-006`
+- `Done`: `SETUP-001` to `SETUP-003`, `RUNNR-001` to `RUNNR-003`, `ARTIF-001` to `ARTIF-003`, `PARSE-001` to `PARSE-007`, `SAFEY-001` to `SAFEY-004`, `CLIUX-001` to `CLIUX-008`, `RULES-001` to `RULES-005`, `DOCUM-001` to `DOCUM-003`, `HARDE-001` to `HARDE-007`, `TAGS-001`, `ADHOC-001`, `ADHOC-002`, `RELRV-001` to `RELRV-009`, `BRAND-001`, `CLEAN-001`, `PORTA-001`, `MCP-001` to `MCP-006`, `AWAIT-001`
 - `In Progress`: none
 - `Deferred`: `AWAIT-005`
-- `Planned`: `AWAIT-001` to `AWAIT-004`
+- `Planned`: `AWAIT-002` to `AWAIT-004`
 
 ## SETUP: Project foundation
 
@@ -170,7 +170,7 @@ Completed release-readiness findings are retained here; remaining accepted findi
 
 | Task ID | Status | Goal | Verification | Reference |
 |---|---|---|---|---|
-| AWAIT-001 | Planned | Add an event-driven terminal waiter over each session-local invocation's immutable completion event without changing execution, cancellation, persistence, or artifact ownership. | Cover normal completion, the already-finished fast path, handler-context cancellation, a later successful await of the same invocation, and multiple concurrent waiters with focused manager tests. | `GAORI-REQ-RQMCP-002`, `GAORI-REQ-RQMCP-006`, `GAORI-REQ-RQMCP-008`, `ADR-0012`, `ADR-0018` |
+| AWAIT-001 | Done | Add an event-driven terminal waiter over each session-local invocation's immutable completion event without changing execution, cancellation, persistence, or artifact ownership. | Cover normal completion, the already-finished fast path, handler-context cancellation, a later successful await of the same invocation, and multiple concurrent waiters with focused manager tests. | `GAORI-REQ-RQMCP-002`, `GAORI-REQ-RQMCP-006`, `GAORI-REQ-RQMCP-008`, `ADR-0012`, `ADR-0018` |
 | AWAIT-002 | Planned | Expose read-only, idempotent `await_run` with an `invocation_id`-only schema and synchronize every current user, integration, architecture, and agent-skill description in the same interface change. | Pass MCP tool/schema tests, manager and CLI integration tests, documentation/skill contract tests, current-surface stale-text searches, and `git diff --check`. | `GAORI-REQ-RQMCP-003`, `GAORI-REQ-RQMCP-005`, `GAORI-REQ-RQMCP-008`, `ADR-0018` |
 | AWAIT-003 | Planned | Harden terminal awaiting across authoritative command results and the existing cancellation and shutdown boundaries. | Use built-binary MCP coverage for passed, failed, timed-out, and killed results; explicit `cancel_run`; server shutdown; cancelled or host-timed-out await followed by reconciliation; concurrent waiters; and bounded redacted errors. | `GAORI-REQ-RQMCP-004`, `GAORI-REQ-RQMCP-005`, `GAORI-REQ-RQMCP-008`, `ADR-0012`, `ADR-0018` |
 | AWAIT-004 | Planned | Complete traceability and run the full development gate before promoting AWAIT documentation and roadmap status. | Map `GAORI-REQ-RQMCP-008` only to existing named tests, pass `make test` and `git diff --check`, then update current-status headers and roadmap state from observed evidence. | `GAORI-REQ-RQMCP-008`, `GAORI-REQ-RQDOC-001`, `ADR-0018` |
