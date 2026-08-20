@@ -26,7 +26,7 @@ Gaori has no `init` command. A configured workspace exists only when the selecte
 
 ## Run start and replacement
 
-Gaori has no durable task registry. When all Gaori MCP tools are connected, start only the concrete command selected by the user or parent project with `start_configured_run` or `start_ad_hoc_run`. Record its session-local invocation ID and revision, then use `wait_run`; `queued`, `executing`, `materializing`, and `finished` are live phases, not command results. Otherwise use the CLI:
+Gaori has no durable task registry. When all Gaori MCP tools are connected, start only the concrete command selected by the user or parent project with `start_configured_run` or `start_ad_hoc_run`. Record its session-local invocation ID and revision, then use `await_run` for terminal completion or `wait_run` for bounded phase/revision observation; `queued`, `executing`, `materializing`, and `finished` are live phases, not command results. `await_run` accepts only the invocation ID and relies on the host's tool-call deadline. Otherwise use the CLI:
 
 ```bash
 gaori --json run unit

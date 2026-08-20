@@ -13,7 +13,7 @@ Scope: Documentation and implementation follow-up notes
 ## Active items
 
 - `Open` — Promote `dotnet-test` and `gradle-test` from Experimental after satisfying the [parser support criteria](parser-support.md#promotion-criteria). `dotnet-test` still needs a failing raw log from a real project. A real Gradle 9.1 failure produced a precise failure and test name but did not retain the available `BookTest.java:10` location, so that parser gap and its regression coverage must be resolved first. Real Jest 30.1.3 and RSpec 3.13.2 failures matched their authored metadata expectations on 2026-08-17 and remain Supported. Additional authored examples alone cannot close this item.
-- `Open` — Implement roadmap epic [`AWAIT-001` through `AWAIT-004`](roadmap.md#await-token-efficient-terminal-waiting) so an attached agent can await one session-local invocation's terminal event without repeated unchanged MCP wait results. The accepted contract is `GAORI-REQ-RQMCP-008` and `ADR-0018`; the current binary does not yet expose `await_run`.
+- `Active` — Complete roadmap epic [`AWAIT-001` through `AWAIT-004`](roadmap.md#await-token-efficient-terminal-waiting). The current source tree exposes `await_run`; built-binary lifecycle hardening, traceability, and the full development gate remain before final AWAIT promotion. The accepted contract is `GAORI-REQ-RQMCP-008` and `ADR-0018`.
 
 ## Deferred items
 

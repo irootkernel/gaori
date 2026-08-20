@@ -69,6 +69,12 @@ func TestMCPServerAdvertisesExpectedTools(t *testing.T) {
 		if tool.Name == "wait_run" {
 			assertOptionalIntegerBounds(t, tool.InputSchema, "timeout_ms", 1, 50000)
 		}
+		if tool.Name == "await_run" {
+			if tool.Annotations == nil || !tool.Annotations.ReadOnlyHint || !tool.Annotations.IdempotentHint {
+				t.Fatalf("await_run is not read-only and idempotent: %+v", tool.Annotations)
+			}
+			assertOnlyRequiredSchemaProperty(t, tool.InputSchema, "invocation_id")
+		}
 		if tool.Name == "cancel_run" {
 			if !strings.Contains(tool.Description, "accepted reports whether this call recorded that request") {
 				t.Fatalf("cancel_run description does not define accepted: %q", tool.Description)
@@ -85,7 +91,7 @@ func TestMCPServerAdvertisesExpectedTools(t *testing.T) {
 			}
 		}
 	}
-	want := []string{"cancel_run", "get_excerpt", "get_run", "list_runs", "start_ad_hoc_run", "start_configured_run", "wait_run"}
+	want := []string{"await_run", "cancel_run", "get_excerpt", "get_run", "list_runs", "start_ad_hoc_run", "start_configured_run", "wait_run"}
 	slices.Sort(names)
 	if !slices.Equal(names, want) {
 		t.Fatalf("tools = %v, want %v", names, want)
@@ -123,6 +129,7 @@ func TestMCPInvocationLookupErrorsAreBoundedAndNonReflective(t *testing.T) {
 	}{
 		{name: "get_run", arguments: map[string]any{}},
 		{name: "wait_run", arguments: map[string]any{"after_revision": 0, "timeout_ms": 1}},
+		{name: "await_run", arguments: map[string]any{}},
 		{name: "cancel_run", arguments: map[string]any{}},
 		{name: "get_excerpt", arguments: map[string]any{"failure_id": "F001"}},
 	}
@@ -144,6 +151,42 @@ func TestMCPInvocationLookupErrorsAreBoundedAndNonReflective(t *testing.T) {
 			if !result.IsError || strings.Contains(string(encoded), invocationID) || len(encoded) > safety.MaxExcerptBytes {
 				t.Fatalf("%s reflected or failed to bound invocation %q: %s", tool.name, invocationID, encoded)
 			}
+		}
+	}
+}
+
+func TestMCPAwaitRunReturnsTerminalSnapshotAndSupportsFinishedFastPath(t *testing.T) {
+	manager := newMCPManager(globalOptions{RepoRoot: t.TempDir()})
+	defer manager.close()
+	server := newMCPServer(manager, NewBuildInfo("gaori", "0.1.13", "test", "test"))
+	client := mcp.NewClient(&mcp.Implementation{Name: "test", Version: "v1"}, nil)
+	clientTransport, serverTransport := mcp.NewInMemoryTransports()
+	serverSession, err := server.Connect(context.Background(), serverTransport, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer serverSession.Close()
+	clientSession, err := client.Connect(context.Background(), clientTransport, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer clientSession.Close()
+
+	started, err := clientSession.CallTool(context.Background(), &mcp.CallToolParams{Name: "start_ad_hoc_run", Arguments: map[string]any{
+		"argv": []string{"sh", "-c", "true"}, "tags": []string{"unit"},
+	}})
+	if err != nil || started.IsError {
+		t.Fatalf("start_ad_hoc_run: result=%+v err=%v", started, err)
+	}
+	initial := decodeMCPOutput[mcpSnapshot](t, started)
+	for attempt := 0; attempt < 2; attempt++ {
+		result, err := clientSession.CallTool(context.Background(), &mcp.CallToolParams{Name: "await_run", Arguments: map[string]any{"invocation_id": initial.InvocationID}})
+		if err != nil || result.IsError {
+			t.Fatalf("await_run attempt %d: result=%+v err=%v", attempt+1, result, err)
+		}
+		finished := decodeMCPOutput[mcpSnapshot](t, result)
+		if finished.Phase != mcpPhaseFinished || finished.Result == nil || finished.Result.Status != model.RunStatusPassed {
+			t.Fatalf("await_run attempt %d snapshot = %+v", attempt+1, finished)
 		}
 	}
 }
@@ -319,6 +362,37 @@ func assertOptionalIntegerBounds(t *testing.T, schema any, property string, mini
 	if got.Type != "integer" || got.Minimum == nil || *got.Minimum != minimum || got.Maximum == nil || *got.Maximum != maximum {
 		t.Fatalf("%s schema = type %v minimum %v maximum %v", property, got.Type, got.Minimum, got.Maximum)
 	}
+}
+
+func assertOnlyRequiredSchemaProperty(t *testing.T, schema any, property string) {
+	t.Helper()
+	encoded, err := json.Marshal(schema)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var document struct {
+		Required   []string       `json:"required"`
+		Properties map[string]any `json:"properties"`
+	}
+	if err := json.Unmarshal(encoded, &document); err != nil {
+		t.Fatal(err)
+	}
+	if len(document.Properties) != 1 || len(document.Required) != 1 || document.Required[0] != property {
+		t.Fatalf("schema properties = %v, required = %v; want only required %q", document.Properties, document.Required, property)
+	}
+}
+
+func decodeMCPOutput[T any](t *testing.T, result *mcp.CallToolResult) T {
+	t.Helper()
+	encoded, err := json.Marshal(result.StructuredContent)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var out T
+	if err := json.Unmarshal(encoded, &out); err != nil {
+		t.Fatal(err)
+	}
+	return out
 }
 
 func assertSchemaPropertyDescription(t *testing.T, schema any, property, expected string) {

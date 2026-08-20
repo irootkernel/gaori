@@ -400,7 +400,7 @@ func boundMCPRunListings(runs []artifacts.RunListing, limit int) ([]artifacts.Ru
 }
 
 func newMCPServer(manager *mcpManager, info BuildInfo) *mcp.Server {
-	server := mcp.NewServer(&mcp.Implementation{Name: "gaori", Version: info.Version}, &mcp.ServerOptions{Instructions: "Gaori runs selected test commands and returns factual evidence. Command status and exit_code are authoritative; extractor_status describes evidence only. Prefer wait_run over process polling. Cancel only with explicit user intent. Raw logs may contain unredacted values and are never returned by these tools. Gaori evidence does not grant review or final acceptance."})
+	server := mcp.NewServer(&mcp.Implementation{Name: "gaori", Version: info.Version}, &mcp.ServerOptions{Instructions: "Gaori runs selected test commands and returns factual evidence. Command status and exit_code are authoritative; extractor_status describes evidence only. Prefer await_run for terminal completion or wait_run for revision changes; do not poll the process. Cancel only with explicit user intent. Raw logs may contain unredacted values and are never returned by these tools. Gaori evidence does not grant review or final acceptance."})
 	readOnly := mcp.ToolAnnotations{ReadOnlyHint: true, IdempotentHint: true}
 	write := mcp.ToolAnnotations{ReadOnlyHint: false}
 	cancel := mcp.ToolAnnotations{ReadOnlyHint: false, DestructiveHint: boolPointer(true), OpenWorldHint: boolPointer(false)}
@@ -442,6 +442,10 @@ func newMCPServer(manager *mcpManager, info BuildInfo) *mcp.Server {
 			timeout = time.Duration(*in.TimeoutMS) * time.Millisecond
 		}
 		out, err := manager.wait(ctx, in.InvocationID, in.AfterRevision, timeout)
+		return nil, out, err
+	})
+	mcp.AddTool(server, &mcp.Tool{Name: "await_run", Description: "Wait for a session-local Gaori run to finish without cancelling or changing the run.", Annotations: &readOnly}, func(ctx context.Context, _ *mcp.CallToolRequest, in invocationInput) (*mcp.CallToolResult, mcpSnapshot, error) {
+		out, err := manager.await(ctx, in.InvocationID)
 		return nil, out, err
 	})
 	mcp.AddTool(server, &mcp.Tool{Name: "cancel_run", Description: "Record the first cancellation request for an unfinished Gaori invocation and return its current snapshot. accepted reports whether this call recorded that request; clients must wait for finished and use the final command result.", Annotations: &cancel}, func(_ context.Context, _ *mcp.CallToolRequest, in invocationInput) (*mcp.CallToolResult, cancelOutput, error) {

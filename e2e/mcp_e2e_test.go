@@ -173,7 +173,7 @@ func TestBinaryMCPLifecycleAndBoundedEvidence(t *testing.T) {
 	}()
 
 	tools, err := session.ListTools(ctx, nil)
-	if err != nil || len(tools.Tools) != 7 {
+	if err != nil || len(tools.Tools) != 8 {
 		t.Fatalf("list tools: count=%d err=%v", len(tools.Tools), err)
 	}
 	assertMCPToolErrorDoesNotContain(t, ctx, session, "get_run", map[string]any{
