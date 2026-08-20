@@ -57,11 +57,39 @@ func TestBinaryMCPSignalsShutDownServerAndProcessGroup(t *testing.T) {
 			}
 			rawPath := waitForInterruptedRaw(t, repo, "")
 			waitForRawMarker(t, rawPath, "started\n")
+			type awaitResult struct {
+				result *mcp.CallToolResult
+				err    error
+			}
+			awaitDone := make(chan awaitResult, 1)
+			go func() {
+				result, err := session.CallTool(ctx, &mcp.CallToolParams{Name: "await_run", Arguments: map[string]any{"invocation_id": snapshot.InvocationID}})
+				awaitDone <- awaitResult{result: result, err: err}
+			}()
+			select {
+			case result := <-awaitDone:
+				t.Fatalf("await_run returned before shutdown: result=%+v err=%v", result.result, result.err)
+			case <-time.After(50 * time.Millisecond):
+			}
 			if err := command.Process.Signal(test.signal); err != nil {
 				t.Fatal(err)
 			}
 			statusPath := filepath.Join(filepath.Dir(rawPath), "unit.status.json")
 			waitForPath(t, statusPath)
+			select {
+			case awaited := <-awaitDone:
+				if awaited.err == nil {
+					finished, err := decodeMCPToolResult[mcpBinarySnapshot](awaited.result)
+					if err != nil {
+						t.Fatal(err)
+					}
+					if finished.Phase != "finished" || finished.Result.Status != model.RunStatusKilled || finished.Result.ExitCode != 137 {
+						t.Fatalf("shutdown await_run result = %+v", finished)
+					}
+				}
+			case <-time.After(5 * time.Second):
+				t.Fatal("active await_run did not return after MCP shutdown")
+			}
 			closeErr := session.Close()
 			requireExitCode(t, closeErr, test.exitCode, nil)
 

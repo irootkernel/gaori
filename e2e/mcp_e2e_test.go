@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -12,13 +13,23 @@ import (
 	"time"
 
 	"github.com/irootkernel/gaori/internal/model"
+	"github.com/irootkernel/gaori/internal/safety"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
 func TestBinaryMCPExitsCleanlyOnEOF(t *testing.T) {
 	root := projectRoot(t)
 	bin := buildBinary(t, root)
-	command := exec.Command(bin, "mcp")
+	repo := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(repo, ".gaori"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	config := "version: 2\ncommands:\n  unit:\n    command: [\"sh\", \"-c\", \"echo started; sleep 30\"]\n    tags: [unit]\n    parser: generic\n    timeout_sec: 30\n"
+	if err := os.WriteFile(filepath.Join(repo, ".gaori", "tester.yaml"), []byte(config), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	command := exec.Command(bin, "--repo", repo, "mcp")
+	command.Dir = repo
 	stdin, err := command.StdinPipe()
 	if err != nil {
 		t.Fatal(err)
@@ -51,6 +62,30 @@ func TestBinaryMCPExitsCleanlyOnEOF(t *testing.T) {
 	if err := decoder.Decode(&response); err != nil || response["id"] != float64(2) {
 		t.Fatalf("tools/list response = %v, err=%v", response, err)
 	}
+	if err := encoder.Encode(map[string]any{"jsonrpc": "2.0", "id": 3, "method": "tools/call", "params": map[string]any{"name": "start_configured_run", "arguments": map[string]any{"command_id": "unit"}}}); err != nil {
+		t.Fatal(err)
+	}
+	response = nil
+	if err := decoder.Decode(&response); err != nil || response["id"] != float64(3) {
+		t.Fatalf("start response = %v, err=%v", response, err)
+	}
+	result, ok := response["result"].(map[string]any)
+	if !ok {
+		t.Fatalf("start result = %#v", response["result"])
+	}
+	structured, ok := result["structuredContent"].(map[string]any)
+	if !ok {
+		t.Fatalf("start structuredContent = %#v", result["structuredContent"])
+	}
+	invocationID, ok := structured["invocation_id"].(string)
+	if !ok || invocationID == "" {
+		t.Fatalf("start invocation_id = %#v", structured["invocation_id"])
+	}
+	rawPath := waitForInterruptedRaw(t, repo, "")
+	waitForRawMarker(t, rawPath, "started\n")
+	if err := encoder.Encode(map[string]any{"jsonrpc": "2.0", "id": 4, "method": "tools/call", "params": map[string]any{"name": "await_run", "arguments": map[string]any{"invocation_id": invocationID}}}); err != nil {
+		t.Fatal(err)
+	}
 	if err := stdin.Close(); err != nil {
 		t.Fatal(err)
 	}
@@ -59,6 +94,10 @@ func TestBinaryMCPExitsCleanlyOnEOF(t *testing.T) {
 	}
 	if stderr.Len() != 0 {
 		t.Fatalf("unexpected MCP shutdown output: stderr=%q", stderr.String())
+	}
+	status := readStatus(t, strings.TrimSuffix(rawPath, ".raw.log")+".status.json")
+	if status.Status != model.RunStatusKilled || status.ExitCode != 137 {
+		t.Fatalf("MCP EOF status with active await = %s/%d", status.Status, status.ExitCode)
 	}
 }
 
@@ -136,7 +175,8 @@ type mcpBinarySnapshot struct {
 	CancellationRequested bool            `json:"cancellation_requested"`
 	Result                binaryRunResult `json:"result"`
 	Error                 *struct {
-		ExitCode int `json:"exit_code"`
+		ExitCode int    `json:"exit_code"`
+		Message  string `json:"message"`
 	} `json:"gaori_error"`
 }
 
@@ -152,7 +192,7 @@ func TestBinaryMCPLifecycleAndBoundedEvidence(t *testing.T) {
 	if err := os.MkdirAll(filepath.Join(repo, ".gaori"), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	config := "version: 2\ncommands:\n  fail:\n    command: [\"sh\", \"-c\", \"echo 'TypeError: token=secret failed'; echo 'src/demo.test.ts:12:3'; exit 7\"]\n    tags: [unit]\n    parser: generic\n    timeout_sec: 30\n  slow:\n    command: [\"sh\", \"-c\", \"echo started; sleep 30\"]\n    tags: [unit]\n    parser: generic\n    timeout_sec: 30\nredaction:\n  patterns:\n    - name: token\n      regex: 'token=[^ ]+'\n      replace: 'token=<redacted>'\n"
+	config := "version: 2\ncommands:\n  fail:\n    command: [\"sh\", \"-c\", \"echo 'TypeError: token=secret failed'; echo 'src/demo.test.ts:12:3'; exit 7\"]\n    tags: [unit]\n    parser: generic\n    timeout_sec: 30\n  broken:\n    command: [\"token=secret-missing-binary\"]\n    tags: [unit]\n    parser: generic\n    timeout_sec: 30\n  slow:\n    command: [\"sh\", \"-c\", \"echo started; sleep 30\"]\n    tags: [unit]\n    parser: generic\n    timeout_sec: 30\nredaction:\n  patterns:\n    - name: token\n      regex: 'token=[^ ]+'\n      replace: 'token=<redacted>'\n"
 	if err := os.WriteFile(filepath.Join(repo, ".gaori", "tester.yaml"), []byte(config), 0o644); err != nil {
 		t.Fatal(err)
 	}
@@ -184,12 +224,15 @@ func TestBinaryMCPLifecycleAndBoundedEvidence(t *testing.T) {
 		"after_revision": 0,
 		"timeout_ms":     1,
 	}, "token=secret")
+	assertMCPToolErrorDoesNotContain(t, ctx, session, "await_run", map[string]any{
+		"invocation_id": "run-000001-token=secret",
+	}, "token=secret")
 	assertMCPToolError(t, ctx, session, "start_ad_hoc_run", map[string]any{
 		"argv": []string{"true"}, "tags": []string{"unit"}, "timeout_sec": nil,
 	})
 
 	failed := callMCPTool[mcpBinarySnapshot](t, ctx, session, "start_configured_run", map[string]any{"command_id": "fail"})
-	failed = waitForMCPFinish(t, ctx, session, failed)
+	failed = awaitMCPFinish(t, ctx, session, failed)
 	assertMCPToolError(t, ctx, session, "wait_run", map[string]any{
 		"invocation_id": failed.InvocationID, "after_revision": 0, "timeout_ms": nil,
 	})
@@ -249,7 +292,7 @@ func TestBinaryMCPLifecycleAndBoundedEvidence(t *testing.T) {
 	passed := callMCPTool[mcpBinarySnapshot](t, ctx, session, "start_ad_hoc_run", map[string]any{
 		"argv": []string{"sh", "-c", "echo ok"}, "tags": []string{"unit"}, "parser": "generic", "timeout_sec": 10,
 	})
-	passed = waitForMCPFinish(t, ctx, session, passed)
+	passed = awaitMCPFinish(t, ctx, session, passed)
 	if passed.Result.Status != model.RunStatusPassed || passed.Result.ExitCode != 0 {
 		t.Fatalf("ad-hoc result = %+v", passed.Result)
 	}
@@ -257,21 +300,55 @@ func TestBinaryMCPLifecycleAndBoundedEvidence(t *testing.T) {
 	timedOut := callMCPTool[mcpBinarySnapshot](t, ctx, session, "start_ad_hoc_run", map[string]any{
 		"argv": []string{"sh", "-c", "echo partial; sleep 30"}, "tags": []string{"unit"}, "timeout_sec": 1,
 	})
-	timedOut = waitForMCPFinish(t, ctx, session, timedOut)
+	timedOut = awaitMCPFinish(t, ctx, session, timedOut)
 	if timedOut.Result.Status != model.RunStatusTimedOut || timedOut.Result.ExitCode != int(model.ExitCodeTimeout) {
 		t.Fatalf("timeout result = %+v", timedOut.Result)
 	}
 
 	invalid := callMCPTool[mcpBinarySnapshot](t, ctx, session, "start_configured_run", map[string]any{"command_id": "missing"})
-	invalid = waitForMCPFinish(t, ctx, session, invalid)
+	invalid = awaitMCPFinish(t, ctx, session, invalid)
 	if invalid.Error == nil || invalid.Error.ExitCode != int(model.ExitCodeConfigError) || invalid.Result.Status != "" {
 		t.Fatalf("invalid result = %+v", invalid)
+	}
+
+	broken := callMCPTool[mcpBinarySnapshot](t, ctx, session, "start_configured_run", map[string]any{"command_id": "broken"})
+	broken = awaitMCPFinish(t, ctx, session, broken)
+	if broken.Error == nil || broken.Error.ExitCode != int(model.ExitCodeParserError) || !strings.Contains(broken.Error.Message, "token=<redacted>") || strings.Contains(broken.Error.Message, "token=secret") || len(broken.Error.Message) > safety.MaxExcerptBytes {
+		t.Fatalf("unsafe await_run error = %+v", broken.Error)
 	}
 
 	slow := callMCPTool[mcpBinarySnapshot](t, ctx, session, "start_configured_run", map[string]any{"command_id": "slow"})
 	slow = callMCPTool[mcpBinarySnapshot](t, ctx, session, "wait_run", map[string]any{"invocation_id": slow.InvocationID, "after_revision": slow.Revision, "timeout_ms": 5000})
 	if slow.Phase != "executing" {
 		t.Fatalf("slow phase = %q", slow.Phase)
+	}
+	waiterCtx, cancelWaiter := context.WithTimeout(ctx, 50*time.Millisecond)
+	_, err = session.CallTool(waiterCtx, &mcp.CallToolParams{Name: "await_run", Arguments: map[string]any{"invocation_id": slow.InvocationID}})
+	cancelWaiter()
+	if !errors.Is(err, context.DeadlineExceeded) && !errors.Is(err, context.Canceled) {
+		t.Fatalf("host-timed-out await_run error = %v", err)
+	}
+	current := callMCPTool[mcpBinarySnapshot](t, ctx, session, "get_run", map[string]any{"invocation_id": slow.InvocationID})
+	if current.Phase != "executing" || current.CancellationRequested {
+		t.Fatalf("timed-out await_run changed execution: %+v", current)
+	}
+
+	const waiterCount = 4
+	type awaitResult struct {
+		snapshot mcpBinarySnapshot
+		err      error
+	}
+	awaitResults := make(chan awaitResult, waiterCount)
+	for range waiterCount {
+		go func() {
+			result, err := session.CallTool(ctx, &mcp.CallToolParams{Name: "await_run", Arguments: map[string]any{"invocation_id": slow.InvocationID}})
+			if err != nil {
+				awaitResults <- awaitResult{err: err}
+				return
+			}
+			snapshot, err := decodeMCPToolResult[mcpBinarySnapshot](result)
+			awaitResults <- awaitResult{snapshot: snapshot, err: err}
+		}()
 	}
 	cancelled := callMCPTool[mcpBinaryCancelOutput](t, ctx, session, "cancel_run", map[string]any{"invocation_id": slow.InvocationID})
 	if !cancelled.Accepted || !cancelled.Snapshot.CancellationRequested {
@@ -281,9 +358,18 @@ func TestBinaryMCPLifecycleAndBoundedEvidence(t *testing.T) {
 	if repeated.Accepted || !repeated.Snapshot.CancellationRequested {
 		t.Fatalf("repeated cancel response = %+v", repeated)
 	}
-	slow = waitForMCPFinish(t, ctx, session, repeated.Snapshot)
+	slow = awaitMCPFinish(t, ctx, session, repeated.Snapshot)
 	if slow.Result.Status != model.RunStatusKilled || slow.Result.ExitCode != 137 {
 		t.Fatalf("cancelled result = %+v", slow.Result)
+	}
+	for range waiterCount {
+		awaited := <-awaitResults
+		if awaited.err != nil {
+			t.Fatal(awaited.err)
+		}
+		if awaited.snapshot.Phase != "finished" || awaited.snapshot.Revision != slow.Revision || awaited.snapshot.Result.Status != model.RunStatusKilled || awaited.snapshot.Result.ExitCode != 137 {
+			t.Fatalf("concurrent await_run snapshot = %+v, want revision %d killed/137", awaited.snapshot, slow.Revision)
+		}
 	}
 	finishedCancel := callMCPTool[mcpBinaryCancelOutput](t, ctx, session, "cancel_run", map[string]any{"invocation_id": slow.InvocationID})
 	if finishedCancel.Accepted || finishedCancel.Snapshot.Phase != "finished" || finishedCancel.Snapshot.Revision != slow.Revision {
@@ -410,21 +496,33 @@ func waitForMCPFinish(t *testing.T, ctx context.Context, session *mcp.ClientSess
 	return snapshot
 }
 
+func awaitMCPFinish(t *testing.T, ctx context.Context, session *mcp.ClientSession, snapshot mcpBinarySnapshot) mcpBinarySnapshot {
+	t.Helper()
+	return callMCPTool[mcpBinarySnapshot](t, ctx, session, "await_run", map[string]any{"invocation_id": snapshot.InvocationID})
+}
+
 func callMCPTool[T any](t *testing.T, ctx context.Context, session *mcp.ClientSession, name string, arguments map[string]any) T {
 	t.Helper()
 	result, err := session.CallTool(ctx, &mcp.CallToolParams{Name: name, Arguments: arguments})
 	if err != nil {
 		t.Fatalf("call %s: %v", name, err)
 	}
-	data, err := json.Marshal(result.StructuredContent)
+	output, err := decodeMCPToolResult[T](result)
 	if err != nil {
-		t.Fatal(err)
-	}
-	var output T
-	if err := json.Unmarshal(data, &output); err != nil {
+		data, _ := json.Marshal(result.StructuredContent)
 		t.Fatalf("decode %s result: %v (%s)", name, err, data)
 	}
 	return output
+}
+
+func decodeMCPToolResult[T any](result *mcp.CallToolResult) (T, error) {
+	var output T
+	data, err := json.Marshal(result.StructuredContent)
+	if err != nil {
+		return output, err
+	}
+	err = json.Unmarshal(data, &output)
+	return output, err
 }
 
 // TestBinaryMCPListsCompletedStandaloneEvidence closes the gap the use-gaori skill

@@ -562,6 +562,12 @@ func mcpCommand(opts globalOptions, args []string, stderr io.Writer, info BuildI
 	manager := newMCPManager(opts)
 	serverCtx, cancelServer := context.WithCancel(context.Background())
 	defer cancelServer()
+	managerClosed := make(chan struct{})
+	go func() {
+		<-serverCtx.Done()
+		manager.close()
+		close(managerClosed)
+	}()
 	interrupts := make(chan os.Signal, 1)
 	signal.Notify(interrupts, mcpShutdownSignals()...)
 	defer signal.Stop(interrupts)
@@ -576,11 +582,12 @@ func mcpCommand(opts globalOptions, args []string, stderr io.Writer, info BuildI
 		}
 	}()
 
-	input := &mcpEOFReader{reader: os.Stdin}
+	input := &mcpEOFReader{reader: os.Stdin, onEOF: cancelServer}
 	transport := &mcp.IOTransport{Reader: input, Writer: mcpNoCloseWriter{Writer: os.Stdout}}
 	err := newMCPServer(manager, info).Run(serverCtx, transport)
 	close(serverFinished)
-	manager.close()
+	cancelServer()
+	<-managerClosed
 	select {
 	case sig := <-receivedSignal:
 		return mcpSignalExitCode(sig)
@@ -598,6 +605,8 @@ func mcpCommand(opts globalOptions, args []string, stderr io.Writer, info BuildI
 
 type mcpEOFReader struct {
 	reader       io.ReadCloser
+	onEOF        func()
+	eofOnce      sync.Once
 	sawEOF       atomic.Bool
 	partialFrame atomic.Bool
 }
@@ -615,6 +624,11 @@ func (r *mcpEOFReader) Read(p []byte) (int, error) {
 	}
 	if err == io.EOF {
 		r.sawEOF.Store(true)
+		r.eofOnce.Do(func() {
+			if r.onEOF != nil {
+				r.onEOF()
+			}
+		})
 	}
 	return n, err
 }
