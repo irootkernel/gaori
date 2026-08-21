@@ -89,12 +89,17 @@ For multi-step work, keep a short plan in which every step has a corresponding v
 - Use `$aquarium:task-handler` for one named roadmap task.
 - Use `$aquarium:epic-handler` to implement one roadmap epic as sequential task goals.
 - Use `$aquarium:epic-validator` to cold-validate and remediate one completed roadmap epic.
+- Use `$aquarium:new-project`, `$aquarium:new-feature`, or `$aquarium:refactor` for an explicitly requested Ouroboros-assisted project or epic design workflow.
+- Use `$aquarium:war-room` to diagnose one difficult bug and stop at a task, epic, or incomplete-investigation proposal.
+- Use `$aquarium:design-qa` to create, change, reactivate, or retire local Design Gates.
 - Use `$aquarium:dev-setup` to diagnose or configure development tooling.
 - Use `$use-mulgae` for an authorized Mulgae review, run inspection, finding follow-up, configuration diagnosis, cleanup plan, or recovery.
 - Use `$use-gaori` when a selected long or noisy check is routed through Gaori or existing Gaori evidence must be inspected.
-- Let `$aquarium:task-handler`, `$aquarium:epic-handler`, and `$aquarium:epic-validator` use Podway by default unless the current user opts out before the first managed-session mutation; Aquarium workflow skills retain their stricter roadmap, ownership, and approval rules.
+- Let `$aquarium:task-handler`, `$aquarium:epic-handler`, `$aquarium:epic-validator`, `$aquarium:new-project`, `$aquarium:new-feature`, `$aquarium:refactor`, `$aquarium:war-room`, and `$aquarium:design-qa` use Podway by default unless the current user opts out before the first managed-session mutation; Aquarium workflow skills retain their stricter roadmap, ownership, and approval rules.
 - Use `$use-podway` directly for an explicitly requested Procedure v2 session operation, authoring, lifecycle, diagnosis, recovery, cancellation, or current-session discard flow. Keep each handler opt-out local to its current task, epic, or validation request.
 - Use `$lore-commits` for non-trivial commit messages and `$lore-query` to inspect recorded decision context.
+- Use the separately installed upstream `$deslop` skill for task-owned cleanup when an Aquarium workflow requests it.
+- Treat `.podway/procedures/aquarium-*-v2.yaml` as this repository's authority for normal workflow evidence and routing.
 - Repository-specific rules below override defaults from the referenced skills.
 
 ## Repository Authorities
@@ -124,7 +129,7 @@ Preserve these invariants:
 
 Do not claim review acceptance, waiver, final acceptance, install, release, push, or runtime activation from Gaori evidence alone.
 
-Local runtime, evidence, and tool state must stay out of source commits. The portable tracked exceptions are `.gaori/tester.yaml`, reviewed `.gaori/tester/rules/*.yaml`, `.mulgae/config.yaml`, reviewed `.mulgaeignore`, `.podway/config.yaml`, `.podway/.gitignore`, and the three reviewed Aquarium Procedure v2 files under `.podway/procedures/`:
+Local runtime, evidence, and tool state must stay out of source commits. The portable tracked exceptions are `.gaori/tester.yaml`, reviewed `.gaori/tester/rules/*.yaml`, `.mulgae/config.yaml`, reviewed `.mulgaeignore`, `.podway/config.yaml`, `.podway/.gitignore`, and the five reviewed Aquarium Procedure v2 files under `.podway/procedures/`:
 
 ```text
 .gaori/* except tester.yaml and reviewed tester/rules/*.yaml
@@ -160,9 +165,9 @@ Record in the release notes and completion report that the user waived a repeate
 ## Mulgae Review Overrides
 
 - An explicit `$aquarium:task-handler` invocation authorizes the task-scoped Mulgae review required by that workflow. Outside that workflow, run Mulgae only when the user explicitly asks for a review.
-- Assign all six non-UI roles (`logic`, `security`, `maintainability`, `product`, `documentation`, and `testing`) to ZCode. Do not configure AGY or substitute another provider unless the user explicitly changes that policy.
+- Assign `logic`, `security`, `maintainability`, `product`, and `testing` to ZCode, and assign `documentation` to AGY. Do not substitute another provider unless the user explicitly changes that policy.
 - Compose a review-only objective that requires concrete captured-target findings and preserves Gaori's standalone boundary, authoritative command-exit semantics, evidence-only parser and rule behavior, artifact containment, and raw-log contract.
-- Before provider invocation, preflight the same target and all six roles. Confirm the exact transmitted file set, all six ZCode routes, provider timeout, and invocation budgets; stop on unsafe or overbroad capture.
+- Before provider invocation, preflight the same target and all six roles. Confirm the exact transmitted file set, the five ZCode routes, the documentation AGY route, provider timeouts, and invocation budgets; stop on unsafe or overbroad capture.
 - Verify every advisory finding against the captured target and the repository authorities before recommending a change. Do not infer review acceptance, waiver, release, or runtime activation from Mulgae output.
 
 ## Verification
