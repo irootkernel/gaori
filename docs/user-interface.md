@@ -71,7 +71,7 @@ Add `--sample <raw-log>` to also measure whether the configured redaction patter
 
 ## Available parser labels
 
-`gaori parsers list` is the authoritative label inventory for the installed binary. The current source tree provides sixteen labels; see the [parser support matrix](parser-support.md) for the complete list, support tiers, verification evidence, and known limitations. `dart-test`, `dotnet-test`, and `gradle-test` are Experimental even though the same registry and validation paths make them selectable. `gaori --json parsers catalog` serializes each label's code-owned support tier and stable output family for machine consumers; availability remains with `parsers list`.
+`gaori parsers list` is the authoritative label inventory for the installed binary. The current source tree provides seventeen labels; see the [parser support matrix](parser-support.md) for the complete list, support tiers, verification evidence, and known limitations. `dart-test`, `dotnet-test`, `gradle-test`, and `patrol` are Experimental even though the same registry and validation paths make them selectable. `gaori --json parsers catalog` serializes each label's code-owned support tier and stable output family for machine consumers; availability remains with `parsers list`.
 
 Applicable project rules are evaluated first. The selected parser is a fallback and runs only when no rule produces a failure. The `generic` label uses generic extraction patterns; specialized labels use only their own parser patterns and never retry generic extraction. A specialized-parser miss reports `no_match` after a pass and `degraded` after a non-pass result.
 

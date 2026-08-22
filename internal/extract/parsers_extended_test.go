@@ -1,6 +1,7 @@
 package extract
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/irootkernel/gaori/internal/model"
@@ -19,6 +20,7 @@ func TestProcessExtendedParserFixtures(t *testing.T) {
 		{parser: "cargo-test", file: "crates/domain/tests/book.rs", line: 42, testName: "rejects_empty_title"},
 		{parser: "dart-test", file: "test/book_test.dart", line: 42, testName: "rejects empty title"},
 		{parser: "flutter-test", file: "test/book_test.dart", line: 42, testName: "rejects empty title"},
+		{parser: "patrol", file: "integration_test/app_test.dart", line: 42, testName: "rejects empty title"},
 		{parser: "bun-test", file: "tests/book.test.ts", line: 42, testName: "rejects empty title"},
 		{parser: "node-test", file: "/repo/tests/book.test.js", line: 42, testName: "rejects empty title"},
 		{parser: "jest", file: "tests/book.test.js", line: 42, testName: "rejects empty title"},
@@ -88,6 +90,53 @@ func TestGoTestFailureVariants(t *testing.T) {
 	}
 }
 
+func TestPatrolFailureSelection(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name     string
+		raw      string
+		testName string
+		sig      string
+	}{
+		{
+			name: "assertion failure preferred over terminal task failure",
+			raw: "❌ rejects empty title (integration_test/app_test.dart)\n" +
+				"Expected: exactly one matching node in the widget tree\n" +
+				"integration_test/app_test.dart 42:7   main.<fn> (12s)\n" +
+				"✗ Failed to execute tests of app with entrypoint test_bundle.dart on emulator-5554 (Gradle test execution failed with code 1) (21.4s)\n",
+			testName: "rejects empty title",
+			sig:      "rejects empty title",
+		},
+		{
+			name: "terminal infrastructure diagnostic retained without assertion failure",
+			raw: "✗ Failed to build app with entrypoint test_bundle.dart for iOS simulator (xcodebuild exited with code 65) (68.6s)\n" +
+				"Error: xcodebuild exited with code 65\n",
+			sig: "xcodebuild exited with code 65",
+		},
+	}
+	for _, test := range tests {
+		test := test
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			run := model.RunOutput{Status: model.RunStatusFailed, Metadata: model.RunMetadata{Parser: "patrol"}}
+			processed, err := Process([]byte(test.raw), run, nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(processed.Failures) != 1 {
+				t.Fatalf("expected one failure, got %+v", processed.Failures)
+			}
+			failure := processed.Failures[0]
+			if failure.TestName != test.testName {
+				t.Fatalf("unexpected test name %q, want %q", failure.TestName, test.testName)
+			}
+			if !strings.Contains(failure.Signature, test.sig) {
+				t.Fatalf("signature %q does not contain %q", failure.Signature, test.sig)
+			}
+		})
+	}
+}
+
 func TestParserIndicatesFailure(t *testing.T) {
 	t.Parallel()
 	for _, test := range []struct {
@@ -99,6 +148,7 @@ func TestParserIndicatesFailure(t *testing.T) {
 		{parser: "cargo-test", text: "test result: FAILED"},
 		{parser: "dart-test", text: "Some tests failed."},
 		{parser: "flutter-test", text: "Some tests failed."},
+		{parser: "patrol", text: "✗ Failed to execute tests of app with entrypoint test_bundle.dart on emulator-5554 (Gradle test execution failed with code 1) (21.4s)"},
 		{parser: "bun-test", text: "(fail) rejects empty title"},
 		{parser: "node-test", text: "not ok 1 - rejects empty title"},
 		{parser: "jest", text: "Tests:       1 failed, 1 total"},
@@ -121,6 +171,7 @@ func TestParserIndicatesFailure(t *testing.T) {
 		{parser: "rspec", text: "2 examples, 0 failures"},
 		{parser: "dotnet-test", text: "Passed!  - Failed:     0, Passed:     2"},
 		{parser: "gradle-test", text: "2 tests completed, 0 failed"},
+		{parser: "patrol", text: "✅ accepts a valid title (integration_test/app_test.dart) (8s)"},
 	} {
 		if ParserIndicatesFailure(test.parser, test.text) {
 			t.Errorf("unexpected %s failure marker", test.parser)

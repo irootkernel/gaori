@@ -3,7 +3,7 @@
 Status: Current source-tree support tiers
 Audience: Operators, integrators, and maintainers selecting a built-in parser
 
-Gaori exposes sixteen built-in parser labels through `gaori parsers list`. A label being available means config, rule validation, `run`, `summarize`, and parser discovery accept it through the shared registry. Availability does not by itself establish the parser's support tier.
+Gaori exposes seventeen built-in parser labels through `gaori parsers list`. A label being available means config, rule validation, `run`, `summarize`, and parser discovery accept it through the shared registry. Availability does not by itself establish the parser's support tier.
 
 Each label's support tier and stable output family are owned by the shared code registry and serialized by `gaori --json parsers catalog` (schema `gaori-parser-catalog.v1`). That code-owned catalog is the support-tier source of truth; this document is its required operator-facing rendering and limitation record, and repository validation fails when the catalog and this matrix drift. Requirements and accepted ADRs define the behavior of available labels; the live `parsers list` command remains authoritative for which labels an installed binary actually contains.
 
@@ -32,6 +32,7 @@ Every tier preserves the same authority boundary: the executed command's exit co
 | Jest | `jest` | Supported | Authored fixture and ingestion coverage; a real Jest 30.1.3 failure also produced precise file, line, and test-name evidence. |
 | RSpec | `rspec` | Supported | Authored fixture and ingestion coverage; a real RSpec 3.13.2 failure also produced precise file, line, and test-name evidence. |
 | Dart test (`package:test`) | `dart-test` | Experimental | Authored fixture coverage only; validation against a real `dart test` failure is pending (`QUALI-002`). |
+| Patrol | `patrol` | Experimental | Authored fixture coverage of standard Patrol-owned output only; validation against a real `patrol test` failure is pending (`QUALI-002`). Project wrapper, launcher, and aggregate signatures remain project-rule concerns, and per-test assertion spans are preferred over terminal build or execution diagnostics. |
 | `dotnet test` | `dotnet-test` | Experimental | Authored fixture coverage only; validation against a real `dotnet test` failure is pending. |
 | Gradle test | `gradle-test` | Experimental | Authored fixture coverage plus a real Gradle 9.1 failure. The default concise failure line exposed `BookTest.java:10`, but the parser did not retain that file and line. |
 

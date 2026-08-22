@@ -61,7 +61,7 @@ func TestParserSupportDocumentationContract(t *testing.T) {
 			t.Errorf("README repeats full parser matrix row %q", detailedRow)
 		}
 	}
-	if !strings.Contains(readme, "`dart-test`, `dotnet-test`, and `gradle-test` are currently Experimental") {
+	if !strings.Contains(readme, "`dart-test`, `dotnet-test`, `gradle-test`, and `patrol` are currently Experimental") {
 		t.Error("README does not disclose the Experimental parser labels")
 	}
 
@@ -70,7 +70,7 @@ func TestParserSupportDocumentationContract(t *testing.T) {
 		t.Error("requirements do not define parser support tiers")
 	}
 	authoring := readParserSupportDocument(t, root, "skills/use-gaori/references/authoring.md")
-	if !strings.Contains(authoring, "`dart-test`, `dotnet-test`, and `gradle-test` are Experimental") {
+	if !strings.Contains(authoring, "`dart-test`, `dotnet-test`, `gradle-test`, and `patrol` are Experimental") {
 		t.Error("use-gaori authoring guidance does not disclose Experimental parsers")
 	}
 }

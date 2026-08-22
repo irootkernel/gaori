@@ -24,6 +24,7 @@ var expectedParserCatalog = []ParserCatalogEntry{
 	{Label: "gradle-test", Tier: ParserTierExperimental, OutputFamily: "gradle-test"},
 	{Label: "jest", Tier: ParserTierSupported, OutputFamily: "jest"},
 	{Label: "node-test", Tier: ParserTierSupported, OutputFamily: "node-test"},
+	{Label: "patrol", Tier: ParserTierExperimental, OutputFamily: "patrol"},
 	{Label: "playwright", Tier: ParserTierSupported, OutputFamily: "playwright"},
 	{Label: "pytest", Tier: ParserTierSupported, OutputFamily: "pytest"},
 	{Label: "rspec", Tier: ParserTierSupported, OutputFamily: "rspec"},

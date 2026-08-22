@@ -51,6 +51,7 @@ var parserRegistry = map[string]parserDescriptor{
 	"rspec":        {failures: rspecFailures, indicates: rspecIndicatesFailure, tier: ParserTierSupported, outputFamily: "rspec"},
 	"dotnet-test":  {failures: dotnetTestFailures, indicates: dotnetTestIndicatesFailure, tier: ParserTierExperimental, outputFamily: "dotnet-test"},
 	"gradle-test":  {failures: gradleTestFailures, indicates: gradleTestIndicatesFailure, tier: ParserTierExperimental, outputFamily: "gradle-test"},
+	"patrol":       {failures: patrolTestFailures, indicates: patrolIndicatesFailure, tier: ParserTierExperimental, outputFamily: "patrol"},
 }
 
 // IsKnown reports whether label names a supported parser.
@@ -144,6 +145,10 @@ func cargoTestIndicatesFailure(visible string) bool {
 
 func dartTestIndicatesFailure(visible string) bool {
 	return containsAny(visible, []string{"Some tests failed.", "[E]"})
+}
+
+func patrolIndicatesFailure(visible string) bool {
+	return strings.Contains(visible, "✗ Failed to ") || patrolFailureRE.MatchString(visible)
 }
 
 func flutterTestIndicatesFailure(visible string) bool {

@@ -40,7 +40,7 @@ func TestParsersListReportsEveryRegistryLabel(t *testing.T) {
 			t.Errorf("human output omits %q: %s", label, stdout.String())
 		}
 	}
-	if !strings.Contains(stdout.String(), "Parsers: 16") {
+	if !strings.Contains(stdout.String(), "Parsers: 17") {
 		t.Errorf("human output omits the total: %s", stdout.String())
 	}
 }

@@ -27,6 +27,7 @@ var documentedParserLabels = []string{
 	"gradle-test",
 	"jest",
 	"node-test",
+	"patrol",
 	"playwright",
 	"pytest",
 	"rspec",

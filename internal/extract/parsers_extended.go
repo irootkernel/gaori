@@ -32,6 +32,15 @@ var (
 	dartTestFailureRE  = regexp.MustCompile(`^\d\d:\d\d\s+\+\d+(?:\s+-\d+)?:\s+(.+?)\s+\[E\]$`)
 	dartTestLocationRE = regexp.MustCompile(`(?m)^\s*([^\s]+\.dart)\s+(\d+):\d+`)
 
+	// patrol owns its patterns for standard Patrol-owned output: the per-test
+	// failure entry printed by patrol_log, the task-failure line used for
+	// terminal build or execution diagnostics, and the lifecycle markers that
+	// bound one failure span. Project wrapper signatures stay project rules.
+	patrolFailureRE  = regexp.MustCompile(`^❌\s+(.+?)\s+\([^\s()]+\.dart\)\s*$`)
+	patrolInfraRE    = regexp.MustCompile(`^✗\s+(.+\S)\s+\(\d+(?:\.\d+)?s\)\s*$`)
+	patrolEntryRE    = regexp.MustCompile(`^(?:🧪|✅|❌|⏩|✗\s|Test summary:)`)
+	patrolLocationRE = regexp.MustCompile(`(?m)^\s*([^\s]+\.dart)\s+(\d+):\d+`)
+
 	flutterFailureRE  = regexp.MustCompile(`^\d\d:\d\d\s+\+\d+(?:\s+-\d+)?:\s+(.+?)\s+\[E\]$`)
 	flutterLoadRE     = regexp.MustCompile(`^(?:Failed to load|.*(?:Compilation failed|Error:)).*$`)
 	flutterLocationRE = regexp.MustCompile(`(?m)^\s*([^\s]+\.dart)\s+(\d+):\d+`)
@@ -419,6 +428,58 @@ func dartTestFailures(lines []lineIndex, text string) []model.Failure {
 		failures = append(failures, failure)
 	}
 	return dedupeFailures(failures)
+}
+
+// patrolTestFailures prefers the per-test assertion failure entries of
+// standard Patrol-owned output. Only when no test failure entry exists does it
+// retain the terminal infrastructure task failure, so unrelated test, build,
+// device, driver, or timeout blocks are never combined into one failure span.
+func patrolTestFailures(lines []lineIndex, text string) []model.Failure {
+	failures := make([]model.Failure, 0)
+	for idx, line := range lines {
+		match := patrolFailureRE.FindStringSubmatch(line.text)
+		if len(match) == 0 {
+			continue
+		}
+		span := spanFor(lines, idx, patrolSpanEnd(lines, idx))
+		segment := visibleText(sliceText(text, span))
+		failure := model.Failure{Signature: firstMeaningfulLine(segment, line.text), RawSpan: span, StackTop: stackTop(segment)}
+		failure.TestName = strings.TrimSpace(match[1])
+		captureFileLine(patrolLocationRE, segment, &failure)
+		if failure.File == "" {
+			captureFileLine(fileLineRE, segment, &failure)
+		}
+		failures = append(failures, failure)
+	}
+	if len(failures) == 0 {
+		for idx, line := range lines {
+			match := patrolInfraRE.FindStringSubmatch(line.text)
+			if len(match) == 0 {
+				continue
+			}
+			span := spanFor(lines, idx, patrolSpanEnd(lines, idx))
+			segment := visibleText(sliceText(text, span))
+			failure := model.Failure{Signature: firstMeaningfulLine(segment, line.text), RawSpan: span, StackTop: stackTop(segment)}
+			captureFileLine(patrolLocationRE, segment, &failure)
+			if failure.File == "" {
+				captureFileLine(fileLineRE, segment, &failure)
+			}
+			failures = append(failures, failure)
+		}
+	}
+	return dedupeFailures(failures)
+}
+
+// patrolSpanEnd bounds one failure span at the next Patrol lifecycle entry or
+// the run summary instead of swallowing the remainder of the run.
+func patrolSpanEnd(lines []lineIndex, idx int) int {
+	end := min(len(lines)-1, idx+18)
+	for i := idx + 1; i <= end; i++ {
+		if patrolEntryRE.MatchString(lines[i].text) {
+			return i - 1
+		}
+	}
+	return end
 }
 
 func flutterTestFailures(lines []lineIndex, text string) []model.Failure {

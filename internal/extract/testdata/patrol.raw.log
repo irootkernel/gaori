@@ -1,0 +1,18 @@
+🧪 app_test accepts a valid title
+✅ accepts a valid title (integration_test/app_test.dart) (8s)
+🧪 app_test rejects empty title
+❌ rejects empty title (integration_test/app_test.dart)
+Expected: exactly one matching node in the widget tree
+  Actual: _TextFinder:<zero nodes with text "Title is required">
+   Which: means none were found but one was expected
+integration_test/app_test.dart 42:7   main.<fn> (12s)
+
+Test summary:
+📝 Total: 2
+✅ Successful: 1
+❌ Failed: 1
+  - rejects empty title (integration_test/app_test.dart)
+⏩ Skipped: 0
+📊 Report: file:///repo/build/app/reports/androidTests/connected/debug/index.html
+⏱️  Duration: 0:00:21
+✗ Failed to execute tests of app with entrypoint test_bundle.dart on emulator-5554 (Gradle test execution failed with code 1) (21.4s)

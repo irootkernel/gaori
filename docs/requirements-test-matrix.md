@@ -59,6 +59,7 @@ This matrix records the primary evidence for every requirement marked complete. 
 | `GAORI-REQ-RQEXT-009` | `TestParserSupportDocumentationContract` |
 | `GAORI-REQ-RQEXT-010` | `TestParserCatalogCoversEveryRegistryLabel`; `TestParserCatalogMatchesExpectedMetadata`; `TestParserSupportDocumentationContract`; `TestBinaryParserCatalogContract` |
 | `GAORI-REQ-RQEXT-011` | `TestValidateAcceptsImplementedParsers`; `TestProcessExtendedParserFixtures`; `TestParserIndicatesFailure`; `TestDetectParsersRanksFixtureLabelAboveGeneric`; `TestFrameworkParsersFromCapturedStream`; `TestFrameworkParsersFromRawLogFile`; `TestParserCatalogMatchesExpectedMetadata`; `TestParserSupportDocumentationContract`; `TestBinaryParserCatalogContract` |
+| `GAORI-REQ-RQEXT-012` | `TestValidateAcceptsImplementedParsers`; `TestProcessExtendedParserFixtures`; `TestPatrolFailureSelection`; `TestParserIndicatesFailure`; `TestDetectParsersRanksFixtureLabelAboveGeneric`; `TestFrameworkParsersFromCapturedStream`; `TestFrameworkParsersFromRawLogFile`; `TestParserCatalogMatchesExpectedMetadata`; `TestParserSupportDocumentationContract`; `TestBinaryParserCatalogContract` |
 | `GAORI-REQ-RQRUL-001` | `TestRulesLifecycleCommands`; `TestDocumentedCLIWorkflowAgainstFreshFixture` |
 | `GAORI-REQ-RQRUL-002` | `TestCreateSearchAndDeleteRule`; `TestRulesLifecycleCommands`; portable Git policy in `README.md` and `ADR-0011` |
 | `GAORI-REQ-RQRUL-003` | `TestValidateStoredRuleRejectsInvalidContextAndStatus`; `TestCreateSearchAndDeleteRule` |
