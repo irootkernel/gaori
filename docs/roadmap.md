@@ -1,6 +1,6 @@
 # Gaori Roadmap
 
-Status: Completed through `AWAIT-004`; `GEPIC` in progress; `AWAIT-005` deferred
+Status: Completed through `AWAIT-004` and `GEPIC`; `AWAIT-005` deferred
 Scope: Implementation tracking for the Gaori v0.1 standalone baseline, hardening, tag and parser selection, release readiness, identity migration, operator-directed standalone evidence cleanup, portable project config, CLI usability improvements, session-local MCP execution, token-efficient terminal waiting, and the parser catalog plus Dart/Patrol extraction epic
 
 This roadmap is a delivery record, not an operator guide or a promise that out-of-scope capabilities will be added. See the [integration guide](integration-guide.md) for the current supported/unsupported capability boundary and `todo.md` for explicitly accepted open work.
@@ -53,7 +53,7 @@ Current implementation snapshot:
 
 ## GEPIC: Parser catalog and Dart/Patrol extraction
 
-Epic status: In Progress
+Epic status: Done
 
 This epic implements the Gaori-owned portion of the [Aquarium test-framework parser handoff](handoffs/aquarium-test-framework-parser.md). It is complete only when all four tasks below are `Done`. External real-runner qualification and Sudal App adoption are separately owned, non-blocking follow-ups recorded in `todo.md`.
 
