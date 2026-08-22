@@ -14,6 +14,7 @@ import (
 var expectedParserCatalog = []ParserCatalogEntry{
 	{Label: "bun-test", Tier: ParserTierSupported, OutputFamily: "bun-test"},
 	{Label: "cargo-test", Tier: ParserTierSupported, OutputFamily: "cargo-test"},
+	{Label: "dart-test", Tier: ParserTierExperimental, OutputFamily: "dart-test"},
 	{Label: "dotnet-test", Tier: ParserTierExperimental, OutputFamily: "dotnet-test"},
 	{Label: "flutter-test", Tier: ParserTierSupported, OutputFamily: "flutter-test"},
 	{Label: "generic", Tier: ParserTierSupported, OutputFamily: "generic-text"},

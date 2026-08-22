@@ -34,6 +34,7 @@ func frameworkParserIntegrationCases() []parserIntegrationCase {
 		{parser: "ginkgo", file: "books/books_test.go", line: 42, testName: "rejects empty title", failureCount: 1},
 		{parser: "godog", file: "features/auth.feature", line: 12, testName: "rejects invalid token", failureCount: 1},
 		{parser: "cargo-test", file: "crates/domain/tests/book.rs", line: 42, testName: "rejects_empty_title", failureCount: 1},
+		{parser: "dart-test", file: "test/book_test.dart", line: 42, testName: "rejects empty title", failureCount: 1},
 		{parser: "flutter-test", file: "test/book_test.dart", line: 42, testName: "rejects empty title", failureCount: 1},
 		{parser: "bun-test", file: "tests/book.test.ts", line: 42, testName: "rejects empty title", failureCount: 1},
 		{parser: "node-test", file: "/repo/tests/book.test.js", line: 42, testName: "rejects empty title", failureCount: 1},

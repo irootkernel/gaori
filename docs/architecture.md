@@ -14,7 +14,7 @@ Gaori is a deterministic test and log-evidence tool. It should run test commands
 - Implementation language: Go.
 - Packaging target: standalone single binary named `gaori`.
 - Regex engine baseline: Go `regexp` (RE2 semantics) only.
-- Current parser availability and support tiers are recorded in the [parser support matrix](parser-support.md), which renders the code-owned registry catalog (`gaori --json parsers catalog`). All fifteen labels share one registry; `dotnet-test` and `gradle-test` are Experimental.
+- Current parser availability and support tiers are recorded in the [parser support matrix](parser-support.md), which renders the code-owned registry catalog (`gaori --json parsers catalog`). All sixteen labels share one registry; `dart-test`, `dotnet-test`, and `gradle-test` are Experimental.
 - Unknown parser labels fail closed.
 
 ## Non-goals

@@ -17,6 +17,7 @@ import (
 var documentedParserLabels = []string{
 	"bun-test",
 	"cargo-test",
+	"dart-test",
 	"dotnet-test",
 	"flutter-test",
 	"generic",

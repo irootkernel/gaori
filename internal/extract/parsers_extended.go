@@ -26,6 +26,12 @@ var (
 	cargoCompileRE = regexp.MustCompile(`^error(?:\[[^]]+\])?:\s+(.+)$`)
 	cargoArrowRE   = regexp.MustCompile(`(?m)^\s*-->\s+(.+?):(\d+):\d+$`)
 
+	// dart-test owns its patterns even where the package:test compact format
+	// overlaps flutter-test: the handoff forbids aliasing the two parsers until
+	// real-runner evidence establishes a shared output contract.
+	dartTestFailureRE  = regexp.MustCompile(`^\d\d:\d\d\s+\+\d+(?:\s+-\d+)?:\s+(.+?)\s+\[E\]$`)
+	dartTestLocationRE = regexp.MustCompile(`(?m)^\s*([^\s]+\.dart)\s+(\d+):\d+`)
+
 	flutterFailureRE  = regexp.MustCompile(`^\d\d:\d\d\s+\+\d+(?:\s+-\d+)?:\s+(.+?)\s+\[E\]$`)
 	flutterLoadRE     = regexp.MustCompile(`^(?:Failed to load|.*(?:Compilation failed|Error:)).*$`)
 	flutterLocationRE = regexp.MustCompile(`(?m)^\s*([^\s]+\.dart)\s+(\d+):\d+`)
@@ -389,6 +395,28 @@ func cargoTestFailures(lines []lineIndex, text string) []model.Failure {
 			}
 			failures = append(failures, failure)
 		}
+	}
+	return dedupeFailures(failures)
+}
+
+func dartTestFailures(lines []lineIndex, text string) []model.Failure {
+	failures := make([]model.Failure, 0)
+	for idx, line := range lines {
+		match := dartTestFailureRE.FindStringSubmatch(line.text)
+		if len(match) == 0 {
+			continue
+		}
+		span := spanFor(lines, idx, min(len(lines)-1, idx+18))
+		segment := visibleText(sliceText(text, span))
+		failure := model.Failure{Signature: firstMeaningfulLine(segment, line.text), RawSpan: span, StackTop: stackTop(segment)}
+		if len(match) > 0 {
+			failure.TestName = strings.TrimSpace(match[1])
+		}
+		captureFileLine(dartTestLocationRE, segment, &failure)
+		if failure.File == "" {
+			captureFileLine(fileLineRE, segment, &failure)
+		}
+		failures = append(failures, failure)
 	}
 	return dedupeFailures(failures)
 }

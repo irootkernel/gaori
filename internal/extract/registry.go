@@ -44,6 +44,7 @@ var parserRegistry = map[string]parserDescriptor{
 	"ginkgo":       {failures: ginkgoFailures, indicates: ginkgoIndicatesFailure, tier: ParserTierSupported, outputFamily: "ginkgo-v2"},
 	"godog":        {failures: godogFailures, indicates: godogIndicatesFailure, tier: ParserTierSupported, outputFamily: "godog"},
 	"cargo-test":   {failures: cargoTestFailures, indicates: cargoTestIndicatesFailure, tier: ParserTierSupported, outputFamily: "cargo-test"},
+	"dart-test":    {failures: dartTestFailures, indicates: dartTestIndicatesFailure, tier: ParserTierExperimental, outputFamily: "dart-test"},
 	"flutter-test": {failures: flutterTestFailures, indicates: flutterTestIndicatesFailure, tier: ParserTierSupported, outputFamily: "flutter-test"},
 	"bun-test":     {failures: bunTestFailures, indicates: bunTestIndicatesFailure, tier: ParserTierSupported, outputFamily: "bun-test"},
 	"node-test":    {failures: nodeTestFailures, indicates: nodeTestIndicatesFailure, tier: ParserTierSupported, outputFamily: "node-test"},
@@ -139,6 +140,10 @@ func godogIndicatesFailure(visible string) bool {
 
 func cargoTestIndicatesFailure(visible string) bool {
 	return containsAny(visible, []string{"test result: FAILED", "error: test failed", "could not compile"})
+}
+
+func dartTestIndicatesFailure(visible string) bool {
+	return containsAny(visible, []string{"Some tests failed.", "[E]"})
 }
 
 func flutterTestIndicatesFailure(visible string) bool {
