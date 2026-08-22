@@ -1,7 +1,7 @@
 # Gaori Roadmap
 
-Status: Completed through `AWAIT-004`; `AWAIT-005` deferred
-Scope: Implementation tracking for the Gaori v0.1 standalone baseline, hardening, tag and parser selection, release readiness, identity migration, operator-directed standalone evidence cleanup, portable project config, CLI usability improvements, session-local MCP execution, and token-efficient terminal waiting
+Status: Completed through `AWAIT-004`; `GEPIC` planned; `AWAIT-005` deferred
+Scope: Implementation tracking for the Gaori v0.1 standalone baseline, hardening, tag and parser selection, release readiness, identity migration, operator-directed standalone evidence cleanup, portable project config, CLI usability improvements, session-local MCP execution, token-efficient terminal waiting, and the planned parser catalog plus Dart/Patrol extraction epic
 
 This roadmap is a delivery record, not an operator guide or a promise that out-of-scope capabilities will be added. See the [integration guide](integration-guide.md) for the current supported/unsupported capability boundary and `todo.md` for explicitly accepted open work.
 
@@ -13,7 +13,7 @@ Current implementation snapshot:
 - `Done`: `SETUP-001` to `SETUP-003`, `RUNNR-001` to `RUNNR-003`, `ARTIF-001` to `ARTIF-003`, `PARSE-001` to `PARSE-007`, `SAFEY-001` to `SAFEY-004`, `CLIUX-001` to `CLIUX-008`, `RULES-001` to `RULES-005`, `DOCUM-001` to `DOCUM-003`, `HARDE-001` to `HARDE-007`, `TAGS-001`, `ADHOC-001`, `ADHOC-002`, `RELRV-001` to `RELRV-009`, `BRAND-001`, `CLEAN-001`, `PORTA-001`, `MCP-001` to `MCP-006`, `AWAIT-001` to `AWAIT-004`
 - `In Progress`: none
 - `Deferred`: `AWAIT-005`
-- `Planned`: none
+- `Planned`: `GEPIC`, comprising `PARSE-008` to `PARSE-011`
 
 ## SETUP: Project foundation
 
@@ -50,6 +50,19 @@ Current implementation snapshot:
 | PARSE-005 | Done | Replace the duplicated parser-label declarations with one registry in `internal/extract` that config and rule validation resolve through, without changing available labels or matching behavior. | `GAORI-REQ-RQEXT-002`, `GAORI-REQ-RQCFG-006`, `GAORI-REQ-RQRUL-008`, `ADR-0013` |
 | PARSE-006 | Done | Add fixture-backed Jest, RSpec, `dotnet test`, and Gradle test parsers for ecosystems that previously fell back to `generic`, preserving the no-generic-fallback contract. | `GAORI-REQ-RQEXT-002`, `GAORI-REQ-RQEXT-004`, `GAORI-REQ-RQSEC-005` |
 | PARSE-007 | Done | Add read-only `parsers list` and `parsers detect <raw-log>` so label selection is informed by registry enumeration and per-label candidate counts, without adding fallback, parser selection, config loading, artifacts, or surfaced log text. | `GAORI-REQ-RQCLI-014`, `GAORI-REQ-RQEXT-008`, `ADR-0002`, `ADR-0013`, `ADR-0014` |
+
+## GEPIC: Parser catalog and Dart/Patrol extraction
+
+Epic status: Planned
+
+This epic implements the Gaori-owned portion of the [Aquarium test-framework parser handoff](handoffs/aquarium-test-framework-parser.md). It is complete only when all four tasks below are `Done`. External real-runner qualification and Sudal App adoption are separately owned, non-blocking follow-ups recorded in `todo.md`.
+
+| Task ID | Status | Goal | Verification | Reference |
+|---|---|---|---|---|
+| PARSE-008 | Planned | Add a JSON-only, read-only parser catalog backed by code-owned tier and output-family metadata while preserving existing parser-list contracts and side-effect boundaries. | Focused registry and CLI contract tests, catalog-to-support-matrix parity validation, and built-binary JSON/error-path coverage. | `GAORI-REQ-RQCLI-015`, `GAORI-REQ-RQEXT-010`, proposed `ADR-0019` |
+| PARSE-009 | Planned | Add a bounded Experimental `dart-test` parser for normal failing `dart test` output without aliasing or generic fallback. | Authored fixture and focused extraction tests plus configured-run, summarize, discovery, and built-binary coverage. | `GAORI-REQ-RQEXT-011`, proposed `ADR-0019` |
+| PARSE-010 | Planned | Add a bounded Experimental `patrol` parser for standard Patrol-owned failure output while leaving project-wrapper signatures to project rules. | Authored fixture and focused extraction tests plus configured-run, summarize, discovery, and built-binary coverage. | `GAORI-REQ-RQEXT-012`, proposed `ADR-0019` |
+| PARSE-011 | Planned | Synchronize implemented requirements, accepted decisions, support and operator documentation, then close the implementation with the full repository gate. | `make test`, documented built-binary smokes, and `git diff --check`; requirements-to-test coverage must include every newly completed requirement. | `GAORI-REQ-RQCLI-015`, `GAORI-REQ-RQEXT-010` to `GAORI-REQ-RQEXT-012`, proposed `ADR-0019` |
 
 ## SAFEY: Safety and filtering
 

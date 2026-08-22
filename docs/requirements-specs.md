@@ -1,7 +1,7 @@
 # Gaori Requirement Specs
 
-Status: Current source-tree requirements; all listed requirements complete
-Scope: Gaori v0.1 standalone baseline, post-baseline hardening, portable project configuration, CLI usability, verified rule proposals, operator-directed cleanup, and session-local STDIO MCP execution with terminal awaiting
+Status: Current source-tree requirements plus accepted planned requirements for `GEPIC`
+Scope: Gaori v0.1 standalone baseline, post-baseline hardening, portable project configuration, CLI usability, verified rule proposals, operator-directed cleanup, session-local STDIO MCP execution with terminal awaiting, and the planned parser catalog plus Dart/Patrol extraction contract
 Source context: deterministic Gaori v0.1 CLI, evidence, and attached MCP behavior.
 
 ## Requirement status legend
@@ -11,7 +11,7 @@ Source context: deterministic Gaori v0.1 CLI, evidence, and attached MCP behavio
 - `[x]` Complete
 - `Blocked` means external decision or missing dependency prevents implementation.
 
-Implementation note: the original v0.1 roadmap and the recorded `RQHAR` hardening requirements are implemented. A checked requirement means that specific behavior is implemented and mapped to evidence; it does not imply support for capabilities outside its wording. See the [integration guide](integration-guide.md) for the current capability matrix and explicit v0.1 boundaries. Accepted open work is recorded in `todo.md`.
+Implementation note: the original v0.1 roadmap and the recorded `RQHAR` hardening requirements are implemented. A checked requirement means that specific behavior is implemented and mapped to evidence; an unchecked requirement is planned and must not be read as current binary behavior. See the [integration guide](integration-guide.md) for the current capability matrix and explicit v0.1 boundaries. Accepted open work is recorded in the [roadmap](roadmap.md), [todo](todo.md), and tracked [Aquarium parser handoff](handoffs/aquarium-test-framework-parser.md).
 
 ## RQCLI: Command-line interface
 
@@ -29,6 +29,7 @@ Implementation note: the original v0.1 roadmap and the recorded `RQHAR` hardenin
 - [x] `GAORI-REQ-RQCLI-012` Allow tagged ad-hoc runs to select one `--timeout-sec` value from 1 through 86400 before the explicit child boundary, default to 600 seconds, reject configured-run use before side effects, and preserve child-side timeout arguments.
 - [x] `GAORI-REQ-RQCLI-013` Provide `gaori runs list` as a side-effect-free listing of completed `.gaori/runs/standalone/` evidence, sourced only from redacted status artifacts, ordered newest first, filterable by repeatable `--tag`, one `--status`, and a non-negative `--limit`, applying the same recognition and completeness rules as cleanup, skipping unrecognized or incomplete runs, and failing closed on unsafe or unreadable evidence without executing commands, opening raw logs, or creating artifacts.
 - [x] `GAORI-REQ-RQCLI-014` Provide side-effect-free parser discovery through `gaori parsers list` and `gaori parsers detect <raw-log>`, where `list` enumerates every available parser label in ascending order and `detect` reports, per label, the candidate failure count and that label's own summary-heuristic verdict for one caller-named raw log in a deterministic order that never names a recommended label, accepting only the `--repo` and `--json` global options, exiting `0` even when no label reports a candidate, and creating no artifacts.
+- [ ] `GAORI-REQ-RQCLI-015` Provide `parsers catalog` as a JSON-only, read-only catalog with schema `gaori-parser-catalog.v1`, requiring `--json`, preserving every existing human and JSON `parsers list` contract, accepting only the read-only `--repo` and `--json` global options, and failing closed without loading project configuration, executing or resolving a command, selecting a parser, creating an artifact, or performing a network request.
 
 ## RQCFG: Project configuration
 
@@ -79,6 +80,9 @@ Implementation note: the original v0.1 roadmap and the recorded `RQHAR` hardenin
 - [x] `GAORI-REQ-RQEXT-007` Never use extraction rules, parser matches, or parser misses to override the executed command's exit code or authoritative non-pass status.
 - [x] `GAORI-REQ-RQEXT-008` Evaluate every available parser label against one raw log through the shared parser registry, reading and scanning at most the final 256 KiB of complete lines with the same ANSI handling as extraction so a large log is never held whole in memory, and surfacing only label names, candidate counts, heuristic verdicts, the file size, and the scan bounds; parser discovery never applies project rules, selects a parser, creates artifacts, or changes any run's status, exit code, or `extractor_status`.
 - [x] `GAORI-REQ-RQEXT-009` Publish one support-tier matrix for every available parser label, distinguish Supported from Experimental without changing label availability or command-result authority, record known real-runner limitations, and require real-project failing-log evidence plus complete regression coverage before promotion from Experimental.
+- [ ] `GAORI-REQ-RQEXT-010` Own each available parser label's support tier and stable output family in the shared code registry, expose exactly one bytewise-label-sorted catalog entry per available label, and validate automatic parity with the operator-facing support matrix without merging parser availability and maturity semantics.
+- [ ] `GAORI-REQ-RQEXT-011` Provide an Experimental `dart-test` parser for normal failing `package:test` output from `dart test`, extracting a bounded primary failure span and available test, repository-relative file, line, and assertion or exception metadata without aliasing to `flutter-test` or falling back to `generic`.
+- [ ] `GAORI-REQ-RQEXT-012` Provide an Experimental `patrol` parser for standard Patrol-owned E2E output, preferring a bounded assertion failure and otherwise the most direct terminal infrastructure diagnostic, without combining unrelated failure blocks, claiming project-wrapper signatures, adding a public failure kind, or falling back to `generic`.
 
 ## RQRUL: Rule lifecycle and CRUD
 

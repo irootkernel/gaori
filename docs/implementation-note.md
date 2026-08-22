@@ -87,6 +87,16 @@ The skill hardcodes the CLI and MCP surfaces (subcommands, tools, phases, flags,
 
 The [parser support matrix](parser-support.md) records every available label, its support tier, verification evidence, and known limitations. Every label is declared once in the `internal/extract` parser registry; config and rule validation resolve labels through `extract.IsKnown` rather than keeping their own allow-lists. Adding a parser means adding one registry entry plus its extractor and fixture, then assigning its documented support tier independently.
 
+### Planned GEPIC guidance
+
+`GEPIC` is planned work, not current binary behavior. Until `PARSE-008` through `PARSE-011` are implemented and verified, the registry still contains the fifteen labels listed below, the support matrix remains the current maturity authority, and neither `parsers catalog`, `dart-test`, nor `patrol` is available.
+
+Implement the epic through the existing registry descriptor rather than adding an independently maintained catalog table. Add support tier and stable output-family metadata beside each label's extractor and heuristic, derive catalog output from those descriptors, and make documentation parity an automated check. Preserve current `parsers list` output exactly; the new catalog is JSON-only and read-only.
+
+The `dart-test` parser targets normal failing `package:test` output from `dart test` and must not be implemented as a silent alias to `flutter-test`. The `patrol` parser targets standard Patrol-owned output; repository-specific launchers, wrappers, and aggregate signatures remain exact-parser project rules unless a separate reviewed built-in contract is approved. Both labels begin as Experimental, use the existing public failure kind, and retain the specialized-parser no-fallback boundary.
+
+External qualification is a non-blocking follow-up. Original external real-runner logs stay local and untracked; reviewed bounded sanitized regression fixtures may be tracked. A later consumer migration must update any exact-parser configuration and matching project rules together under that consumer's authority.
+
 Generic extraction is used only for the `generic` parser label. Every specialized parser is fixture-backed and fails closed when its own patterns do not match; specialized parsers do not retry generic extraction. ANSI control sequences are ignored for parser matching while original raw spans continue to reference the unchanged raw log.
 
 Recommended generic patterns still matter for unknown output shapes:

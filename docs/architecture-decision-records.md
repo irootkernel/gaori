@@ -422,6 +422,36 @@ Standard MCP Tasks migration is deferred until Tasks is no longer experimental, 
 - Current CLI, status JSON, artifact layouts, watcher hashes, command-result authority, and explicit cancellation behavior remain unchanged.
 - Deferred MCP Tasks work does not block delivery or completion of the terminal-await extension.
 
+## ADR-0019: Code-owned parser catalog exposes maturity metadata without changing command authority
+
+Status: Proposed
+Date: 2026-08-22
+
+### Context
+
+ADR-0013 makes the shared parser registry authoritative for label availability, while ADR-0017 deliberately keeps support maturity in the documentation-only parser matrix. Aquarium consumers now need deterministic machine-readable maturity and output-family metadata before adopting additional output families. Duplicating that metadata in an unrelated CLI table would create a second registry and make drift more likely.
+
+The current binary has fifteen available labels. `dart-test` and `patrol` are planned additions, not current behavior. Maturity metadata must therefore become machine-readable only as the corresponding implementation and verification land; a proposed decision cannot make an unavailable parser selectable.
+
+### Decision
+
+Augment each shared parser-registry descriptor with a support tier and stable output-family identifier. This code-owned catalog becomes the maturity-metadata source of truth, while `docs/parser-support.md` remains its required operator-facing rendering and limitation record. Repository validation will fail when registry availability, catalog metadata, or the documented matrix drift.
+
+Expose the catalog only through `parsers catalog` with JSON enabled, using schema `gaori-parser-catalog.v1` and entries sorted by label. Each entry contains exactly `label`, `tier`, and `output_family` at minimum. The existing human and JSON `parsers list` contracts remain unchanged and continue to expose availability only.
+
+The catalog accepts only the same read-only `--repo` and `--json` global options as parser discovery. It does not load project configuration, execute or resolve commands, select a parser, create artifacts, perform network access, or influence extraction. Invocation without JSON or with invalid operands fails closed with configuration exit code `2`.
+
+Planned `dart-test` and `patrol` entries begin as Experimental. Their specialized parsers retain bounded scanning, redaction, ANSI handling, no generic fallback, existing `Failure.kind` behavior, and the executed command's authoritative status and exit code. The `patrol` built-in covers standard Patrol-owned output; repository-owned wrapper signatures remain project-rule concerns.
+
+### Consequences
+
+- Availability and maturity remain separate contracts even though one registry descriptor stores both kinds of metadata.
+- Machine consumers gain a deterministic catalog without a second metadata table or a breaking change to `parsers list`.
+- Documentation parity becomes executable repository validation instead of a manual synchronization convention.
+- Adding or promoting a parser requires synchronized code metadata, support documentation, regression evidence, and any applicable release note.
+- This Proposed ADR records planned behavior only. It does not make the catalog, `dart-test`, or `patrol` available until their roadmap tasks and unchecked requirements are implemented and verified.
+- Catalog or parser evidence cannot claim review acceptance, release, installation, runtime activation, or consumer adoption.
+
 ## Future ADR candidates
 
 - CI integration surface.
