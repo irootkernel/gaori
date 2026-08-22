@@ -31,6 +31,7 @@ gaori runs list [--tag <tag> ...] [--status <status>] [--limit <count>]
 gaori config check [--sample <raw-log>]
 gaori parsers list
 gaori parsers detect <raw-log>
+gaori --json parsers catalog
 gaori mcp
 ```
 
@@ -70,7 +71,7 @@ Add `--sample <raw-log>` to also measure whether the configured redaction patter
 
 ## Available parser labels
 
-`gaori parsers list` is the authoritative label inventory for the installed binary. The current source tree provides fifteen labels; see the [parser support matrix](parser-support.md) for the complete list, support tiers, verification evidence, and known limitations. `dotnet-test` and `gradle-test` are Experimental even though the same registry and validation paths make them selectable.
+`gaori parsers list` is the authoritative label inventory for the installed binary. The current source tree provides fifteen labels; see the [parser support matrix](parser-support.md) for the complete list, support tiers, verification evidence, and known limitations. `dotnet-test` and `gradle-test` are Experimental even though the same registry and validation paths make them selectable. `gaori --json parsers catalog` serializes each label's code-owned support tier and stable output family for machine consumers; availability remains with `parsers list`.
 
 Applicable project rules are evaluated first. The selected parser is a fallback and runs only when no rule produces a failure. The `generic` label uses generic extraction patterns; specialized labels use only their own parser patterns and never retry generic extraction. A specialized-parser miss reports `no_match` after a pass and `degraded` after a non-pass result.
 
@@ -297,6 +298,7 @@ Enumerate parser labels and diagnose an existing raw log without creating eviden
 ```bash
 gaori parsers list
 gaori parsers detect fixtures/vitest.raw.log
+gaori --json parsers catalog
 ```
 
 Preview completed standalone evidence cleanup:
@@ -354,8 +356,9 @@ Tags are rule selectors, not command selectors or automatic rule generators. The
 
 ## Parser discovery notes
 
-- `parsers list` and `parsers detect` are read-only. They execute no command, resolve no executable, load no config, load no project rules, and create no artifacts. They accept only the `--repo` and `--json` global options; `--config`, `--output-dir`, and `--run-id` fail with config exit code `2`.
-- `parsers list` prints every supported label in ascending order, then a total. `--json` emits `parsers`.
+- `parsers list`, `parsers detect`, and `parsers catalog` are read-only. They execute no command, resolve no executable, load no config, load no project rules, and create no artifacts. They accept only the `--repo` and `--json` global options; `--config`, `--output-dir`, and `--run-id` fail with config exit code `2`.
+- `parsers list` prints every available label in ascending order, then a total. `--json` emits `parsers`.
+- `parsers catalog` is JSON-only: `--json` is required, and without it the command writes no stdout and fails with config exit code `2` plus bounded usage guidance on stderr. Extra operands also fail with exit code `2`. It emits `schema_version` (exactly `gaori-parser-catalog.v1`) and `parsers`, exactly one entry per available label carrying `label`, `tier` (`supported` or `experimental`), and `output_family` (a stable lowercase identifier), sorted by label in ascending bytewise order. The catalog is the code-owned source of truth for support-tier metadata; `parsers list` continues to represent availability only.
 - `parsers detect` opens only the raw log named on the command line, and reads at most its final 256 KiB of complete lines rather than the whole file. A relative path resolves against the selected repository root; an absolute path is used as given. A missing, unreadable, or non-regular path fails with config exit code `2`.
 - Output contains only label names, counts, verdicts, and byte totals. It never contains matched text, signatures, test names, file paths from inside the log, spans, or line numbers, so no redaction is applied and no config is required. To see what a label actually extracts, run `gaori summarize --parser <label> <raw-log>`.
 - `failures` counts candidate failure records inside the bounded scan window, and `indicates` is the label's own summary heuristic over that same window. `indicates` is `false` for a label that has no heuristic, which is the case for `generic`. A label may still report `indicates: true` with `failures: 0`, because a heuristic and an extractor can disagree about the same window.
@@ -400,6 +403,8 @@ Tags are rule selectors, not command selectors or automatic rule generators. The
 | Other Gaori parser/rule internal error | documented internal code, recommended `4` |
 | Successful `summarize`, `excerpt`, or `clean` | `0` |
 | Successful `parsers list` or `parsers detect`, including when no label reports a candidate | `0` |
+| Successful `parsers catalog` with `--json` | `0` |
+| `parsers catalog` without `--json`, or with an extra operand | `2` |
 | Missing, unreadable, or non-regular `parsers detect` raw log | `2` |
 | Missing, unreadable, non-regular, or oversized `config check --sample` raw log | `2` |
 | Missing, conflicting, or invalid cleanup selector | `2`, with no cleanup side effect |

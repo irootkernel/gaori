@@ -14,7 +14,7 @@ Gaori is a deterministic test and log-evidence tool. It should run test commands
 - Implementation language: Go.
 - Packaging target: standalone single binary named `gaori`.
 - Regex engine baseline: Go `regexp` (RE2 semantics) only.
-- Current parser availability and support tiers are recorded in the [parser support matrix](parser-support.md). All fifteen labels share one registry; `dotnet-test` and `gradle-test` are Experimental.
+- Current parser availability and support tiers are recorded in the [parser support matrix](parser-support.md), which renders the code-owned registry catalog (`gaori --json parsers catalog`). All fifteen labels share one registry; `dotnet-test` and `gradle-test` are Experimental.
 - Unknown parser labels fail closed.
 
 ## Non-goals
@@ -195,6 +195,8 @@ Listing shares the cleanup selector so both commands agree on what "completed st
 ```
 
 Discovery shares the parser registry with extraction so a supported label cannot exist in one and be missing from the other. It reports only label names, counts, verdicts, and byte totals, never text taken from the log, so it needs no redactor and writes nothing. It is a selection aid, not a parser selector, not generic fallback, and not a decision about which parser is correct.
+
+The JSON-only `parsers catalog` reads the same registry descriptors for their code-owned support tier and stable output family, emitting one bytewise-label-sorted entry per available label under schema `gaori-parser-catalog.v1`. It shares discovery's side-effect boundary — no config, no execution, no artifacts — and adds no parser selection.
 
 ## Config model
 

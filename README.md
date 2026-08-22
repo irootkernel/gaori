@@ -233,7 +233,7 @@ Choose the parser that matches the command output. Common choices are:
 | Playwright | `playwright` |
 | Jest | `jest` |
 
-See the [complete parser support matrix](docs/parser-support.md) for all fifteen labels, their verification level, and known limitations. `dotnet-test` and `gradle-test` are currently Experimental; they remain selectable, but callers should not assume complete evidence metadata for every runner output.
+See the [complete parser support matrix](docs/parser-support.md) for all fifteen labels, their verification level, and known limitations. `dotnet-test` and `gradle-test` are currently Experimental; they remain selectable, but callers should not assume complete evidence metadata for every runner output. For machine-readable maturity metadata, `gaori --json parsers catalog` emits each label's code-owned support tier and stable output family.
 
 Not sure which label matches an existing log? Enumerate the labels and see what each one would find, without creating any evidence:
 

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 
@@ -185,6 +186,70 @@ func TestParsersDetectReportsTruncationForOversizedRawLog(t *testing.T) {
 	}
 }
 
+func TestParsersCatalogReportsCodeOwnedMetadata(t *testing.T) {
+	t.Parallel()
+	repo := t.TempDir()
+
+	var stdout, stderr bytes.Buffer
+	if exitCode := Main([]string{"--repo", repo, "--json", "parsers", "catalog"}, &stdout, &stderr); exitCode != 0 {
+		t.Fatalf("exit=%d stderr=%s", exitCode, stderr.String())
+	}
+	var result parsersCatalogResult
+	if err := json.Unmarshal(stdout.Bytes(), &result); err != nil {
+		t.Fatal(err)
+	}
+	if result.SchemaVersion != "gaori-parser-catalog.v1" {
+		t.Fatalf("schema_version = %q, want gaori-parser-catalog.v1", result.SchemaVersion)
+	}
+	want := extract.ParserCatalog()
+	if !slices.Equal(result.Parsers, want) {
+		t.Fatalf("catalog = %v, want %v", result.Parsers, want)
+	}
+	if !slices.IsSortedFunc(result.Parsers, func(a, b extract.ParserCatalogEntry) int {
+		return strings.Compare(a.Label, b.Label)
+	}) {
+		t.Fatalf("catalog is not sorted by label in ascending bytewise order: %v", result.Parsers)
+	}
+
+	if _, err := os.Stat(filepath.Join(repo, ".gaori")); !os.IsNotExist(err) {
+		t.Fatalf("catalog created .gaori state: %v", err)
+	}
+}
+
+// TestParsersCatalogIsJSONOnly proves the catalog has no human rendering: it
+// fails closed with configuration exit code 2, writes nothing to stdout, and
+// limits stderr to bounded usage guidance.
+func TestParsersCatalogIsJSONOnly(t *testing.T) {
+	t.Parallel()
+	repo := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(repo, ".gaori"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	// A malformed config must not matter: the catalog never loads it.
+	if err := os.WriteFile(filepath.Join(repo, ".gaori", "tester.yaml"), []byte("version: [not-a-number\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	for _, args := range [][]string{
+		{"--repo", repo, "parsers", "catalog"},
+		{"--repo", repo, "parsers", "catalog", "extra"},
+		{"--repo", repo, "--json", "parsers", "catalog", "extra"},
+	} {
+		t.Run(strings.Join(args[2:], "_"), func(t *testing.T) {
+			var stdout, stderr bytes.Buffer
+			if exitCode := Main(args, &stdout, &stderr); exitCode != 2 {
+				t.Fatalf("exit=%d, want 2 (stdout=%s stderr=%s)", exitCode, stdout.String(), stderr.String())
+			}
+			if stdout.Len() != 0 {
+				t.Fatalf("stdout = %q, want empty", stdout.String())
+			}
+			if !strings.Contains(stderr.String(), "usage: gaori --json parsers catalog") {
+				t.Fatalf("stderr omits catalog usage guidance: %q", stderr.String())
+			}
+		})
+	}
+}
+
 func candidateIndexByLabel(t *testing.T, result parsersDetectResult, label string) int {
 	t.Helper()
 	for index, candidate := range result.Parsers {
@@ -215,6 +280,9 @@ func TestParsersRejectsUnsupportedInput(t *testing.T) {
 		{"--repo", repo, "--config", filepath.Join(repo, "tester.yaml"), "parsers", "list"},
 		{"--repo", repo, "--run-id", "fixed", "parsers", "list"},
 		{"--repo", repo, "--output-dir", repo, "parsers", "list"},
+		{"--repo", repo, "--config", filepath.Join(repo, "tester.yaml"), "--json", "parsers", "catalog"},
+		{"--repo", repo, "--run-id", "fixed", "--json", "parsers", "catalog"},
+		{"--repo", repo, "--output-dir", repo, "--json", "parsers", "catalog"},
 	} {
 		t.Run(strings.Join(args[2:], "_"), func(t *testing.T) {
 			var stdout, stderr bytes.Buffer

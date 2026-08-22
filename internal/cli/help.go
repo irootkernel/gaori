@@ -73,7 +73,7 @@ Commands:
   runs        List completed standalone run evidence
   config      Validate project configuration and rules
   rules       Inspect and manage project extraction rules
-  parsers     List supported parser labels and diagnose a raw log
+  parsers     List parser labels, diagnose a raw log, and print the parser catalog
   mcp         Serve asynchronous Gaori tools over STDIO MCP
 
 Global options:
@@ -142,15 +142,16 @@ unreadable, non-regular, or larger-than-256-KiB sample fails with exit code 2.
 	"parsers": `Usage: gaori parsers <command>
 
 Commands:
-  list      List every supported parser label
+  list      List every available parser label
   detect    Report per-label candidates for an existing raw log
+  catalog   Print the JSON parser support catalog
 
 Use "gaori help parsers <command>" for command details.
 `,
-	"parsers list": "Usage: gaori parsers list\n\nList every supported parser label in ascending order. Reads no config and\ncreates nothing.\n",
+	"parsers list": "Usage: gaori parsers list\n\nList every available parser label in ascending order. Reads no config and\ncreates nothing.\n",
 	"parsers detect": `Usage: gaori parsers detect <raw-log>
 
-Report, for every supported parser label, how many candidate failure records it
+Report, for every available parser label, how many candidate failure records it
 would extract from one existing raw log and whether that label's own summary
 heuristic recognizes the log. Reads no config, applies no project rules, and
 creates nothing. Output carries only label names, counts, and verdicts, never
@@ -160,6 +161,16 @@ Detect reports candidates only. Several labels can legitimately report a
 candidate for one log, so it never names a recommended label: select one
 explicitly with "--parser <label>" on run or summarize. Exits 0 even when no
 label reports a candidate.
+`,
+	"parsers catalog": `Usage: gaori --json parsers catalog
+
+Print the code-owned parser catalog as JSON with schema gaori-parser-catalog.v1:
+exactly one entry per available label carrying its label, support tier
+(supported or experimental), and stable output family, sorted by label in
+ascending bytewise order. Requires --json; without it the command fails with
+exit code 2 and writes only usage guidance to stderr. Reads no config, executes
+no command, selects no parser, and creates nothing. parsers list remains the
+availability surface and is unchanged by this catalog.
 `,
 	"mcp": `Usage: gaori [--repo <path>] [--config <path>] [--output-dir <path>] mcp
 

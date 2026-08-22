@@ -15,15 +15,24 @@ import (
 )
 
 const (
-	parsersUsage       = "usage: gaori parsers <list|detect>"
-	parsersListUsage   = "usage: gaori parsers list"
-	parsersDetectUsage = "usage: gaori parsers detect <raw-log>"
+	parsersUsage        = "usage: gaori parsers <list|detect|catalog>"
+	parsersListUsage    = "usage: gaori parsers list"
+	parsersDetectUsage  = "usage: gaori parsers detect <raw-log>"
+	parsersCatalogUsage = "usage: gaori --json parsers catalog"
 )
 
 const parsersDetectDisclaimer = "Choose one label explicitly with --parser <label>; summarize with that label to see its evidence."
 
+// parsersCatalogSchemaVersion is the catalog JSON contract version.
+const parsersCatalogSchemaVersion = "gaori-parser-catalog.v1"
+
 type parsersListResult struct {
 	Parsers []string `json:"parsers"`
+}
+
+type parsersCatalogResult struct {
+	SchemaVersion string                       `json:"schema_version"`
+	Parsers       []extract.ParserCatalogEntry `json:"parsers"`
 }
 
 type parsersDetectResult struct {
@@ -52,6 +61,8 @@ func parsersCommand(opts globalOptions, args []string, stdout, stderr io.Writer)
 		return parsersListCommand(opts, args[1:], stdout, stderr)
 	case "detect":
 		return parsersDetectCommand(opts, args[1:], stdout, stderr)
+	case "catalog":
+		return parsersCatalogCommand(opts, args[1:], stdout, stderr)
 	default:
 		writeLine(stderr, parsersUsage)
 		return int(model.ExitCodeConfigError)
@@ -79,6 +90,33 @@ func parsersListCommand(opts globalOptions, args []string, stdout, stderr io.Wri
 	}
 	writef(stdout, "Parsers: %d\n", len(labels))
 	return 0
+}
+
+// parsersCatalogCommand prints the code-owned parser catalog. The catalog is
+// JSON-only: without --json it fails closed with bounded usage guidance instead
+// of inventing a human rendering of maturity metadata. Like the other parsers
+// subcommands it loads no project config, executes nothing, and creates no
+// artifacts, so there is nothing to redact.
+func parsersCatalogCommand(opts globalOptions, args []string, stdout, stderr io.Writer) int {
+	fs := flag.NewFlagSet("parsers catalog", flag.ContinueOnError)
+	fs.SetOutput(io.Discard)
+	if err := fs.Parse(args); err != nil {
+		writeLine(stderr, err)
+		return int(model.ExitCodeConfigError)
+	}
+	if len(fs.Args()) != 0 {
+		writeLine(stderr, parsersCatalogUsage)
+		return int(model.ExitCodeConfigError)
+	}
+	if !opts.JSON {
+		writeLine(stderr, "parsers catalog is JSON-only: pass --json")
+		writeLine(stderr, parsersCatalogUsage)
+		return int(model.ExitCodeConfigError)
+	}
+	return writeParsersJSON(parsersCatalogResult{
+		SchemaVersion: parsersCatalogSchemaVersion,
+		Parsers:       extract.ParserCatalog(),
+	}, stdout, stderr)
 }
 
 func parsersDetectCommand(opts globalOptions, args []string, stdout, stderr io.Writer) int {

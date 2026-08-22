@@ -24,6 +24,8 @@ func TestHelpSurfacesExitSuccessfully(t *testing.T) {
 		{args: []string{"parsers", "-h"}, want: "gaori parsers <command>"},
 		{args: []string{"help", "parsers", "detect"}, want: "<raw-log>"},
 		{args: []string{"parsers", "detect", "--help"}, want: "never names a recommended label"},
+		{args: []string{"help", "parsers", "catalog"}, want: "gaori-parser-catalog.v1"},
+		{args: []string{"parsers", "catalog", "--help"}, want: "gaori --json parsers catalog"},
 		{args: []string{"help", "rules", "propose"}, want: "--raw-log <raw-log>"},
 		{args: []string{"rules", "propose", "--help"}, want: "--span <start:end>"},
 	}
@@ -56,6 +58,11 @@ func TestRootUsageListsEveryDispatchedCommand(t *testing.T) {
 func TestRulesUsageListsEveryDispatchedSubcommand(t *testing.T) {
 	t.Parallel()
 	assertUsageMatchesHelpTopics(t, []string{"rules"}, "rules ")
+}
+
+func TestParsersUsageListsEveryDispatchedSubcommand(t *testing.T) {
+	t.Parallel()
+	assertUsageMatchesHelpTopics(t, []string{"parsers"}, "parsers ")
 }
 
 // assertDispatcherAccepts invokes name through its dispatcher and fails when the

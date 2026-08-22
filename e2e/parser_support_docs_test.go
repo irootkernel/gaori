@@ -5,6 +5,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/irootkernel/gaori/internal/extract"
 )
 
 func TestParserSupportDocumentationContract(t *testing.T) {
@@ -12,27 +14,35 @@ func TestParserSupportDocumentationContract(t *testing.T) {
 	root := projectRoot(t)
 
 	matrix := readParserSupportDocument(t, root, "docs/parser-support.md")
-	supported := []string{
-		"generic", "vitest", "pytest", "go-test", "playwright", "ginkgo", "godog",
-		"cargo-test", "flutter-test", "bun-test", "node-test", "jest", "rspec",
-	}
-	for _, label := range supported {
-		row := "`" + label + "` | Supported |"
+	// The code-owned catalog is the support-tier source of truth; the operator
+	// matrix must render exactly one row per catalog entry with a matching tier.
+	// Deriving expectations from the catalog makes any drift between the shared
+	// registry and the documented matrix fail here instead of passing silently.
+	// Parity covers label and tier, the fields the matrix renders: its Output
+	// column is display copy, not the stable output_family identifier. The
+	// output_family mapping itself is anchored by the registry unit test.
+	var supported, experimental int
+	for _, entry := range extract.ParserCatalog() {
+		var row string
+		switch entry.Tier {
+		case extract.ParserTierSupported:
+			supported++
+			row = "`" + entry.Label + "` | Supported |"
+		case extract.ParserTierExperimental:
+			experimental++
+			row = "`" + entry.Label + "` | Experimental |"
+		default:
+			t.Fatalf("catalog entry %s has unknown tier %q", entry.Label, entry.Tier)
+		}
 		if !strings.Contains(matrix, row) {
-			t.Errorf("parser support matrix is missing Supported row for %s", label)
+			t.Errorf("parser support matrix is missing row %q", row)
 		}
 	}
-	for _, label := range []string{"dotnet-test", "gradle-test"} {
-		row := "`" + label + "` | Experimental |"
-		if !strings.Contains(matrix, row) {
-			t.Errorf("parser support matrix is missing Experimental row for %s", label)
-		}
+	if count := strings.Count(matrix, " | Supported |"); count != supported {
+		t.Errorf("parser support matrix has %d Supported rows, want %d", count, supported)
 	}
-	if count := strings.Count(matrix, " | Supported |"); count != len(supported) {
-		t.Errorf("parser support matrix has %d Supported rows, want %d", count, len(supported))
-	}
-	if count := strings.Count(matrix, " | Experimental |"); count != 2 {
-		t.Errorf("parser support matrix has %d Experimental rows, want 2", count)
+	if count := strings.Count(matrix, " | Experimental |"); count != experimental {
+		t.Errorf("parser support matrix has %d Experimental rows, want %d", count, experimental)
 	}
 
 	for _, relative := range []string{

@@ -8,33 +8,48 @@ import (
 	"github.com/irootkernel/gaori/internal/model"
 )
 
-// parserDescriptor binds one supported parser label to its extraction behavior.
-// failures is required. indicates is nil for a parser that exposes no summary
-// heuristic, which reports no failure signal when no execution result exists.
+// Parser support tiers owned by the shared registry. Supported means repository
+// regression coverage exists with no known real-runner gap; Experimental means
+// the label remains selectable and fixture-backed but real-project validation is
+// incomplete or a known evidence-metadata gap remains. Availability and maturity
+// stay distinct: every label here is selectable regardless of tier.
+const (
+	ParserTierSupported    = "supported"
+	ParserTierExperimental = "experimental"
+)
+
+// parserDescriptor binds one supported parser label to its extraction behavior
+// and catalog metadata. failures is required. indicates is nil for a parser that
+// exposes no summary heuristic, which reports no failure signal when no
+// execution result exists. tier is one of the ParserTier constants and
+// outputFamily is a stable lowercase identifier, not display copy.
 type parserDescriptor struct {
-	failures  func(lines []lineIndex, text string) []model.Failure
-	indicates func(visible string) bool
+	failures     func(lines []lineIndex, text string) []model.Failure
+	indicates    func(visible string) bool
+	tier         string
+	outputFamily string
 }
 
-// parserRegistry is the single source of truth for supported parser labels.
-// Config validation, rule validation, failure extraction, and summarize status
-// inference all resolve labels through this table.
+// parserRegistry is the single source of truth for supported parser labels and
+// their support-tier and output-family metadata. Config validation, rule
+// validation, failure extraction, and summarize status inference all resolve
+// labels through this table.
 var parserRegistry = map[string]parserDescriptor{
-	"generic":      {failures: genericParserFailures},
-	"vitest":       {failures: vitestFailures, indicates: vitestIndicatesFailure},
-	"jest":         {failures: jestFailures, indicates: jestIndicatesFailure},
-	"pytest":       {failures: pytestFailures, indicates: pytestIndicatesFailure},
-	"go-test":      {failures: goTestFailures, indicates: goTestIndicatesFailure},
-	"playwright":   {failures: playwrightFailures, indicates: playwrightIndicatesFailure},
-	"ginkgo":       {failures: ginkgoFailures, indicates: ginkgoIndicatesFailure},
-	"godog":        {failures: godogFailures, indicates: godogIndicatesFailure},
-	"cargo-test":   {failures: cargoTestFailures, indicates: cargoTestIndicatesFailure},
-	"flutter-test": {failures: flutterTestFailures, indicates: flutterTestIndicatesFailure},
-	"bun-test":     {failures: bunTestFailures, indicates: bunTestIndicatesFailure},
-	"node-test":    {failures: nodeTestFailures, indicates: nodeTestIndicatesFailure},
-	"rspec":        {failures: rspecFailures, indicates: rspecIndicatesFailure},
-	"dotnet-test":  {failures: dotnetTestFailures, indicates: dotnetTestIndicatesFailure},
-	"gradle-test":  {failures: gradleTestFailures, indicates: gradleTestIndicatesFailure},
+	"generic":      {failures: genericParserFailures, tier: ParserTierSupported, outputFamily: "generic-text"},
+	"vitest":       {failures: vitestFailures, indicates: vitestIndicatesFailure, tier: ParserTierSupported, outputFamily: "vitest"},
+	"jest":         {failures: jestFailures, indicates: jestIndicatesFailure, tier: ParserTierSupported, outputFamily: "jest"},
+	"pytest":       {failures: pytestFailures, indicates: pytestIndicatesFailure, tier: ParserTierSupported, outputFamily: "pytest"},
+	"go-test":      {failures: goTestFailures, indicates: goTestIndicatesFailure, tier: ParserTierSupported, outputFamily: "go-test"},
+	"playwright":   {failures: playwrightFailures, indicates: playwrightIndicatesFailure, tier: ParserTierSupported, outputFamily: "playwright"},
+	"ginkgo":       {failures: ginkgoFailures, indicates: ginkgoIndicatesFailure, tier: ParserTierSupported, outputFamily: "ginkgo-v2"},
+	"godog":        {failures: godogFailures, indicates: godogIndicatesFailure, tier: ParserTierSupported, outputFamily: "godog"},
+	"cargo-test":   {failures: cargoTestFailures, indicates: cargoTestIndicatesFailure, tier: ParserTierSupported, outputFamily: "cargo-test"},
+	"flutter-test": {failures: flutterTestFailures, indicates: flutterTestIndicatesFailure, tier: ParserTierSupported, outputFamily: "flutter-test"},
+	"bun-test":     {failures: bunTestFailures, indicates: bunTestIndicatesFailure, tier: ParserTierSupported, outputFamily: "bun-test"},
+	"node-test":    {failures: nodeTestFailures, indicates: nodeTestIndicatesFailure, tier: ParserTierSupported, outputFamily: "node-test"},
+	"rspec":        {failures: rspecFailures, indicates: rspecIndicatesFailure, tier: ParserTierSupported, outputFamily: "rspec"},
+	"dotnet-test":  {failures: dotnetTestFailures, indicates: dotnetTestIndicatesFailure, tier: ParserTierExperimental, outputFamily: "dotnet-test"},
+	"gradle-test":  {failures: gradleTestFailures, indicates: gradleTestIndicatesFailure, tier: ParserTierExperimental, outputFamily: "gradle-test"},
 }
 
 // IsKnown reports whether label names a supported parser.
@@ -48,6 +63,34 @@ func IsKnown(label string) bool {
 // stays internal and parsers remain compiled in.
 func SupportedParsers() []string {
 	return slices.Sorted(maps.Keys(parserRegistry))
+}
+
+// ParserCatalogEntry is the code-owned maturity record for one available parser
+// label. Tier is one of the ParserTier constants; OutputFamily is a stable
+// lowercase identifier for the output format the parser targets, not display
+// copy. Serializing availability and maturity together does not merge them:
+// every available label is selectable regardless of tier.
+type ParserCatalogEntry struct {
+	Label        string `json:"label"`
+	Tier         string `json:"tier"`
+	OutputFamily string `json:"output_family"`
+}
+
+// ParserCatalog returns exactly one catalog entry for every available registry
+// label, sorted by label in ascending bytewise order. It is the maturity
+// metadata source of truth that docs/parser-support.md renders for operators.
+func ParserCatalog() []ParserCatalogEntry {
+	labels := SupportedParsers()
+	catalog := make([]ParserCatalogEntry, 0, len(labels))
+	for _, label := range labels {
+		descriptor := parserRegistry[label]
+		catalog = append(catalog, ParserCatalogEntry{
+			Label:        label,
+			Tier:         descriptor.tier,
+			OutputFamily: descriptor.outputFamily,
+		})
+	}
+	return catalog
 }
 
 func genericParserFailures(lines []lineIndex, _ string) []model.Failure {

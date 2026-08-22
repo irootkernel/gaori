@@ -5,7 +5,7 @@ Audience: Operators, integrators, and maintainers selecting a built-in parser
 
 Gaori exposes fifteen built-in parser labels through `gaori parsers list`. A label being available means config, rule validation, `run`, `summarize`, and parser discovery accept it through the shared registry. Availability does not by itself establish the parser's support tier.
 
-This document is the source of truth for parser support tiers. Requirements and accepted ADRs define the behavior of available labels; the live `parsers list` command remains authoritative for which labels an installed binary actually contains.
+Each label's support tier and stable output family are owned by the shared code registry and serialized by `gaori --json parsers catalog` (schema `gaori-parser-catalog.v1`). That code-owned catalog is the support-tier source of truth; this document is its required operator-facing rendering and limitation record, and repository validation fails when the catalog and this matrix drift. Requirements and accepted ADRs define the behavior of available labels; the live `parsers list` command remains authoritative for which labels an installed binary actually contains.
 
 ## Support tiers
 

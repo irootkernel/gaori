@@ -21,6 +21,7 @@ This matrix records the primary evidence for every requirement marked complete. 
 | `GAORI-REQ-RQCLI-012` | `TestAdHocTimeoutSelection`; `TestAdHocParserOptionValidationPreventsExecution`; `TestAdHocChildTimeoutArgumentIsPreserved`; `TestBinaryAdHocTimeoutContract` |
 | `GAORI-REQ-RQCLI-013` | `TestListStandaloneReportsCompletedRunsNewestFirst`; `TestListStandaloneSkipsIncompleteAndUnrecognizedRuns`; `TestListStandaloneReturnsEmptyWithoutStandaloneDirectory`; `TestListStandaloneRejectsSymlinkedRun`; `TestListStandaloneRejectsUnreadableStatusArtifact`; `TestRunsListReportsCompletedEvidenceWithSelectors`; `TestRunsListIsReadOnlyAndHumanReadable`; `TestRunsListRejectsUnsupportedInput`; `TestDocumentedCLIWorkflowAgainstFreshFixture` |
 | `GAORI-REQ-RQCLI-014` | `TestParsersListReportsEveryRegistryLabel`; `TestParsersDetectReportsCandidatesWithoutArtifacts`; `TestParsersDetectOutputContainsNoRawLogText`; `TestParsersDetectSucceedsWithoutProjectConfig`; `TestParsersDetectExitsZeroWhenNoLabelReportsCandidates`; `TestParsersRejectsUnsupportedInput`; `TestParsersDetectRejectsSpecialRawLog`; `TestHelpSurfacesExitSuccessfully`; `TestBinaryParserDiscoveryIsReadOnly`; `TestDocumentedCLIWorkflowAgainstFreshFixture` |
+| `GAORI-REQ-RQCLI-015` | `TestParsersCatalogReportsCodeOwnedMetadata`; `TestParsersCatalogIsJSONOnly`; `TestParsersRejectsUnsupportedInput`; `TestParsersUsageListsEveryDispatchedSubcommand`; `TestHelpSurfacesExitSuccessfully`; `TestBinaryParserCatalogContract`; `TestDocumentedCLIWorkflowAgainstFreshFixture` |
 | `GAORI-REQ-RQCFG-001` | `TestConfiguredRunAndExcerpt`; `TestAdHocRunWithoutConfig`; portable Git policy in `README.md` and `ADR-0011` |
 | `GAORI-REQ-RQCFG-002` | `TestDocumentedCLIWorkflowAgainstFreshFixture` |
 | `GAORI-REQ-RQCFG-003` | `TestValidateAcceptsImplementedParsers`; `TestLoadCanonicalizesTags`; `TestValidateRejectsMissingAndUnsafeTags`; `TestBinaryTagsSelectRulesByAllTags` |
@@ -56,6 +57,7 @@ This matrix records the primary evidence for every requirement marked complete. 
 | `GAORI-REQ-RQEXT-007` | `TestMaterializeArtifactsExtractionErrorContract`; `TestBinaryExtractionContracts` |
 | `GAORI-REQ-RQEXT-008` | `TestSupportedParsersMatchesDocumentedLabels`; `TestDetectParsersRanksFixtureLabelAboveGeneric`; `TestDetectParsersReportsGenericOnlyRecognition`; `TestDetectParsersOrderIsDeterministic`; `TestDetectParsersReportsBoundedTailTruncation`; `TestDetectParsersDoesNotChangeExtraction`; `TestDetectParsersHandlesEmptyInput`; `TestParsersDetectReportsTruncationForOversizedRawLog` |
 | `GAORI-REQ-RQEXT-009` | `TestParserSupportDocumentationContract` |
+| `GAORI-REQ-RQEXT-010` | `TestParserCatalogCoversEveryRegistryLabel`; `TestParserCatalogMatchesExpectedMetadata`; `TestParserSupportDocumentationContract`; `TestBinaryParserCatalogContract` |
 | `GAORI-REQ-RQRUL-001` | `TestRulesLifecycleCommands`; `TestDocumentedCLIWorkflowAgainstFreshFixture` |
 | `GAORI-REQ-RQRUL-002` | `TestCreateSearchAndDeleteRule`; `TestRulesLifecycleCommands`; portable Git policy in `README.md` and `ADR-0011` |
 | `GAORI-REQ-RQRUL-003` | `TestValidateStoredRuleRejectsInvalidContextAndStatus`; `TestCreateSearchAndDeleteRule` |

@@ -424,7 +424,7 @@ Standard MCP Tasks migration is deferred until Tasks is no longer experimental, 
 
 ## ADR-0019: Code-owned parser catalog exposes maturity metadata without changing command authority
 
-Status: Proposed
+Status: Accepted
 Date: 2026-08-22
 
 ### Context
@@ -449,7 +449,7 @@ Planned `dart-test` and `patrol` entries begin as Experimental. Their specialize
 - Machine consumers gain a deterministic catalog without a second metadata table or a breaking change to `parsers list`.
 - Documentation parity becomes executable repository validation instead of a manual synchronization convention.
 - Adding or promoting a parser requires synchronized code metadata, support documentation, regression evidence, and any applicable release note.
-- This Proposed ADR records planned behavior only. It does not make the catalog, `dart-test`, or `patrol` available until their roadmap tasks and unchecked requirements are implemented and verified.
+- The catalog and its parity validation are implemented for the fifteen currently available labels. `dart-test` and `patrol` remain planned: this decision does not make them available or selectable until their roadmap tasks and requirements are implemented and verified.
 - Catalog or parser evidence cannot claim review acceptance, release, installation, runtime activation, or consumer adoption.
 
 ## Future ADR candidates
