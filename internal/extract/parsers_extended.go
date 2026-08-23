@@ -29,6 +29,7 @@ var (
 	// dart-test owns its patterns even where the package:test compact format
 	// overlaps flutter-test: the handoff forbids aliasing the two parsers until
 	// real-runner evidence establishes a shared output contract.
+	dartTestEntryRE    = regexp.MustCompile(`^\d\d:\d\d\s+\+\d+(?:\s+-\d+)?:\s+`)
 	dartTestFailureRE  = regexp.MustCompile(`^\d\d:\d\d\s+\+\d+(?:\s+-\d+)?:\s+(.+?)\s+\[E\]$`)
 	dartTestLocationRE = regexp.MustCompile(`(?m)^\s*([^\s]+\.dart)\s+(\d+):\d+`)
 
@@ -415,7 +416,7 @@ func dartTestFailures(lines []lineIndex, text string) []model.Failure {
 		if len(match) == 0 {
 			continue
 		}
-		span := spanFor(lines, idx, min(len(lines)-1, idx+18))
+		span := spanFor(lines, idx, dartTestSpanEnd(lines, idx))
 		segment := visibleText(sliceText(text, span))
 		failure := model.Failure{Signature: firstMeaningfulLine(segment, line.text), RawSpan: span, StackTop: stackTop(segment)}
 		if len(match) > 0 {
@@ -428,6 +429,18 @@ func dartTestFailures(lines []lineIndex, text string) []model.Failure {
 		failures = append(failures, failure)
 	}
 	return dedupeFailures(failures)
+}
+
+// dartTestSpanEnd stops at the next package:test progress entry so one failure
+// cannot absorb a later test result or the run summary.
+func dartTestSpanEnd(lines []lineIndex, idx int) int {
+	end := min(len(lines)-1, idx+18)
+	for i := idx + 1; i <= end; i++ {
+		if dartTestEntryRE.MatchString(lines[i].text) {
+			return i - 1
+		}
+	}
+	return end
 }
 
 // patrolTestFailures prefers the per-test assertion failure entries of

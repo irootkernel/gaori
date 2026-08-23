@@ -64,6 +64,10 @@ This epic implements the Gaori-owned portion of the [Aquarium test-framework par
 | PARSE-010 | Done | Add a bounded Experimental `patrol` parser for standard Patrol-owned failure output while leaving project-wrapper signatures to project rules. | Authored fixture and focused extraction tests plus configured-run, summarize, discovery, and built-binary coverage. | `GAORI-REQ-RQEXT-012`, `ADR-0019` |
 | PARSE-011 | Done | Synchronize implemented requirements, accepted decisions, support and operator documentation, then close the implementation with the full repository gate. | `make test`, documented built-binary smokes, and `git diff --check`; requirements-to-test coverage must include every newly completed requirement. | `GAORI-REQ-RQCLI-015`, `GAORI-REQ-RQEXT-010` to `GAORI-REQ-RQEXT-012`, `ADR-0019` |
 
+### Validation remediation
+
+- 2026-08-23, PARSE-009 owner: corrected Dart failure-span isolation so a failing entry stops before the next package:test progress entry instead of absorbing a later failure or summary. The focused extraction regression and `git diff --check` passed against the audited `3b9c6cf6` baseline, and Mulgae run `r_01a02f0b-4b24-7485-b461-24117ba9c0f2` completed all six required roles with committed publication and zero findings. The correction is committed separately under PARSE-009; no hardening deferral applies.
+
 ## SAFEY: Safety and filtering
 
 | Task ID | Status | Goal | Reference |

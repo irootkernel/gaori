@@ -50,6 +50,37 @@ func TestProcessExtendedParserFixtures(t *testing.T) {
 	}
 }
 
+func TestDartTestFailureSpansStopAtNextProgressEntry(t *testing.T) {
+	t.Parallel()
+	raw := "00:01 +0 -1: rejects empty title [E]\n" +
+		"Expected: false\n" +
+		"  Actual: true\n" +
+		"test/book_test.dart 42:7  main.<fn>\n" +
+		"00:02 +0 -2: rejects duplicate title [E]\n" +
+		"Expected: no exception\n" +
+		"test/book_test.dart 57:7  main.<fn>\n" +
+		"00:02 +0 -2: Some tests failed.\n"
+	run := model.RunOutput{Status: model.RunStatusFailed, Metadata: model.RunMetadata{Parser: "dart-test"}}
+
+	processed, err := Process([]byte(raw), run, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(processed.Failures) != 2 {
+		t.Fatalf("expected two failures, got %+v", processed.Failures)
+	}
+	first, second := processed.Failures[0], processed.Failures[1]
+	if first.TestName != "rejects empty title" || first.File != "test/book_test.dart" || first.Line != 42 {
+		t.Fatalf("unexpected first failure: %+v", first)
+	}
+	if second.TestName != "rejects duplicate title" || second.File != "test/book_test.dart" || second.Line != 57 {
+		t.Fatalf("unexpected second failure: %+v", second)
+	}
+	if first.RawSpan.EndLine >= second.RawSpan.StartLine {
+		t.Fatalf("first failure span overlaps second failure: first=%+v second=%+v", first.RawSpan, second.RawSpan)
+	}
+}
+
 func TestGoTestFailureVariants(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
