@@ -1,6 +1,6 @@
 # Aquarium Test Framework Parser Handoff for Gaori
 
-- Status: Planned Gaori work and deferred consumer adoption; not implementation, commit, publication, release, or cross-repository mutation authority
+- Status: Gaori `GEPIC` completed; `AQADP` deferred; not commit, publication, release, or cross-repository mutation authority
 - Gaori owner: Gaori team
 - Consumer owner: Sudal App team for `CONSUMER-SUDAL-001`
 - Prepared: 2026-08-22
@@ -10,9 +10,10 @@
 
 Aquarium is standardizing test frameworks for newly created projects and newly established test layers. Gaori remains an optional local evidence-compression adapter: the wrapped command exit code is authoritative for pass or fail, while Gaori preserves raw output and extracts bounded failure evidence.
 
-This tracked handoff is the source of truth for one planned Gaori epic, two non-blocking qualification follow-ups, and one deferred Sudal App adoption reminder:
+This tracked handoff is the source of truth for one completed Gaori epic and one deferred follow-up epic:
 
 - `GEPIC`: deliver the parser catalog plus Experimental `dart-test` and `patrol` parsers through `PARSE-008` to `PARSE-011`.
+- `AQADP`: keep `QUALI-001`, `QUALI-002`, and `CONSUMER-SUDAL-001` visible as separately owned, non-blocking deferred work.
 - `QUALI-001`: refresh real-runner observations for existing canonical output families.
 - `QUALI-002`: qualify Dart and Patrol output externally and, only through a separate decision, consider maturity promotion.
 - `CONSUMER-SUDAL-001`: let the Sudal App owner adopt an exact verified Gaori build later.
@@ -140,6 +141,13 @@ For both labels:
 - do not promote either label from Experimental as part of `GEPIC`.
 
 Close the epic only when `PARSE-008` through `PARSE-011` are complete, their requirements and accepted ADR are synchronized, current user and integration documents reflect the implemented surface, and the full repository development gate passes. `QUALI-001`, `QUALI-002`, and `CONSUMER-SUDAL-001` are explicitly non-blocking for epic completion.
+
+## AQADP: Deferred qualification and downstream adoption
+
+- Status: Deferred
+- Completion relationship: not a `GEPIC` completion gate
+
+`AQADP` groups `QUALI-001`, `QUALI-002`, and `CONSUMER-SUDAL-001` for roadmap visibility after the Gaori implementation epic is complete. It does not transfer task ownership, authorize Aquarium or Sudal repository changes, or imply that Aquarium repository work has been performed. Each task remains dormant until its own activation conditions and owner authorization are satisfied.
 
 ## Non-blocking qualification follow-ups
 

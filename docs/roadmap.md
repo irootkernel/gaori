@@ -1,7 +1,7 @@
 # Gaori Roadmap
 
-Status: Completed through `AWAIT-004` and `GEPIC`; `AWAIT-005` deferred
-Scope: Implementation tracking for the Gaori v0.1 standalone baseline, hardening, tag and parser selection, release readiness, identity migration, operator-directed standalone evidence cleanup, portable project config, CLI usability improvements, session-local MCP execution, token-efficient terminal waiting, and the parser catalog plus Dart/Patrol extraction epic
+Status: Completed through `AWAIT-004` and `GEPIC`; `AQADP` and `AWAIT-005` deferred
+Scope: Implementation tracking for the Gaori v0.1 standalone baseline, hardening, tag and parser selection, release readiness, identity migration, operator-directed standalone evidence cleanup, portable project config, CLI usability improvements, session-local MCP execution, token-efficient terminal waiting, the parser catalog plus Dart/Patrol extraction epic, and deferred Aquarium qualification and downstream adoption tracking
 
 This roadmap is a delivery record, not an operator guide or a promise that out-of-scope capabilities will be added. See the [integration guide](integration-guide.md) for the current supported/unsupported capability boundary and `todo.md` for explicitly accepted open work.
 
@@ -12,7 +12,7 @@ Existing `Done` entries record completion of the original v0.1 implementation sl
 Current implementation snapshot:
 - `Done`: `SETUP-001` to `SETUP-003`, `RUNNR-001` to `RUNNR-003`, `ARTIF-001` to `ARTIF-003`, `PARSE-001` to `PARSE-011`, `SAFEY-001` to `SAFEY-004`, `CLIUX-001` to `CLIUX-008`, `RULES-001` to `RULES-005`, `DOCUM-001` to `DOCUM-003`, `HARDE-001` to `HARDE-007`, `TAGS-001`, `ADHOC-001`, `ADHOC-002`, `RELRV-001` to `RELRV-009`, `BRAND-001`, `CLEAN-001`, `PORTA-001`, `MCP-001` to `MCP-006`, `AWAIT-001` to `AWAIT-004`
 - `In Progress`: none
-- `Deferred`: `AWAIT-005`
+- `Deferred`: `AQADP` (`QUALI-001`, `QUALI-002`, `CONSUMER-SUDAL-001`), `AWAIT-005`
 - `Planned`: none
 
 ## SETUP: Project foundation
@@ -55,7 +55,7 @@ Current implementation snapshot:
 
 Epic status: Done
 
-This epic implements the Gaori-owned portion of the [Aquarium test-framework parser handoff](handoffs/aquarium-test-framework-parser.md). It is complete only when all four tasks below are `Done`. External real-runner qualification and Sudal App adoption are separately owned, non-blocking follow-ups recorded in `todo.md`.
+This epic implements the Gaori-owned portion of the [Aquarium test-framework parser handoff](handoffs/aquarium-test-framework-parser.md). It is complete only when all four tasks below are `Done`. External real-runner qualification and Sudal App adoption are separately owned, non-blocking follow-ups tracked under `AQADP` below and detailed in `todo.md`.
 
 | Task ID | Status | Goal | Verification | Reference |
 |---|---|---|---|---|
@@ -72,6 +72,18 @@ This epic implements the Gaori-owned portion of the [Aquarium test-framework par
 ### Validation record
 
 - 2026-08-23: cold validation of GEPIC converged at audited snapshot `2c08445882bc8c24be9bd033a5b62a4f477fd697`. The PARSE-009 correction is commit `e8f20ce`; the PARSE-010 correction is commit `2c08445`. Complete `internal/extract` tests, focused parser-support and requirements traceability tests, built-binary catalog/list and Dart/Patrol detect/summarize smokes, `git diff --check`, and the Gaori-wrapped full `make test` gate all passed; the full-gate status is `.gaori/runs/standalone/20260823T144648/adhoc-20260823t144648.status.json`. Whole-epic Mulgae run `r_01a02f18-e131-7a96-b243-c59a2195e0f3` completed all six required roles with complete coverage, passing CI, committed publication, and zero findings. `QUALI-001`, `QUALI-002`, `AWAIT-005`, and Sudal consumer adoption remain separately owned, deferred, and non-blocking. This validation is local only; it does not claim push, release, installation, or runtime activation.
+
+## AQADP: Aquarium qualification and downstream adoption
+
+Epic status: Deferred
+
+This tracking epic keeps the non-blocking follow-ups from the Aquarium parser handoff visible after `GEPIC` completion. It does not reopen `GEPIC`, authorize Aquarium or Sudal repository changes, or make qualification or consumer adoption a Gaori implementation gate. Activate each task only when its owner and activation conditions are satisfied; detailed evidence and ownership rules remain in `todo.md` and the handoff.
+
+| Task ID | Status | Goal | Activation and verification | Owner |
+|---|---|---|---|---|
+| QUALI-001 | Deferred | Refresh observations for existing canonical runner output families without turning runner versions into parser gates. | Activate when representative real failing runs are available; record exact commands and non-sensitive provenance, keep raw logs local and untracked, and verify bounded derived expectations. | Gaori team |
+| QUALI-002 | Deferred | Qualify real failing `dart test` and Patrol output before any separate parser-maturity decision. | Activate when representative real failing runs are available; verify expected file, line, test, message, and extractor status, keep raw logs local and untracked, and require a separate explicit decision for promotion. | Gaori team |
+| CONSUMER-SUDAL-001 | Deferred | Adopt an independently verified exact Gaori build in Sudal App under the Aquarium parser mapping contract. | Activate only with Sudal App authorization after exact commit and binary verification; migrate only Patrol-owned E2E output to `patrol`, keep other Flutter output on `flutter-test`, migrate affected exact-parser rules together, and revalidate real commands. | Sudal App team |
 
 ## SAFEY: Safety and filtering
 
