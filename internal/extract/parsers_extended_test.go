@@ -144,6 +144,13 @@ func TestPatrolFailureSelection(t *testing.T) {
 				"Error: xcodebuild exited with code 65\n",
 			sig: "xcodebuild exited with code 65",
 		},
+		{
+			name: "last terminal infrastructure diagnostic retained",
+			raw: "✗ Failed to build app with entrypoint test_bundle.dart for Android (Gradle build failed with code 1) (18.2s)\n" +
+				"✗ Failed to execute tests of app with entrypoint test_bundle.dart on emulator-5554 (driver disconnected) (21.4s)\n" +
+				"Error: driver disconnected\n",
+			sig: "driver disconnected",
+		},
 	}
 	for _, test := range tests {
 		test := test

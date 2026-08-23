@@ -67,6 +67,7 @@ This epic implements the Gaori-owned portion of the [Aquarium test-framework par
 ### Validation remediation
 
 - 2026-08-23, PARSE-009 owner: corrected Dart failure-span isolation so a failing entry stops before the next package:test progress entry instead of absorbing a later failure or summary. The focused extraction regression and `git diff --check` passed against the audited `3b9c6cf6` baseline, and Mulgae run `r_01a02f0b-4b24-7485-b461-24117ba9c0f2` completed all six required roles with committed publication and zero findings. The correction is committed separately under PARSE-009; no hardening deferral applies.
+- 2026-08-23, PARSE-010 owner: corrected Patrol infrastructure fallback so assertion-free output retains only the last terminal task diagnostic instead of surfacing every earlier build or execution diagnostic. The focused extraction regression and `git diff --check` passed after PARSE-009 remediation commit `e8f20ce`, and Mulgae run `r_01a02f10-f64c-7111-a0ce-4ce0305a7b94` completed all six required roles with committed publication and zero findings. The correction is committed separately under PARSE-010; no hardening deferral applies.
 
 ## SAFEY: Safety and filtering
 

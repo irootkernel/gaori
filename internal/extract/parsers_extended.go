@@ -465,6 +465,8 @@ func patrolTestFailures(lines []lineIndex, text string) []model.Failure {
 		failures = append(failures, failure)
 	}
 	if len(failures) == 0 {
+		var terminal model.Failure
+		foundTerminal := false
 		for idx, line := range lines {
 			match := patrolInfraRE.FindStringSubmatch(line.text)
 			if len(match) == 0 {
@@ -477,7 +479,11 @@ func patrolTestFailures(lines []lineIndex, text string) []model.Failure {
 			if failure.File == "" {
 				captureFileLine(fileLineRE, segment, &failure)
 			}
-			failures = append(failures, failure)
+			terminal = failure
+			foundTerminal = true
+		}
+		if foundTerminal {
+			failures = append(failures, terminal)
 		}
 	}
 	return dedupeFailures(failures)
