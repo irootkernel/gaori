@@ -1,7 +1,7 @@
 # Gaori Implementation Note
 
-Status: Current source-tree guidance through `AWAIT-004` plus planned `RSTAT` guidance
-Scope: Maintainer guidance for standalone execution, evidence artifacts, parser/rule behavior, operator-directed cleanup, session-local STDIO MCP execution, and planned run-status insights
+Status: Current source-tree guidance through `AWAIT-004` plus planned `AWAIT-006` and `RSTAT` guidance
+Scope: Maintainer guidance for standalone execution, evidence artifacts, parser/rule behavior, operator-directed cleanup, session-local STDIO MCP execution, planned long-running host waits, and planned run-status insights
 
 This document explains implementation constraints and verification expectations for contributors. It is not the parent-project adoption contract; integrators should start with the [integration guide](integration-guide.md).
 
@@ -18,6 +18,8 @@ The post-baseline HARDE sequence is complete. Preserve the contracts in `roadmap
 Do not pass the handler context into command execution and do not call the invocation cancel function when an await request ends. A timed-out or cancelled tool request must leave the run available to `get_run`, `wait_run`, another `await_run`, or explicit `cancel_run` in the same server session. Cover already-finished and normal completion, multiple concurrent awaiters, handler cancellation before completion, a later successful await of that same invocation, explicit run cancellation, server shutdown, and every terminal command status. Register the tool as read-only and idempotent, accept only `invocation_id`, and keep lookup and run errors bounded and non-reflective.
 
 README, `docs/user-interface.md`, `docs/integration-guide.md`, the architecture description, and `skills/use-gaori/**` must stay synchronized with the executable source interface. The completed requirement-to-test mapping cites the named focused and built-binary hardening tests; preserve that traceability when the contract changes.
+
+`AWAIT-006` is a planned client-guidance change, not a runtime extension. Its [long-running await guidance](long-running-await-guidance.md) owns the future start-once, same-invocation, terminal-await, and same-deferred-handle policy. Keep that work confined to the source-distributed skill and focused documentation contract test unless implementation proves a current contract mismatch. Do not represent the planned guidance or the downstream-owned `AWAIT-007` Aquarium follow-up as current behavior or authority.
 
 ## Planned RSTAT insights
 

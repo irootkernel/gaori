@@ -1,7 +1,7 @@
 # Gaori Requirement Specs
 
-Status: Current source-tree requirements plus accepted planned requirements for `RSTAT`
-Scope: Gaori v0.1 standalone baseline, post-baseline hardening, portable project configuration, CLI usability, verified rule proposals, operator-directed cleanup, session-local STDIO MCP execution with terminal awaiting, the completed parser catalog plus Dart/Patrol extraction contract, and planned run-status and timing insights
+Status: Current source-tree requirements plus accepted planned requirements for `AWAIT-006` and `RSTAT`
+Scope: Gaori v0.1 standalone baseline, post-baseline hardening, portable project configuration, CLI usability, verified rule proposals, operator-directed cleanup, session-local STDIO MCP execution with terminal awaiting, planned long-running await guidance, the completed parser catalog plus Dart/Patrol extraction contract, and planned run-status and timing insights
 Source context: deterministic Gaori v0.1 CLI, evidence, and attached MCP behavior.
 
 ## Requirement status legend
@@ -11,7 +11,7 @@ Source context: deterministic Gaori v0.1 CLI, evidence, and attached MCP behavio
 - `[x]` Complete
 - `Blocked` means external decision or missing dependency prevents implementation.
 
-Implementation note: the original v0.1 roadmap and the recorded `RQHAR` hardening requirements are implemented. A checked requirement means that specific behavior is implemented and mapped to evidence; an unchecked requirement is planned and must not be read as current binary behavior. See the [integration guide](integration-guide.md) for the current capability matrix and explicit v0.1 boundaries. Accepted open work is recorded in the [roadmap](roadmap.md), [todo](todo.md), tracked [Aquarium parser handoff](handoffs/aquarium-test-framework-parser.md), and planned [run-status insights SOT](run-status-insights.md).
+Implementation note: the original v0.1 roadmap and the recorded `RQHAR` hardening requirements are implemented. A checked requirement means that specific behavior is implemented and mapped to evidence; an unchecked requirement is planned and must not be read as current binary behavior. See the [integration guide](integration-guide.md) for the current capability matrix and explicit v0.1 boundaries. Accepted open work is recorded in the [roadmap](roadmap.md), [todo](todo.md), planned [long-running await guidance](long-running-await-guidance.md), tracked [Aquarium parser handoff](handoffs/aquarium-test-framework-parser.md), and planned [run-status insights SOT](run-status-insights.md).
 
 ## RQCLI: Command-line interface
 
@@ -140,6 +140,7 @@ Implementation note: the original v0.1 roadmap and the recorded `RQHAR` hardenin
 - [x] `GAORI-REQ-RQDOC-002` Add CLI examples after the first executable implementation exists. See roadmap task `DOCUM-002`.
 - [x] `GAORI-REQ-RQDOC-003` Add parser/rule examples based on real fixture logs. See roadmap task `RULES-003`.
 - [x] `GAORI-REQ-RQDOC-004` Add release-readiness checklist before tagging Gaori v0.1.0. See roadmap task `DOCUM-003`.
+- [ ] `GAORI-REQ-RQDOC-005` Strengthen the source-distributed `use-gaori` guidance and its focused documentation contract test so an attached agent with the complete MCP lifecycle starts a long-running command exactly once, preserves its invocation identity, prefers terminal `await_run`, keeps one host-native pending call or the same deferred handle suspended for up to five minutes at a time, avoids liveness-only model turns and status polling, and re-awaits the same invocation after observer timeout or cancellation while the same MCP session remains alive, without changing Gaori's runtime, tool schemas, 50-second `wait_run` bound, cancellation behavior, artifact behavior, or evidence semantics. See roadmap task `AWAIT-006` and the [long-running await guidance](long-running-await-guidance.md).
 
 ## RQHAR: Post-baseline hardening and contract closure
 

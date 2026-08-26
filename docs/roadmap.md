@@ -1,7 +1,7 @@
 # Gaori Roadmap
 
-Status: Completed through `AWAIT-004` and `GEPIC`; `RSTAT` planned; `AQADP` and `AWAIT-005` deferred
-Scope: Implementation tracking for the Gaori v0.1 standalone baseline, hardening, tag and parser selection, release readiness, identity migration, operator-directed standalone evidence cleanup, portable project config, CLI usability improvements, session-local MCP execution, token-efficient terminal waiting, the parser catalog plus Dart/Patrol extraction epic, planned run-status and timing insights, and deferred Aquarium qualification and downstream adoption tracking
+Status: Completed through `AWAIT-004` and `GEPIC`; `AWAIT-006` and `RSTAT` planned; `AQADP`, `AWAIT-005`, and `AWAIT-007` deferred
+Scope: Implementation tracking for the Gaori v0.1 standalone baseline, hardening, tag and parser selection, release readiness, identity migration, operator-directed standalone evidence cleanup, portable project config, CLI usability improvements, session-local MCP execution, token-efficient terminal waiting and planned host-wait guidance, the parser catalog plus Dart/Patrol extraction epic, planned run-status and timing insights, and deferred Aquarium qualification and downstream adoption tracking
 
 This roadmap is a delivery record, not an operator guide or a promise that out-of-scope capabilities will be added. See the [integration guide](integration-guide.md) for the current supported/unsupported capability boundary and `todo.md` for explicitly accepted open work.
 
@@ -12,8 +12,8 @@ Existing `Done` entries record completion of the original v0.1 implementation sl
 Current implementation snapshot:
 - `Done`: `SETUP-001` to `SETUP-003`, `RUNNR-001` to `RUNNR-003`, `ARTIF-001` to `ARTIF-003`, `PARSE-001` to `PARSE-011`, `SAFEY-001` to `SAFEY-004`, `CLIUX-001` to `CLIUX-008`, `RULES-001` to `RULES-005`, `DOCUM-001` to `DOCUM-003`, `HARDE-001` to `HARDE-007`, `TAGS-001`, `ADHOC-001`, `ADHOC-002`, `RELRV-001` to `RELRV-009`, `BRAND-001`, `CLEAN-001`, `PORTA-001`, `MCP-001` to `MCP-006`, `AWAIT-001` to `AWAIT-004`
 - `In Progress`: none
-- `Deferred`: `AQADP` (`QUALI-001`, `QUALI-002`, `CONSUMER-SUDAL-001`), `AWAIT-005`
-- `Planned`: `RSTAT` (`RSTAT-001` to `RSTAT-004`)
+- `Deferred`: `AQADP` (`QUALI-001`, `QUALI-002`, `CONSUMER-SUDAL-001`), `AWAIT-005`, `AWAIT-007`
+- `Planned`: `AWAIT-006`, `RSTAT` (`RSTAT-001` to `RSTAT-004`)
 
 ## SETUP: Project foundation
 
@@ -200,7 +200,7 @@ Completed release-readiness findings are retained here; remaining accepted findi
 
 ## AWAIT: Token-efficient terminal waiting
 
-`AWAIT-001` through `AWAIT-004` deliver the approved terminal-await contract. `AWAIT-005` is a non-blocking deferred standards migration: it does not prevent the implemented AWAIT extension from reaching its development completion gate.
+`AWAIT-001` through `AWAIT-004` deliver the approved terminal-await contract. The planned [long-running await guidance](long-running-await-guidance.md) owns `AWAIT-006` and the separately owned `AWAIT-007` downstream follow-up. `AWAIT-005` remains an independent, non-blocking deferred standards migration.
 
 | Task ID | Status | Goal | Verification | Reference |
 |---|---|---|---|---|
@@ -209,6 +209,8 @@ Completed release-readiness findings are retained here; remaining accepted findi
 | AWAIT-003 | Done | Harden terminal awaiting across authoritative command results and the existing cancellation and shutdown boundaries. | Use built-binary MCP coverage for passed, failed, timed-out, and killed results; explicit `cancel_run`; server shutdown; cancelled or host-timed-out await followed by reconciliation; concurrent waiters; and bounded redacted errors. | `GAORI-REQ-RQMCP-004`, `GAORI-REQ-RQMCP-005`, `GAORI-REQ-RQMCP-008`, `ADR-0012`, `ADR-0018` |
 | AWAIT-004 | Done | Complete traceability and run the full development gate before promoting AWAIT documentation and roadmap status. | Map `GAORI-REQ-RQMCP-008` only to existing named tests, pass `make test` and `git diff --check`, then update current-status headers and roadmap state from observed evidence. | `GAORI-REQ-RQMCP-008`, `GAORI-REQ-RQDOC-001`, `ADR-0018` |
 | AWAIT-005 | Deferred | Adopt stable standard MCP Tasks as the preferred lifecycle while retaining the Gaori-specific start/get/wait/await/cancel tools for one release; leave their removal to a separate decision. | Activate only after Tasks leaves experimental status, a stable Go SDK supports its complete server lifecycle, and documented Codex E2E proves deferred result delivery without repeated model-driven polling; then pass lifecycle parity, compatibility, cancellation, evidence-safety, documentation, and full repository gates. | `GAORI-REQ-RQMCP-006`, `ADR-0012`, `ADR-0018` |
+| AWAIT-006 | Planned | Strengthen `use-gaori` to prefer one terminal await and one host-native pending or deferred handle for long-running MCP commands, without liveness-only polling or repeated starts. | Add focused skill-contract assertions for start-once identity, same-handle waits of up to five minutes, terminal-await preference, observer retry, and the unchanged 50-second `wait_run` boundary; pass the focused documentation test and `git diff --check`. | `GAORI-REQ-RQDOC-005`, `GAORI-REQ-RQMCP-008`, `ADR-0018` |
+| AWAIT-007 | Deferred | Align Aquarium's Gaori orchestration guidance with the verified `AWAIT-006` policy under Aquarium ownership. | Activate only after the exact `AWAIT-006` commit appears in a verified stable `v0.1.x` tag and Aquarium separately authorizes the change; synchronize its minimum version if required and pass its focused inspector and validation gates. | [Long-running await guidance](long-running-await-guidance.md#await-007-deferred-aquarium-adoption) |
 
 ## RSTAT: Run status and timing insights
 
