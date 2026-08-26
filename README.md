@@ -382,6 +382,7 @@ Add `--json` when a script needs compact command output. Global options may appe
 
 ## Learn more
 
+- [Unreleased changes](CHANGELOG.md)
 - [CLI reference and rule workflow](docs/user-interface.md)
 - [Parser support tiers and known limitations](docs/parser-support.md)
 - [Parent-project integration guide and current capability status](docs/integration-guide.md)

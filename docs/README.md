@@ -28,7 +28,8 @@ For Gaori maintainers:
 6. For `GEPIC`, read the tracked [Aquarium test-framework parser handoff](handoffs/aquarium-test-framework-parser.md) before implementation or downstream delivery.
 7. For planned `AWAIT-006` or deferred `AWAIT-007`, read the [long-running await guidance](long-running-await-guidance.md) before implementation or downstream adoption.
 8. For planned `RSTAT`, read the [run-status and timing insights SOT](run-status-insights.md) before implementation.
-9. Use the [v0.1.14 release notes](releases/v0.1.14.md) when publishing the GitHub Release.
+9. Track current unreleased changes in the root [changelog](../CHANGELOG.md).
+10. Use the [v0.1.14 release notes](releases/v0.1.14.md) when publishing the GitHub Release.
 
 ## Current delivery state
 
@@ -55,6 +56,7 @@ The standalone v0.1 baseline and the session-local STDIO MCP interface are imple
 | [Implementation note](implementation-note.md) | Contributors | Package boundaries, risk areas, tests, release checklist |
 | [Roadmap](roadmap.md) | Project maintainers | Completed delivery history and integration-contract tasks |
 | [Todo](todo.md) | Project maintainers | Explicitly accepted open work |
+| [Changelog](../CHANGELOG.md) | Users and maintainers | Unreleased user-visible changes from v0.1.15 onward |
 | [Long-running await guidance](long-running-await-guidance.md) | Gaori and Aquarium maintainers and agent-skill authors | Planned `AWAIT-006` host-wait policy and deferred `AWAIT-007` adoption boundary |
 | [Aquarium parser handoff](handoffs/aquarium-test-framework-parser.md) | Gaori and downstream maintainers | Planned `GEPIC`, qualification boundaries, and deferred Sudal adoption contract |
 | [Run-status and timing insights SOT](run-status-insights.md) | Gaori maintainers and agent-skill authors | Planned `RSTAT` provenance, sample, calculation, CLI, MCP, failure-diagnostic, and skill contract |

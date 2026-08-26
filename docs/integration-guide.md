@@ -26,14 +26,14 @@ The default adoption model is selective: route commands through Gaori when their
 
 ## Supported capability matrix
 
-| Area | Supported in v0.1.14 | Integration note |
+| Area | Current support | Integration note |
 |---|---|---|
 | Configured execution | Yes | `run <command-id>` reads `.gaori/tester.yaml`. |
 | Configuration preflight | Yes | `config check` validates config and all stored rules without execution or artifacts. `--sample <raw-log>` additionally reports per-pattern redaction match and replaced-byte counts without echoing sample content. |
 | Ad-hoc execution | Yes | `run [--parser <label>] [--timeout-sec <seconds>] --tag <tag> [--tag <tag> ...] -- <argv...>` can run without configured commands. |
 | Existing-log processing | Yes | `summarize [--parser <label>] <raw-log>` copies and summarizes a log without rerunning the command. Its inferred result is not authoritative execution metadata. |
 | Failure excerpt lookup | Yes | `excerpt --summary <path> <failure-id>` validates contained references and the 16 KiB bound before reading; MCP additionally binds excerpts to the finalized invocation checksum. |
-| Parsers | Tiered | Fifteen labels are available: thirteen Supported and `dotnet-test` plus `gradle-test` Experimental. See the [parser support matrix](parser-support.md) for verification and limitations. |
+| Parsers | Tiered | Seventeen labels are available: thirteen Supported and `dart-test`, `patrol`, `dotnet-test`, plus `gradle-test` Experimental. See the [parser support matrix](parser-support.md) for verification and limitations. |
 | Parser discovery | Yes | `parsers list` and `parsers detect <raw-log>` report available labels and per-label candidate counts from an existing log without executing anything, loading config, creating artifacts, or selecting a parser. JSON-only `parsers catalog` adds the code-owned support tier and stable output family for every available label. |
 | Project extraction rules | Yes | Strict YAML CRUD, provenance, fixture testing, and local proposals from a verified summary failure or explicit bounded raw span. |
 | Rule proposal review | Yes | `rules proposals` and `rules show --proposal <name>` list and read local candidates under `.gaori/rule-proposals/`. Promotion remains the explicit `rules create --file <path>`; nothing is activated automatically. |
