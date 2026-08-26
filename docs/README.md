@@ -26,13 +26,16 @@ For Gaori maintainers:
 4. Read the [implementation note](implementation-note.md) before changing runner, parser, artifact, redaction, or rule behavior.
 5. Use the [roadmap](roadmap.md) and [todo](todo.md) for recorded delivery and open-work state.
 6. For `GEPIC`, read the tracked [Aquarium test-framework parser handoff](handoffs/aquarium-test-framework-parser.md) before implementation or downstream delivery.
-7. Use the [v0.1.14 release notes](releases/v0.1.14.md) when publishing the GitHub Release.
+7. For planned `RSTAT`, read the [run-status and timing insights SOT](run-status-insights.md) before implementation.
+8. Use the [v0.1.14 release notes](releases/v0.1.14.md) when publishing the GitHub Release.
 
 ## Current delivery state
 
 The standalone v0.1 baseline and the session-local STDIO MCP interface are implemented. This document describes the current source tree, which can be ahead of the published release named in the README install commands; the release notes under `releases/` record what each published version actually contains. Current surfaces include configured and tagged ad-hoc execution, read-only config/rule preflight, summarization, bounded excerpts, seventeen parsers resolved through one registry, read-only parser discovery, rule lifecycle commands, read-only standalone run listing and rule-proposal review, redacted derived evidence, final status JSON, explicit cleanup, and asynchronous MCP start/wait/get/cancel/excerpt tools, terminal-only `await_run`, and a read-only completed-evidence listing. Thirteen parser labels are Supported; `dart-test`, `dotnet-test`, `gradle-test`, and `patrol` are Experimental as recorded in the [parser support matrix](parser-support.md). MCP state is ephemeral; completed artifacts retain the existing standalone layout and authority. Parent projects may commit `.gaori/tester.yaml` and reviewed `.gaori/tester/rules/*.yaml`; all other `.gaori/` content remains local-only.
 
 `GEPIC` has delivered the code-owned JSON parser catalog (`gaori --json parsers catalog`, schema `gaori-parser-catalog.v1`) and the Experimental `dart-test` and `patrol` parsers. The roadmap owns that implementation plan, while `todo.md` records non-blocking qualification, maturity, standards, and consumer follow-ups. Standard MCP Tasks migration remains deferred behind explicit protocol, SDK, and host-support conditions. The delivery statement above is intentionally narrower than “Gaori provides every testing or orchestration capability.”
+
+`RSTAT` is planned, not implemented. Its [SOT](run-status-insights.md) defines a future additive command-summary Git provenance snapshot, exact revision statistics with clean-only or include-dirty selection, artifact-derived command statistics, CLI/MCP-owned calculations, session-local live estimates, bounded failure recurrence, and a separate read-only `use-gaori-status` skill. None of those fields, commands, tools, calculations, or skill files are part of the current binary or source-distributed skill set yet.
 
 ## Document catalog
 
@@ -50,6 +53,7 @@ The standalone v0.1 baseline and the session-local STDIO MCP interface are imple
 | [Roadmap](roadmap.md) | Project maintainers | Completed delivery history and integration-contract tasks |
 | [Todo](todo.md) | Project maintainers | Explicitly accepted open work |
 | [Aquarium parser handoff](handoffs/aquarium-test-framework-parser.md) | Gaori and downstream maintainers | Planned `GEPIC`, qualification boundaries, and deferred Sudal adoption contract |
+| [Run-status and timing insights SOT](run-status-insights.md) | Gaori maintainers and agent-skill authors | Planned `RSTAT` provenance, sample, calculation, CLI, MCP, failure-diagnostic, and skill contract |
 | [v0.1.5 release notes](releases/v0.1.5.md) | Users and maintainers | Previous published changes and known limitations |
 | [v0.1.6 release notes](releases/v0.1.6.md) | Users and maintainers | Previous identity migration, compatibility notes, and known limitations |
 | [v0.1.7 release notes](releases/v0.1.7.md) | Users and maintainers | Previous coding-agent guidance, compatibility notes, and known limitations |
@@ -69,6 +73,6 @@ When documents appear to disagree, use this order:
 2. Executable behavior and tests for what the current binary actually does.
 3. `architecture.md` and `integration-guide.md` for stable consumer contracts.
 4. `user-interface.md` and the root README for operator instructions.
-5. `roadmap.md`, `todo.md`, and `implementation-note.md` for project history and development context.
+5. `roadmap.md`, `todo.md`, `implementation-note.md`, and linked feature SOTs for project history, planned detailed contracts, and development context.
 
 Treat a mismatch between the first two levels as a defect. Update user-facing and integration documents in the same change whenever executable CLI or artifact behavior changes.

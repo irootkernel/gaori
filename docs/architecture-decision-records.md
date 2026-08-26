@@ -1,7 +1,7 @@
 # Gaori Architecture Decision Records
 
-Status: Complete
-Scope: Accepted baseline decisions
+Status: Accepted baseline decisions plus proposed `ADR-0020`
+Scope: Accepted Gaori decisions and the planned run-status insights decision
 
 ## ADR status legend
 
@@ -451,6 +451,94 @@ Planned `dart-test` and `patrol` entries begin as Experimental. Their specialize
 - Adding or promoting a parser requires synchronized code metadata, support documentation, regression evidence, and any applicable release note.
 - The catalog and its parity validation are implemented for the fifteen currently available labels. `dart-test` and `patrol` remain planned: this decision does not make them available or selectable until their roadmap tasks and requirements are implemented and verified.
 - Catalog or parser evidence cannot claim review acceptance, release, installation, runtime activation, or consumer adoption.
+
+## ADR-0020: Artifact-derived executable calculations power run-status insights
+
+Status: Proposed
+Date: 2026-08-26
+
+### Context
+
+Gaori already records start time, end time, duration, command result, extractor
+quality, and bounded failure metadata in completed artifacts. Operators and coding
+agents still lack a deterministic answer to common questions such as how long a
+configured command usually takes, whether recent successful duration changed,
+where a current elapsed time sits in retained history, or whether the same
+failure has recurred.
+
+An agent skill could read artifacts and calculate those values itself, but that
+would make answers depend on model arithmetic, formula choice, context, and
+prompt wording. A separate statistics database would make results survive
+evidence cleanup but would also introduce a second durable state and retention
+contract. Discovering operating-system processes or persisting live progress
+would conflict with the attached, session-local MCP boundary established by
+ADR-0012 and ADR-0016.
+
+### Decision
+
+Gaori will derive planned run-status and timing insights at read time from
+validated completed default standalone artifacts. It will not add a statistics
+database, compacted ledger, daemon, heartbeat, process discovery, or restart
+recovery. When explicit cleanup removes source artifacts, their observations
+leave the calculated history.
+
+One shared executable calculation engine will own sample selection, outcome
+distributions, arithmetic mean, median, nearest-rank percentiles, recent-window
+change, elapsed-position, total-target remaining time, conditional residual
+time, and recurring already-redacted failure signatures. The exact formulas,
+minimum sample sizes, ordering, rounding, and unsupported states are defined once
+in `docs/run-status-insights.md`. CLI and MCP surfaces must return those values
+directly; an agent skill may explain them but must not recalculate, adjust, or
+invent them.
+
+The first implementation will group default standalone configured executions by
+command ID. It will exclude ad-hoc, summarize, scoped, caller-selected-output,
+incomplete, and unsafe evidence, verify status-to-summary integrity, and never
+open raw logs. Success estimates use only passed executions. Failed, timed-out,
+killed, and internal-error durations remain separate observations, and failure
+recurrence never changes or predicts the authoritative command result.
+
+Immediately before an actual configured or ad-hoc child command starts, Gaori
+will capture the full `HEAD` object ID and whether staged, unstaged, or untracked
+non-ignored content makes the repository dirty. These optional `git_revision`
+and `git_dirty` fields are added only to the structured summary. Both are omitted
+for `summarize` and when provenance is unavailable; collection failure never
+changes whether the child command runs or how its result is classified.
+
+Revision-scoped statistics compare only the exact stored full object ID and use
+clean samples by default. An explicit `include_dirty` selector adds dirty samples
+with that same object ID to the clean set. Unscoped statistics retain legacy and
+unavailable-provenance evidence. The selector is applied before the sample
+limit, never falls back on no match, never fingerprints dirty content or opens a
+diff, and does not introduce a pairwise revision-comparison formula.
+
+Historical statistics will be available through read-only CLI and MCP surfaces.
+Caller-elapsed CLI estimation is a pure historical calculation and does not
+attach to a process. Live MCP estimation is limited to a configured invocation
+owned by the same attached server, records only its session-local executing
+transition time, and must not revise, wait for, poll, cancel, or otherwise change
+the invocation.
+
+`use-gaori-status` will be a separate automatically discoverable read-only skill
+for historical and already-identified live status questions. Execution,
+lifecycle, cancellation, recovery, and detailed evidence inspection remain with
+`use-gaori`. Neither skill is installed or activated by the binary.
+
+### Consequences
+
+- All consumers receive identical calculations from one Go implementation.
+- Existing completed summaries remain valid without backfill. New actual-run
+  summaries receive an additive Git-provenance extension; status and watcher
+  schema shapes remain unchanged.
+- Statistics are deliberately limited by retained evidence and operator cleanup.
+- Live estimates remain non-durable and cannot address a CLI process or an
+  invocation from another or disconnected MCP server.
+- Percentiles, trends, and estimates describe retained observations; they do not
+  predict success, establish project reliability, explain a cause, or grant
+  review, release, workflow, or acceptance authority.
+- This Proposed ADR records planned behavior only. No CLI command, MCP tool, or
+  skill described by `RSTAT` exists until its unchecked requirements and roadmap
+  tasks are implemented and verified.
 
 ## Future ADR candidates
 

@@ -1,7 +1,7 @@
 # Gaori Implementation Note
 
-Status: Current source-tree guidance; complete through `AWAIT-004`
-Scope: Maintainer guidance for standalone execution, evidence artifacts, parser/rule behavior, operator-directed cleanup, and session-local STDIO MCP execution
+Status: Current source-tree guidance through `AWAIT-004` plus planned `RSTAT` guidance
+Scope: Maintainer guidance for standalone execution, evidence artifacts, parser/rule behavior, operator-directed cleanup, session-local STDIO MCP execution, and planned run-status insights
 
 This document explains implementation constraints and verification expectations for contributors. It is not the parent-project adoption contract; integrators should start with the [integration guide](integration-guide.md).
 
@@ -18,6 +18,43 @@ The post-baseline HARDE sequence is complete. Preserve the contracts in `roadmap
 Do not pass the handler context into command execution and do not call the invocation cancel function when an await request ends. A timed-out or cancelled tool request must leave the run available to `get_run`, `wait_run`, another `await_run`, or explicit `cancel_run` in the same server session. Cover already-finished and normal completion, multiple concurrent awaiters, handler cancellation before completion, a later successful await of that same invocation, explicit run cancellation, server shutdown, and every terminal command status. Register the tool as read-only and idempotent, accept only `invocation_id`, and keep lookup and run errors bounded and non-reflective.
 
 README, `docs/user-interface.md`, `docs/integration-guide.md`, the architecture description, and `skills/use-gaori/**` must stay synchronized with the executable source interface. The completed requirement-to-test mapping cites the named focused and built-binary hardening tests; preserve that traceability when the contract changes.
+
+## Planned RSTAT insights
+
+`RSTAT` is planned work, not current binary behavior. Its detailed authority is
+`docs/run-status-insights.md`; do not duplicate or reinterpret its sample,
+rounding, percentile, trend, residual-time, failure-recurrence, CLI, MCP, or skill
+formulas elsewhere.
+
+Implement one shared calculation package beneath both CLI and MCP. It must read
+only validated completed default standalone status and summary artifacts, enforce
+the same recognition and fail-closed containment boundary as listing, verify the
+status-to-summary integrity contract, and never open raw logs. Keep the default
+20-run and maximum 50-run selection bounds in that shared layer rather than in
+each transport.
+
+Capture the optional full `git_revision` and `git_dirty` snapshot immediately
+before actual configured or ad-hoc execution against the resolved repository
+root. Keep provenance failure non-fatal and omit both fields for unavailable
+provenance and `summarize`. Do not backfill old artifacts. The shared selector
+must apply an exact revision match and clean-only default before the run limit;
+`include_dirty` adds same-revision dirty samples to the clean set and is invalid
+without a revision. Do not resolve prefixes, inspect diffs, fingerprint dirty
+content, check out revisions, or add pairwise revision arithmetic.
+
+The caller-elapsed CLI estimate is a stateless calculation over retained history;
+it must not inspect processes. The live MCP estimate stores only the first
+`executing` timestamp in the existing invocation object and derives elapsed time
+when explicitly queried. Do not add clock-driven revision changes, progress
+events, polling, a second registry, persisted live state, or cancellation side
+effects.
+
+Keep descriptive statistics, trend classification, elapsed-position, target
+remaining time, conditional residual time, and outcome/failure aggregation in Go.
+Human output, JSON output, MCP output, and `use-gaori-status` must consume those
+results without performing their own arithmetic. The skill may present two
+independently revision-scoped results side by side but must not derive a delta.
+Preserve command-result and extractor-status separation throughout.
 
 ## Suggested package boundaries
 
@@ -46,11 +83,11 @@ The module root also holds a `main.go` whose executable content matches `cmd/gao
 
 ## Agent skills
 
-`skills/use-gaori/` is optional, source-distributed AI-agent guidance (a `SKILL.md` plus `references/`). It is not linked into the binary or installed by any Make target. Unlike the illustrative package names above, the `skills/use-gaori/` path is fixed: the Agent Skills convention and the README install URLs depend on it, so do not rename it.
+`skills/use-gaori/` is optional, source-distributed AI-agent guidance (a `SKILL.md` plus `references/`). It is not linked into the binary or installed by any Make target. Unlike the illustrative package names above, the `skills/use-gaori/` path is fixed: the Agent Skills convention and the README install URLs depend on it, so do not rename it. Planned `RSTAT-004` adds a separate `skills/use-gaori-status/` package only after its executable CLI and MCP dependencies exist and pass their contracts.
 
 Keep skills agent-agnostic and subordinate to the executable and documentation contracts. They may teach safe use of Gaori, but must not add runtime behavior or imply workflow or acceptance authority. They must distinguish portable `.gaori/tester.yaml` and reviewed `.gaori/tester/rules/*.yaml` from local toolchain metadata, proposals, and run evidence. Source archives include the skill only from the first release tag created after `skills/` was added; binary installation and toolchain installation never copy or activate it.
 
-The skill hardcodes the CLI and MCP surfaces (subcommands, tools, phases, flags, parser labels, exit codes, config schema, cleanup semantics), so treat it as a user-facing document: verify `skills/use-gaori/**` still matches the current surface whenever either interface changes.
+The skills hardcode their applicable CLI and MCP surfaces, so treat each present skill as a user-facing document and verify it against the current executable surface whenever either interface changes. `use-gaori-status` must remain read-only and calculation-free: it explains executable results, while `use-gaori` continues to own execution, lifecycle, recovery, and detailed evidence inspection.
 
 ## Runner guidance
 
