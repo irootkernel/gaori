@@ -44,9 +44,36 @@ Use `gaori --help`, `gaori help <command>`, or `gaori help rules <subcommand>` t
 
 ## Run and report
 
+Once per root task, after confirming Gaori is available and before the first new standalone `run` or `summarize`, inventory completed standalone evidence first:
+
+```bash
+gaori --json runs list --limit 50
+```
+
+Then inspect safely deletable completed history without deleting it:
+
+```bash
+gaori --json clean --all --dry-run
+```
+
+Use the `runs list` result to show its bounded candidate inventory before showing deletion commands, and use the dry-run's `selected_runs` rather than counting `.gaori/runs/` entries yourself. When both observations succeed and `selected_runs` is at least `10`, report `selected_runs` and `selected_bytes` once, show both supported deletion choices, remind the user to add `--dry-run` first, and continue the requested work without asking a blocking cleanup question:
+
+```text
+Delete all eligible completed standalone evidence: gaori clean --all
+Delete older evidence only (example: 30 days): gaori clean --older-than 30d
+```
+
+Do not report anything when fewer than 10 runs are eligible. If the inventory or dry-run observation fails, report that briefly, do not show deletion commands from the incomplete observation, and continue; never turn this advisory into a test or review gate. Do not run cleanup without explicit user intent.
+
 When the connected tool list contains all of the Gaori MCP tools, prefer MCP for a new long-running test. Before relying on one uninterrupted `await_run`, verify the host's Gaori tool-call timeout when its configuration is readable. For Codex, recommend `mcp_servers.<server-id>.tool_timeout_sec = 3600` or greater, using the actual Gaori server ID; the host deadline must exceed the longest expected command plus evidence finalization. Do not claim that installing Gaori changed this host-owned setting, and do not silently edit agent configuration without user authority. If the effective deadline cannot be verified or is too short, state that limitation and use `get_run` or bounded `wait_run` calls for recoverable observation instead of assuming `await_run` can remain attached.
 
-Call `start_configured_run` or `start_ad_hoc_run`, then use `await_run` with only the returned invocation ID when terminal completion is the next required event and the host deadline is adequate. Use `get_run` or `wait_run` with the invocation ID and revision when a current snapshot or bounded phase/revision observation is required. Omit `timeout_sec` and `timeout_ms` for their 600-second and 50-second defaults; never send `null` or zero to request a default. `await_run` has no Gaori-owned timeout. Cancelling or timing out either wait request does not cancel the run; the same invocation may be awaited again. Do not use process polling. Use `cancel_run` only with explicit user intent. Closing the MCP client cancels active runs as server shutdown, so keep the session attached until completion unless cancellation is intended. When MCP is absent, incomplete, or the installed Gaori version does not provide it, use the CLI workflow below.
+When terminal completion is the next required event and the host deadline is adequate, call `start_configured_run` or `start_ad_hoc_run` exactly once and preserve the returned session-local invocation ID. Call `await_run` with only that same invocation ID. Prefer a host-native wait that keeps the pending tool call suspended until terminal completion.
+
+If the host returns a deferred execution handle or cell, wait only on that same handle for up to five minutes at a time, or for the longest shorter duration the host supports, and return early when the call completes. Do not resume model reasoning merely to report liveness or perform a shorter empty wait. Do not repeatedly call `get_run`, `wait_run`, or `list_runs` only to confirm that the invocation is still active. Use `get_run` or revision-based `wait_run` only when a current snapshot or phase/revision observation is genuinely required, or when the verified host deadline cannot safely support terminal awaiting.
+
+If the await request ends because of host timeout or observer cancellation, do not treat the run as cancelled. While the same MCP session remains alive, call `await_run` again for the preserved invocation and never repeat start. The five-minute duration governs waiting on a host-owned deferred handle; it does not extend the selected command timeout, the MCP host tool-call deadline, or the current 50-second maximum for `wait_run.timeout_ms`. `await_run` remains terminal-only and has no Gaori-owned timeout.
+
+Omit `timeout_sec` and `timeout_ms` for their 600-second and 50-second defaults; never send `null` or zero to request a default. Cancelling or timing out `await_run` or `wait_run` does not cancel the run. Do not use process polling. Use `cancel_run` only with explicit user intent. Closing the MCP client cancels active runs as server shutdown, so keep the session attached until completion unless cancellation is intended. When MCP is absent, incomplete, or the installed Gaori version does not provide it, use the CLI workflow below.
 
 1. Perform the real requested external check before recording that it ran. Use `gaori --json run <command-id>` for a configured command, or an explicitly selected tagged ad-hoc invocation:
 

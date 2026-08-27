@@ -26,7 +26,7 @@ For Gaori maintainers:
 4. Read the [implementation note](implementation-note.md) before changing runner, parser, artifact, redaction, or rule behavior.
 5. Use the [roadmap](roadmap.md) and [todo](todo.md) for recorded delivery and open-work state.
 6. For `GEPIC`, read the tracked [Aquarium test-framework parser handoff](handoffs/aquarium-test-framework-parser.md) before implementation or downstream delivery.
-7. For planned `AWAIT-006` or deferred `AWAIT-007`, read the [long-running await guidance](long-running-await-guidance.md) before implementation or downstream adoption.
+7. For implemented `AWAIT-006` or deferred `AWAIT-007`, read the [long-running await guidance](long-running-await-guidance.md) before changing the source skill or considering downstream adoption.
 8. For planned `RSTAT`, read the [run-status and timing insights SOT](run-status-insights.md) before implementation.
 9. Track current unreleased changes in the root [changelog](../CHANGELOG.md).
 10. Use the [v0.1.14 release notes](releases/v0.1.14.md) when publishing the GitHub Release.
@@ -39,7 +39,7 @@ The standalone v0.1 baseline and the session-local STDIO MCP interface are imple
 
 `RSTAT` is planned, not implemented. Its [SOT](run-status-insights.md) defines a future additive command-summary Git provenance snapshot, exact revision statistics with clean-only or include-dirty selection, artifact-derived command statistics, CLI/MCP-owned calculations, session-local live estimates, bounded failure recurrence, and a separate read-only `use-gaori-status` skill. None of those fields, commands, tools, calculations, or skill files are part of the current binary or source-distributed skill set yet.
 
-`AWAIT-006` is planned, not implemented. Its [guidance SOT](long-running-await-guidance.md) defines a future `use-gaori` update that keeps one terminal await or one host-owned deferred handle pending instead of spending model turns on liveness-only polling. `AWAIT-007` retains Aquarium alignment as a separately owned deferred follow-up after an exact stable Gaori tag contains the verified upstream change. Neither roadmap item changes the current runtime surface or grants downstream mutation authority.
+`AWAIT-006` is implemented in the source-distributed `use-gaori` skill. Its [guidance SOT](long-running-await-guidance.md) keeps one terminal await or one host-owned deferred handle pending instead of spending model turns on liveness-only polling, and re-awaits the same invocation after observer interruption while the MCP session survives. `AWAIT-007` retains Aquarium alignment as a separately owned deferred follow-up after an exact stable Gaori tag contains the verified upstream change. Neither task changes the Gaori runtime surface or grants downstream mutation authority.
 
 ## Document catalog
 
@@ -57,7 +57,7 @@ The standalone v0.1 baseline and the session-local STDIO MCP interface are imple
 | [Roadmap](roadmap.md) | Project maintainers | Completed delivery history and integration-contract tasks |
 | [Todo](todo.md) | Project maintainers | Explicitly accepted open work |
 | [Changelog](../CHANGELOG.md) | Users and maintainers | Unreleased user-visible changes from v0.1.15 onward |
-| [Long-running await guidance](long-running-await-guidance.md) | Gaori and Aquarium maintainers and agent-skill authors | Planned `AWAIT-006` host-wait policy and deferred `AWAIT-007` adoption boundary |
+| [Long-running await guidance](long-running-await-guidance.md) | Gaori and Aquarium maintainers and agent-skill authors | Implemented `AWAIT-006` host-wait policy and deferred `AWAIT-007` adoption boundary |
 | [Aquarium parser handoff](handoffs/aquarium-test-framework-parser.md) | Gaori and downstream maintainers | Planned `GEPIC`, qualification boundaries, and deferred Sudal adoption contract |
 | [Run-status and timing insights SOT](run-status-insights.md) | Gaori maintainers and agent-skill authors | Planned `RSTAT` provenance, sample, calculation, CLI, MCP, failure-diagnostic, and skill contract |
 | [v0.1.5 release notes](releases/v0.1.5.md) | Users and maintainers | Previous published changes and known limitations |

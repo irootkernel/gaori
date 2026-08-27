@@ -1,7 +1,7 @@
 # Gaori Implementation Note
 
-Status: Current source-tree guidance through `AWAIT-004` plus planned `AWAIT-006` and `RSTAT` guidance
-Scope: Maintainer guidance for standalone execution, evidence artifacts, parser/rule behavior, operator-directed cleanup, session-local STDIO MCP execution, planned long-running host waits, and planned run-status insights
+Status: Current source-tree guidance through `AWAIT-006` plus planned `RSTAT` guidance
+Scope: Maintainer guidance for standalone execution, evidence artifacts, parser/rule behavior, operator-directed cleanup, session-local STDIO MCP execution, long-running host waits, and planned run-status insights
 
 This document explains implementation constraints and verification expectations for contributors. It is not the parent-project adoption contract; integrators should start with the [integration guide](integration-guide.md).
 
@@ -19,7 +19,7 @@ Do not pass the handler context into command execution and do not call the invoc
 
 README, `docs/user-interface.md`, `docs/integration-guide.md`, the architecture description, and `skills/use-gaori/**` must stay synchronized with the executable source interface. The completed requirement-to-test mapping cites the named focused and built-binary hardening tests; preserve that traceability when the contract changes.
 
-`AWAIT-006` is a planned client-guidance change, not a runtime extension. Its [long-running await guidance](long-running-await-guidance.md) owns the future start-once, same-invocation, terminal-await, and same-deferred-handle policy. Keep that work confined to the source-distributed skill and focused documentation contract test unless implementation proves a current contract mismatch. Do not represent the planned guidance or the downstream-owned `AWAIT-007` Aquarium follow-up as current behavior or authority.
+`AWAIT-006` is an implemented client-guidance change, not a runtime extension. Its [long-running await guidance](long-running-await-guidance.md) owns the current start-once, same-invocation, terminal-await, and same-deferred-handle policy in the source-distributed skill. Keep future changes confined to that skill and focused documentation contract test unless implementation proves a current contract mismatch. Do not represent the downstream-owned `AWAIT-007` Aquarium follow-up as current behavior or authority.
 
 ## Planned RSTAT insights
 

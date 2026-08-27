@@ -91,6 +91,7 @@ This matrix records the primary evidence for every requirement marked complete. 
 | `GAORI-REQ-RQDOC-002` | `TestDocumentedCLIWorkflowAgainstFreshFixture` |
 | `GAORI-REQ-RQDOC-003` | parser fixtures under `internal/extract/testdata`; `TestTestRuleMatchesExpectedSpan`; `TestDocumentedCLIWorkflowAgainstFreshFixture` |
 | `GAORI-REQ-RQDOC-004` | release-readiness checklist in `implementation-note.md`; `make test` |
+| `GAORI-REQ-RQDOC-005` | `TestAwaitRunDocumentationContract` |
 | `GAORI-REQ-RQHAR-001` | `TestBinaryArtifactContainment`; `TestBinaryMCPLifecycleAndBoundedEvidence` (relocated MCP evidence); path, artifact, and rule symlink tests |
 | `GAORI-REQ-RQHAR-002` | `TestBinaryPreservesInterruptedEvidence`; `TestExecuteInterruptedReportsRawLogWriteFailure`; Unix runner signal tests |
 | `GAORI-REQ-RQHAR-003` | `TestBinaryStandaloneCollisionResistance`; concurrent artifact allocation tests |

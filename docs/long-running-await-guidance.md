@@ -1,15 +1,15 @@
 # Long-Running Await Guidance
 
-Status: Planned under `AWAIT-006`; Aquarium adoption deferred under `AWAIT-007`
+Status: Implemented under `AWAIT-006`; Aquarium adoption deferred under `AWAIT-007`
 
 Roadmap: [AWAIT: Token-efficient terminal waiting](roadmap.md#await-token-efficient-terminal-waiting)
 
 ## Authority
 
-This document is the detailed source of truth for the planned `AWAIT-006`
+This document is the detailed source of truth for the implemented `AWAIT-006`
 agent-guidance change and the separately owned `AWAIT-007` Aquarium follow-up.
-It does not describe current `use-gaori` behavior and does not authorize either
-task's implementation, a commit, release, installation, or cross-repository
+It describes current source-distributed `use-gaori` behavior but does not
+authorize downstream adoption, a release, installation, or cross-repository
 mutation. Current runtime behavior remains owned by source, tests,
 `GAORI-REQ-RQMCP-008`, and ADR-0018.
 
@@ -23,12 +23,12 @@ turns and context without improving completion authority.
 
 Mulgae addresses the same host behavior by preserving one invocation and one
 pending handle, waiting on that handle for up to five minutes at a time, and
-resuming early only when the call completes. Gaori should provide equivalent
-client guidance while preserving its existing execution and evidence contracts.
+resuming early only when the call completes. Gaori provides equivalent client
+guidance while preserving its existing execution and evidence contracts.
 
-## AWAIT-006: Planned Gaori guidance
+## AWAIT-006: Implemented Gaori guidance
 
-Update the source-distributed `use-gaori` skill so an attached agent follows
+The source-distributed `use-gaori` skill directs an attached agent to follow
 this lifecycle when the complete Gaori MCP surface is available:
 
 1. When terminal completion is the next required event, call
@@ -56,8 +56,8 @@ remains terminal-only and has no Gaori-owned timeout.
 
 ### Boundaries
 
-`AWAIT-006` changes only agent guidance and its documentation contract test. It
-must not change:
+`AWAIT-006` changed only agent guidance and its documentation contract test. It
+did not change:
 
 - Gaori MCP runtime code or tool schemas;
 - invocation, cancellation, shutdown, or restart-recovery behavior;
@@ -69,17 +69,15 @@ must not change:
 
 ### Implementation and verification
 
-The implementation should change only `skills/use-gaori/SKILL.md` and the
-focused assertions in `e2e/await_docs_test.go`, unless a verified conflict makes
-that boundary impossible. The test must protect start-once identity, terminal
+The implementation changed only `skills/use-gaori/SKILL.md` and the focused
+contract-test surface. The test protects start-once identity, terminal
 await preference, host-native pending calls, five-minute same-handle waiting,
 no liveness polling, and no repeated start after observer timeout or
 cancellation.
 
-At plan registration, the focused test already rejects the semantically current
-`docs/implementation-note.md` status because it matches an older exact phrase.
-`AWAIT-006` should make that assertion semantic without weakening the AWAIT-004
-completion check.
+The focused test keeps the `docs/user-interface.md` AWAIT-004 runtime-interface
+completion check separate from the `docs/implementation-note.md` AWAIT-006
+guidance-completion check.
 
 Run and report:
 

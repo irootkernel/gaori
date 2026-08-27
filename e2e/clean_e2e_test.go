@@ -6,11 +6,40 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/irootkernel/gaori/internal/artifacts"
 	"github.com/irootkernel/gaori/internal/model"
 )
+
+func TestUseGaoriCleanupAdvisoryContract(t *testing.T) {
+	t.Parallel()
+	skillPath := filepath.Join(projectRoot(t), "skills", "use-gaori", "SKILL.md")
+	skill, err := os.ReadFile(skillPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, required := range []string{
+		"Once per root task",
+		"gaori --json runs list --limit 50",
+		"gaori --json clean --all --dry-run",
+		"show its bounded candidate inventory before showing deletion commands",
+		"`selected_runs` is at least `10`",
+		"`selected_bytes`",
+		"gaori clean --all",
+		"gaori clean --older-than 30d",
+		"continue the requested work without asking a blocking cleanup question",
+		"Do not report anything when fewer than 10 runs are eligible",
+		"If the inventory or dry-run observation fails, report that briefly",
+		"do not show deletion commands from the incomplete observation",
+		"Do not run cleanup without explicit user intent",
+	} {
+		if !strings.Contains(string(skill), required) {
+			t.Errorf("use-gaori skill is missing cleanup advisory contract %q", required)
+		}
+	}
+}
 
 func TestBinaryCleanContract(t *testing.T) {
 	root := projectRoot(t)
