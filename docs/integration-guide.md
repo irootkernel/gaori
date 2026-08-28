@@ -69,7 +69,7 @@ These are current boundaries, not hidden partial features:
 - Consumer-specific evidence snapshots. Consumers should use or normalize the existing status, summary, and raw-log references.
 - A bundled CI-provider workflow or a cross-platform release matrix. The repository tests platform-neutral behavior plus additional Unix-only install, process-group, and signal behavior.
 
-Open implementation items are recorded in `todo.md`; none of them broaden the boundaries above. The boundaries are not future commitments; a new requirement and roadmap item should be approved before broadening them.
+Adopted implementation work is recorded in `roadmap/README.md`, active dossiers and future epic candidates in `todo/README.md`, and small postponed findings in `deferred-feedback/README.md`; none of them broaden the boundaries above. The boundaries are not future commitments; a new requirement and roadmap item should be approved before broadening them.
 
 ## Portable config and local state
 
@@ -250,7 +250,7 @@ Important cases:
 - An extraction internal error after a passing command leaves artifact `exit_code: 0`, sets artifact `status: internal_error`, and makes Gaori exit `4`.
 - `summarize` has no authoritative process result; inferred status is evidence interpretation only.
 
-See the [architecture extraction policy](architecture.md#failure-and-degraded-extraction-policy) for the full state table.
+See the [architecture extraction policy](architecture/README.md#failure-and-degraded-extraction-policy) for the full state table.
 
 ## 6. Poll without an agent
 
@@ -324,4 +324,4 @@ Schema v2 is a breaking replacement for the single-lane contract:
 
 There is no v1 decoder or `--lane` compatibility alias. Old config, rule fields, and CLI flags fail closed with config exit code `2` before command execution. Consumers that hash status fields must insert comma-joined canonical tags immediately after `command_id` in the ordered watcher input.
 
-For exact CLI syntax and a complete tested rule fixture, see the [CLI reference](user-interface.md). For JSON shapes and path-safety semantics, see the [architecture](architecture.md).
+For exact CLI syntax and a complete tested rule fixture, see the [CLI reference](user-interface.md). For JSON shapes and path-safety semantics, see the [architecture](architecture/README.md).

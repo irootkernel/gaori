@@ -43,7 +43,7 @@ Gaori must not become a planner, reviewer, test gate, acceptance or waiver autho
 - Weigh correctness, performance, maintainability, and structural fit instead of optimizing only for the smallest diff.
 - Prefer durable designs over symptomatic patches while keeping the current work proportional to the verified requirement.
 - When the broader ideal design exceeds scope, implement a bounded durable step that fully satisfies the current success criteria and preserves a clear path forward.
-- Record only independent actionable follow-up in `docs/todo.md`; promote epic-sized work to `docs/roadmap.md`. Do not defer work required for current correctness or acceptance.
+- Record small independent actionable follow-up in `docs/deferred-feedback/README.md`, future epic-sized candidates in `docs/todo/README.md`, and adopted work in `docs/roadmap/README.md`. Do not defer work required for current correctness or acceptance.
 
 ### 4. Make Surgical Changes
 
@@ -125,11 +125,11 @@ For multi-step work, keep a short plan in which every step has a corresponding v
 
 When documents or behavior appear to disagree, use this order:
 
-1. `docs/requirements-specs.md` and accepted decisions in `docs/architecture-decision-records.md` for intended behavior.
+1. `docs/specs/README.md` and accepted decisions in `docs/architecture-decision-records/README.md` for intended behavior.
 2. Executable behavior and tests for what the current binary actually does. Treat a mismatch with the first level as a defect rather than silently choosing one.
-3. `docs/architecture.md` and `docs/integration-guide.md` for stable architecture, ownership, and consumer contracts.
+3. `docs/architecture/README.md` and `docs/integration-guide.md` for stable architecture, ownership, and consumer contracts.
 4. `docs/user-interface.md` and `README.md` for operator-facing commands, options, and examples.
-5. `docs/roadmap.md`, `docs/todo.md`, and `docs/implementation-note.md` for delivery history, accepted open work, implementation guidance, and release-readiness context.
+5. `docs/roadmap/README.md`, `docs/todo/README.md`, `docs/deferred-feedback/README.md`, and `docs/implementation-tips/README.md` for delivery history, active dossiers and future epic candidates, small postponed findings, implementation guidance, and release-readiness context.
 
 Update user-facing and integration documents in the same change whenever CLI or artifact behavior changes.
 

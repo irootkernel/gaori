@@ -387,5 +387,5 @@ Add `--json` when a script needs compact command output. Global options may appe
 - [Parser support tiers and known limitations](docs/parser-support.md)
 - [Parent-project integration guide and current capability status](docs/integration-guide.md)
 - [Documentation map](docs/README.md)
-- [Architecture and artifact contracts](docs/architecture.md)
+- [Architecture and artifact contracts](docs/architecture/README.md)
 - [Development and verification guidance](AGENTS.md)

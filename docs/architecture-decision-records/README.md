@@ -487,7 +487,7 @@ distributions, arithmetic mean, median, nearest-rank percentiles, recent-window
 change, elapsed-position, total-target remaining time, conditional residual
 time, and recurring already-redacted failure signatures. The exact formulas,
 minimum sample sizes, ordering, rounding, and unsupported states are defined once
-in `docs/run-status-insights.md`. CLI and MCP surfaces must return those values
+in `docs/todo/TODO-RSTAT.md`. CLI and MCP surfaces must return those values
 directly; an agent skill may explain them but must not recalculate, adjust, or
 invent them.
 

@@ -1,7 +1,7 @@
 # Gaori Requirements Test Matrix
 
 Status: Complete for the current checked requirements
-Scope: Primary executable or documentary evidence for each completed requirement in `requirements-specs.md`
+Scope: Primary executable or documentary evidence for each completed requirement in `specs/README.md`
 
 This matrix records the primary evidence for every requirement marked complete. The audit regression suite fails when a completed requirement is missing, duplicated, has no evidence, cites a `Test*` identifier that does not resolve to a repository Go test, or references an unknown or incomplete requirement. Every row must cite at least one resolvable test unless its requirement ID is an explicit non-test evidence exception in the audit regression test.
 
@@ -90,7 +90,7 @@ This matrix records the primary evidence for every requirement marked complete. 
 | `GAORI-REQ-RQDOC-001` | authoritative documents listed in `AGENTS.md` and `README.md`; `TestArchitectureJSONContractExamplesMatchFreshRunArtifacts` |
 | `GAORI-REQ-RQDOC-002` | `TestDocumentedCLIWorkflowAgainstFreshFixture` |
 | `GAORI-REQ-RQDOC-003` | parser fixtures under `internal/extract/testdata`; `TestTestRuleMatchesExpectedSpan`; `TestDocumentedCLIWorkflowAgainstFreshFixture` |
-| `GAORI-REQ-RQDOC-004` | release-readiness checklist in `implementation-note.md`; `make test` |
+| `GAORI-REQ-RQDOC-004` | release-readiness checklist in `implementation-tips/README.md`; `make test` |
 | `GAORI-REQ-RQDOC-005` | `TestAwaitRunDocumentationContract` |
 | `GAORI-REQ-RQHAR-001` | `TestBinaryArtifactContainment`; `TestBinaryMCPLifecycleAndBoundedEvidence` (relocated MCP evidence); path, artifact, and rule symlink tests |
 | `GAORI-REQ-RQHAR-002` | `TestBinaryPreservesInterruptedEvidence`; `TestExecuteInterruptedReportsRawLogWriteFailure`; Unix runner signal tests |

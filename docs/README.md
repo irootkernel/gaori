@@ -1,8 +1,43 @@
 # Gaori Documentation
 
-Status: Current source-tree documentation map
+Status: Current source-tree documentation authority
 
-This directory contains Gaori's integration contracts, technical design, delivery history, and maintainer guidance. Start with the document that matches your role instead of reading the directory in filename order.
+- Profile: `single-scope`
+- Delivery scope: `Gaori`
+- Documentation language: English
+- Canonical roadmap: [`docs/roadmap/README.md`](roadmap/README.md)
+
+The repository root [README](../README.md) is the public product entrypoint for installation, quick start, common workflows, and direct-user troubleshooting. The `docs/` tree serves maintainers, contributors, integrators, and operators who need durable contracts, design decisions, implementation guidance, delivery state, and operational ownership.
+
+## Canonical role ownership
+
+Each semantic role has one canonical owner in the Gaori delivery scope.
+
+| Role | Canonical owner | Authority |
+|---|---|---|
+| Specifications | [Specs](specs/README.md) | Required and implemented behavior, durable product contracts, and explicit non-goals |
+| Architecture | [Architecture](architecture/README.md) | Current components, boundaries, data flow, schemas, and responsibilities |
+| Architecture decision records | [ADRs](architecture-decision-records/README.md) | Accepted, superseded, deprecated, and rejected design decisions with rationale |
+| Implementation tips | [Implementation tips](implementation-tips/README.md) | Non-normative contributor, testing, and release-engineering guidance |
+| Operations | [Operations](ops/README.md) | Independently operated environment ownership and runbooks; currently records the bounded absence of such a Gaori surface |
+| Roadmap | [Roadmap](roadmap/README.md) | Adopted work-unit identity, ordering, dependencies, lifecycle vocabulary, and current status |
+| Deferred feedback | [Deferred feedback](deferred-feedback/README.md) | Small actionable findings intentionally postponed from current work |
+| Todo | [Todo](todo/README.md) | Future epic-sized candidates and temporary dossiers for active adopted epics |
+
+## Supplementary documents
+
+These documents remain outside the role directories but have one explicit owner and relationship to the canonical roles.
+
+| Document | Owner and relationship |
+|---|---|
+| [CLI reference](user-interface.md) | Specifications-owned operator interface reference |
+| [Parser support matrix](parser-support.md) | Specifications-owned support-tier, evidence, limitation, and promotion contract |
+| [Integration guide](integration-guide.md) | Specifications-owned parent-project capability and adoption contract |
+| [Requirements-to-test matrix](requirements-test-matrix.md) | Specifications-owned traceability from completed requirements to executable evidence |
+| [Aquarium parser handoff](handoffs/aquarium-test-framework-parser.md) | Specifications-owned durable cross-project parser and adoption contract |
+| [Long-running await guidance](long-running-await-guidance.md) | Implementation-tips-owned source-skill guidance and downstream adoption boundary |
+| [Release notes](releases/) | Public release-history supplements owned by the root [changelog](../CHANGELOG.md) |
+| [Documentation assets](assets/) | Public and maintainer documentation assets; they own no product or delivery authority |
 
 ## Recommended reading paths
 
@@ -14,71 +49,55 @@ For a person running Gaori directly:
 
 For a parent project integrating Gaori:
 
-1. Read the [integration guide](integration-guide.md) for the supported capability matrix, ownership boundaries, project files, invocation, and rollout checklist.
-2. Read the [architecture](architecture.md) for the summary/status schemas, artifact layout, watcher hash, and degraded-evidence behavior.
-3. Consult the [architecture decisions](architecture-decision-records.md) before proposing a change to Gaori's authority or evidence semantics.
+1. Read the [integration guide](integration-guide.md) for supported capabilities, ownership boundaries, project files, invocation, and rollout.
+2. Read the [architecture](architecture/README.md) for schemas, artifact layout, watcher hash, and degraded-evidence behavior.
+3. Consult the [ADRs](architecture-decision-records/README.md) before changing Gaori's authority or evidence semantics.
 
 For Gaori maintainers:
 
 1. Follow [AGENTS.md](../AGENTS.md) for repository workflow and verification expectations.
-2. Use the [requirements](requirements-specs.md) as the behavioral source of truth.
-3. Use the [requirements-to-test matrix](requirements-test-matrix.md) to find executable evidence.
-4. Read the [implementation note](implementation-note.md) before changing runner, parser, artifact, redaction, or rule behavior.
-5. Use the [roadmap](roadmap.md) and [todo](todo.md) for recorded delivery and open-work state.
-6. For `GEPIC`, read the tracked [Aquarium test-framework parser handoff](handoffs/aquarium-test-framework-parser.md) before implementation or downstream delivery.
-7. For implemented `AWAIT-006` or deferred `AWAIT-007`, read the [long-running await guidance](long-running-await-guidance.md) before changing the source skill or considering downstream adoption.
-8. For planned `RSTAT`, read the [run-status and timing insights SOT](run-status-insights.md) before implementation.
-9. Track current unreleased changes in the root [changelog](../CHANGELOG.md).
-10. Use the [v0.1.14 release notes](releases/v0.1.14.md) when publishing the GitHub Release.
+2. Read the [specifications](specs/README.md) and use the [requirements-to-test matrix](requirements-test-matrix.md) to locate executable evidence.
+3. Read the [implementation tips](implementation-tips/README.md) before changing runner, parser, artifact, redaction, rule, or release behavior.
+4. Use the [roadmap](roadmap/README.md) for lifecycle state, the [todo index](todo/README.md) for active dossiers and future epic candidates, and [deferred feedback](deferred-feedback/README.md) for small postponed findings.
+5. For `GEPIC` and `AQADP`, read the durable [Aquarium parser handoff](handoffs/aquarium-test-framework-parser.md); for active `AQADP`, also read its [dossier](todo/TODO-AQADP.md).
+6. For planned `RSTAT`, read its [active dossier](todo/TODO-RSTAT.md).
+7. For implemented `AWAIT-006` or deferred `AWAIT-007`, read the [long-running await guidance](long-running-await-guidance.md).
+8. Track current unreleased changes in the root [changelog](../CHANGELOG.md) and use the matching document under [release notes](releases/) when publishing a release.
 
 ## Current delivery state
 
-The standalone v0.1 baseline and the session-local STDIO MCP interface are implemented. This document describes the current source tree, which can be ahead of the published release named in the README install commands; the release notes under `releases/` record what each published version actually contains. Current surfaces include configured and tagged ad-hoc execution, read-only config/rule preflight, summarization, bounded excerpts, seventeen parsers resolved through one registry, read-only parser discovery, rule lifecycle commands, read-only standalone run listing and rule-proposal review, redacted derived evidence, final status JSON, explicit cleanup, and asynchronous MCP start/wait/get/cancel/excerpt tools, terminal-only `await_run`, and a read-only completed-evidence listing. Thirteen parser labels are Supported; `dart-test`, `dotnet-test`, `gradle-test`, and `patrol` are Experimental as recorded in the [parser support matrix](parser-support.md). MCP state is ephemeral; completed artifacts retain the existing standalone layout and authority. Parent projects may commit `.gaori/tester.yaml` and reviewed `.gaori/tester/rules/*.yaml`; all other `.gaori/` content remains local-only.
+The standalone v0.1 baseline and session-local STDIO MCP interface are implemented. The current published release is [v0.1.14](releases/v0.1.14.md); the source tree can be ahead of that release, and release notes record what each published version contains.
 
-`GEPIC` has delivered the code-owned JSON parser catalog (`gaori --json parsers catalog`, schema `gaori-parser-catalog.v1`) and the Experimental `dart-test` and `patrol` parsers. The roadmap owns that implementation plan, while `todo.md` records non-blocking qualification, maturity, standards, and consumer follow-ups. Standard MCP Tasks migration remains deferred behind explicit protocol, SDK, and host-support conditions. The delivery statement above is intentionally narrower than “Gaori provides every testing or orchestration capability.”
+`GEPIC` delivered the code-owned JSON parser catalog and Experimental `dart-test` and `patrol` parsers. `AQADP`, `AWAIT-005`, and `AWAIT-007` remain deferred under their roadmap-owned activation conditions. `RSTAT` is planned and not current binary behavior. Terminal-only `await_run` is implemented, and `AWAIT-006` strengthens its source-distributed `use-gaori` guidance without changing the Gaori runtime surface.
 
-`RSTAT` is planned, not implemented. Its [SOT](run-status-insights.md) defines a future additive command-summary Git provenance snapshot, exact revision statistics with clean-only or include-dirty selection, artifact-derived command statistics, CLI/MCP-owned calculations, session-local live estimates, bounded failure recurrence, and a separate read-only `use-gaori-status` skill. None of those fields, commands, tools, calculations, or skill files are part of the current binary or source-distributed skill set yet.
+## Roadmap identity and dossier lifecycle
 
-`AWAIT-006` is implemented in the source-distributed `use-gaori` skill. Its [guidance SOT](long-running-await-guidance.md) keeps one terminal await or one host-owned deferred handle pending instead of spending model turns on liveness-only polling, and re-awaits the same invocation after observer interruption while the MCP session survives. `AWAIT-007` retains Aquarium alignment as a separately owned deferred follow-up after an exact stable Gaori tag contains the verified upstream change. Neither task changes the Gaori runtime surface or grants downstream mutation authority.
+The canonical roadmap path is the namespace. This migration preserves every established semantic workstream, epic, and task identifier and the existing lifecycle vocabulary: `Planned`, `In Progress`, `Blocked`, `Done`, and `Deferred`. It performs no identifier or lifecycle normalization.
 
-## Document catalog
+Existing IDs such as `PARSE-010`, `QUALI-002`, and `RSTAT-004` remain authoritative. A new suffix within an established semantic prefix uses the greatest suffix ever recorded for that prefix plus one; a number is never reused. A new semantic prefix requires explicit roadmap adoption. Ordering and dependencies come from the roadmap rather than identifier sorting.
 
-| Document | Audience | Authority |
-|---|---|---|
-| [Repository README](../README.md) | First-time and daily users | Installation, quick start, common workflows |
-| [CLI reference](user-interface.md) | Operators and script authors | Commands, options, examples, exit behavior |
-| [Parser support matrix](parser-support.md) | Operators, integrators, and maintainers | Parser support tiers, verification evidence, known limitations, promotion criteria |
-| [Integration guide](integration-guide.md) | Parent-project owners | Capability status, ownership boundary, adoption contract |
-| [Architecture](architecture.md) | Integrators and maintainers | Components, data flow, schemas, artifact and watcher contracts |
-| [Architecture decisions](architecture-decision-records.md) | Maintainers and reviewers | Accepted design constraints and their rationale |
-| [Requirements](requirements-specs.md) | Maintainers and reviewers | Normative behavioral requirements and v0.1 non-goals |
-| [Requirements-to-test matrix](requirements-test-matrix.md) | Maintainers and auditors | Primary evidence for each completed requirement |
-| [Implementation note](implementation-note.md) | Contributors | Package boundaries, risk areas, tests, release checklist |
-| [Roadmap](roadmap.md) | Project maintainers | Completed delivery history and integration-contract tasks |
-| [Todo](todo.md) | Project maintainers | Explicitly accepted open work |
-| [Changelog](../CHANGELOG.md) | Users and maintainers | Unreleased user-visible changes from v0.1.15 onward |
-| [Long-running await guidance](long-running-await-guidance.md) | Gaori and Aquarium maintainers and agent-skill authors | Implemented `AWAIT-006` host-wait policy and deferred `AWAIT-007` adoption boundary |
-| [Aquarium parser handoff](handoffs/aquarium-test-framework-parser.md) | Gaori and downstream maintainers | Planned `GEPIC`, qualification boundaries, and deferred Sudal adoption contract |
-| [Run-status and timing insights SOT](run-status-insights.md) | Gaori maintainers and agent-skill authors | Planned `RSTAT` provenance, sample, calculation, CLI, MCP, failure-diagnostic, and skill contract |
-| [v0.1.5 release notes](releases/v0.1.5.md) | Users and maintainers | Previous published changes and known limitations |
-| [v0.1.6 release notes](releases/v0.1.6.md) | Users and maintainers | Previous identity migration, compatibility notes, and known limitations |
-| [v0.1.7 release notes](releases/v0.1.7.md) | Users and maintainers | Previous coding-agent guidance, compatibility notes, and known limitations |
-| [v0.1.8 release notes](releases/v0.1.8.md) | Users and maintainers | Previous ad-hoc parser selection, compatibility notes, and known limitations |
-| [v0.1.9 release notes](releases/v0.1.9.md) | Users and maintainers | Previous framework parser support, summarize parser selection, and known limitations |
-| [v0.1.10 release notes](releases/v0.1.10.md) | Users and maintainers | Previous standalone evidence cleanup, safety boundaries, and known limitations |
-| [v0.1.11 release notes](releases/v0.1.11.md) | Users and maintainers | Previous optional AI-agent guidance, source-distributed skill, and known limitations |
-| [v0.1.12 release notes](releases/v0.1.12.md) | Users and maintainers | Previous CLI usability, portable config, rule proposal, MCP, and hardening changes |
-| [v0.1.13 release notes](releases/v0.1.13.md) | Users and maintainers | Previous parser discovery, evidence listing, redaction measurement, and support-tier changes |
-| [v0.1.14 release notes](releases/v0.1.14.md) | Users and maintainers | Current terminal MCP waiting, shutdown hardening, and host-deadline guidance |
+The [todo index](todo/README.md) contains no lifecycle status. An adopted active epic links exactly one temporary dossier through `Detailed SOT`; the dossier owns current cross-task delivery guidance while the roadmap alone owns identity and status. Closeout promotes durable content to its canonical owners, removes and deletes the dossier, and replaces `Detailed SOT` with repository-relative `Canonical Outcomes` links. Historical completed work without these lifecycle fields remains grandfathered.
 
 ## Source-of-truth order
 
-When documents appear to disagree, use this order:
+When authorities disagree, use this order:
 
-1. `requirements-specs.md` and accepted ADRs for intended behavior.
-2. Executable behavior and tests for what the current binary actually does.
-3. `architecture.md` and `integration-guide.md` for stable consumer contracts.
-4. `user-interface.md` and the root README for operator instructions.
-5. `roadmap.md`, `todo.md`, `implementation-note.md`, and linked feature SOTs for project history, planned detailed contracts, and development context.
+1. [Specifications](specs/README.md) and accepted [ADRs](architecture-decision-records/README.md) for intended behavior.
+2. Executable behavior and tests for what the current binary actually does; a mismatch with the first level is a defect.
+3. [Architecture](architecture/README.md) and the [integration guide](integration-guide.md) for stable consumer contracts.
+4. The [CLI reference](user-interface.md) and root [README](../README.md) for operator instructions.
+5. The [roadmap](roadmap/README.md), [todo](todo/README.md), [implementation tips](implementation-tips/README.md), and linked dossiers for delivery history, planned detailed contracts, and development context.
 
-Treat a mismatch between the first two levels as a defect. Update user-facing and integration documents in the same change whenever executable CLI or artifact behavior changes.
+Update user-facing and integration documents in the same change whenever executable CLI or artifact behavior changes. Generated documentation, runtime evidence, provider reports, and temporary workflow state are not canonical documentation authorities.
+
+## Documentation checks
+
+Repository-native documentation checks are part of the E2E package:
+
+```bash
+go test -count=1 ./e2e -run '^(TestAwaitRunDocumentationContract|TestParserSupportDocumentationContract|TestMCPDocumentationAndSkillContract|TestRequirementTraceabilityMatrixCoversCompletedRequirements)$'
+make test-e2e
+git --no-pager diff --check
+```
+
+The Aquarium docs inspector is an additional structural discovery check. It does not replace repository-native tests or prove that documentation matches the implementation.

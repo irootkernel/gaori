@@ -3,7 +3,7 @@
 Status: Complete through `AWAIT-004`
 Scope: Standalone Gaori v0.1 architecture, including session-local STDIO MCP execution and terminal awaiting
 
-This document defines Gaori's technical and artifact contracts. See the [integration guide](integration-guide.md) for parent-project ownership, supported capability status, and rollout guidance.
+This document defines Gaori's technical and artifact contracts. See the [integration guide](../integration-guide.md) for parent-project ownership, supported capability status, and rollout guidance.
 
 ## Architecture goals
 
@@ -14,7 +14,7 @@ Gaori is a deterministic test and log-evidence tool. It should run test commands
 - Implementation language: Go.
 - Packaging target: standalone single binary named `gaori`.
 - Regex engine baseline: Go `regexp` (RE2 semantics) only.
-- Current parser availability and support tiers are recorded in the [parser support matrix](parser-support.md), which renders the code-owned registry catalog (`gaori --json parsers catalog`). All seventeen labels share one registry; `dart-test`, `dotnet-test`, `gradle-test`, and `patrol` are Experimental.
+- Current parser availability and support tiers are recorded in the [parser support matrix](../parser-support.md), which renders the code-owned registry catalog (`gaori --json parsers catalog`). All seventeen labels share one registry; `dart-test`, `dotnet-test`, `gradle-test`, and `patrol` are Experimental.
 - Unknown parser labels fail closed.
 
 ## Non-goals

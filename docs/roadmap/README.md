@@ -3,7 +3,7 @@
 Status: Completed through `AWAIT-006` and `GEPIC`; `RSTAT` planned; `AQADP`, `AWAIT-005`, and `AWAIT-007` deferred
 Scope: Implementation tracking for the Gaori v0.1 standalone baseline, hardening, tag and parser selection, release readiness, identity migration, operator-directed standalone evidence cleanup, portable project config, CLI usability improvements, session-local MCP execution, token-efficient terminal waiting and host-wait guidance, the parser catalog plus Dart/Patrol extraction epic, planned run-status and timing insights, and deferred Aquarium qualification and downstream adoption tracking
 
-This roadmap is a delivery record, not an operator guide or a promise that out-of-scope capabilities will be added. See the [integration guide](integration-guide.md) for the current supported/unsupported capability boundary and `todo.md` for explicitly accepted open work.
+This roadmap is a delivery record, not an operator guide or a promise that out-of-scope capabilities will be added. See the [integration guide](../integration-guide.md) for the current supported/unsupported capability boundary and the [todo index](../todo/README.md) for future candidates and active epic dossiers.
 
 Task status values: `Planned`, `In Progress`, `Blocked`, `Done`, `Deferred`.
 
@@ -53,9 +53,9 @@ Current implementation snapshot:
 
 ## GEPIC: Parser catalog and Dart/Patrol extraction
 
-Epic status: Done
+Status: Done
 
-This epic implements the Gaori-owned portion of the [Aquarium test-framework parser handoff](handoffs/aquarium-test-framework-parser.md). It is complete only when all four tasks below are `Done`. External real-runner qualification and Sudal App adoption are separately owned, non-blocking follow-ups tracked under `AQADP` below and detailed in `todo.md`.
+This epic implements the Gaori-owned portion of the [Aquarium test-framework parser handoff](../handoffs/aquarium-test-framework-parser.md). It is complete only when all four tasks below are `Done`. External real-runner qualification and Sudal App adoption are separately owned, non-blocking follow-ups tracked under `AQADP` below.
 
 | Task ID | Status | Goal | Verification | Reference |
 |---|---|---|---|---|
@@ -75,9 +75,11 @@ This epic implements the Gaori-owned portion of the [Aquarium test-framework par
 
 ## AQADP: Aquarium qualification and downstream adoption
 
-Epic status: Deferred
+Status: Deferred
 
-This tracking epic keeps the non-blocking follow-ups from the Aquarium parser handoff visible after `GEPIC` completion. It does not reopen `GEPIC`, authorize Aquarium or Sudal repository changes, or make qualification or consumer adoption a Gaori implementation gate. Activate each task only when its owner and activation conditions are satisfied; detailed evidence and ownership rules remain in `todo.md` and the handoff.
+Detailed SOT: [AQADP dossier](../todo/TODO-AQADP.md)
+
+This tracking epic keeps the non-blocking follow-ups from the Aquarium parser handoff visible after `GEPIC` completion. It does not reopen `GEPIC`, authorize Aquarium or Sudal repository changes, or make qualification or consumer adoption a Gaori implementation gate. Activate each task only when its owner and activation conditions are satisfied; the dossier owns current cross-task guidance and the durable [handoff](../handoffs/aquarium-test-framework-parser.md) owns the integration contract.
 
 | Task ID | Status | Goal | Activation and verification | Owner |
 |---|---|---|---|---|
@@ -155,7 +157,7 @@ These tasks were implemented as separate, reviewable units in numerical order. A
 
 ## RELRV: v0.1.4 release-readiness follow-up
 
-Completed release-readiness findings are retained here; remaining accepted findings stay in `todo.md`. A completed item records its development gate only and does not claim release, tag, or final review acceptance.
+Completed release-readiness findings are retained here; remaining small actionable findings stay in the [deferred-feedback index](../deferred-feedback/README.md). A completed item records its development gate only and does not claim release, tag, or final review acceptance.
 
 | Task ID | Status | Goal | Verification | Reference |
 |---|---|---|---|---|
@@ -200,7 +202,7 @@ Completed release-readiness findings are retained here; remaining accepted findi
 
 ## AWAIT: Token-efficient terminal waiting
 
-`AWAIT-001` through `AWAIT-004` deliver the approved terminal-await runtime contract, and `AWAIT-006` delivers the source-distributed [long-running await guidance](long-running-await-guidance.md). The separately owned `AWAIT-007` downstream follow-up and the independent `AWAIT-005` standards migration remain deferred.
+`AWAIT-001` through `AWAIT-004` deliver the approved terminal-await runtime contract, and `AWAIT-006` delivers the source-distributed [long-running await guidance](../long-running-await-guidance.md). The separately owned `AWAIT-007` downstream follow-up and the independent `AWAIT-005` standards migration remain deferred.
 
 | Task ID | Status | Goal | Verification | Reference |
 |---|---|---|---|---|
@@ -210,13 +212,15 @@ Completed release-readiness findings are retained here; remaining accepted findi
 | AWAIT-004 | Done | Complete traceability and run the full development gate before promoting AWAIT documentation and roadmap status. | Map `GAORI-REQ-RQMCP-008` only to existing named tests, pass `make test` and `git diff --check`, then update current-status headers and roadmap state from observed evidence. | `GAORI-REQ-RQMCP-008`, `GAORI-REQ-RQDOC-001`, `ADR-0018` |
 | AWAIT-005 | Deferred | Adopt stable standard MCP Tasks as the preferred lifecycle while retaining the Gaori-specific start/get/wait/await/cancel tools for one release; leave their removal to a separate decision. | Activate only after Tasks leaves experimental status, a stable Go SDK supports its complete server lifecycle, and documented Codex E2E proves deferred result delivery without repeated model-driven polling; then pass lifecycle parity, compatibility, cancellation, evidence-safety, documentation, and full repository gates. | `GAORI-REQ-RQMCP-006`, `ADR-0012`, `ADR-0018` |
 | AWAIT-006 | Done | Strengthen `use-gaori` to prefer one terminal await and one host-native pending or deferred handle for long-running MCP commands, without liveness-only polling or repeated starts. | Add focused skill-contract assertions for start-once identity, same-handle waits of up to five minutes, terminal-await preference, observer retry, and the unchanged 50-second `wait_run` boundary; pass the focused documentation test and `git diff --check`. | `GAORI-REQ-RQDOC-005`, `GAORI-REQ-RQMCP-008`, `ADR-0018` |
-| AWAIT-007 | Deferred | Align Aquarium's Gaori orchestration guidance with the verified `AWAIT-006` policy under Aquarium ownership. | Activate only after the exact `AWAIT-006` commit appears in a verified stable `v0.1.x` tag and Aquarium separately authorizes the change; synchronize its minimum version if required and pass its focused inspector and validation gates. | [Long-running await guidance](long-running-await-guidance.md#await-007-deferred-aquarium-adoption) |
+| AWAIT-007 | Deferred | Align Aquarium's Gaori orchestration guidance with the verified `AWAIT-006` policy under Aquarium ownership. | Activate only after the exact `AWAIT-006` commit appears in a verified stable `v0.1.x` tag and Aquarium separately authorizes the change; synchronize its minimum version if required and pass its focused inspector and validation gates. | [Long-running await guidance](../long-running-await-guidance.md#await-007-deferred-aquarium-adoption) |
 
 ## RSTAT: Run status and timing insights
 
-Epic status: Planned
+Status: Planned
 
-This epic implements the Gaori-owned portion of the planned [run-status and timing insights contract](run-status-insights.md). The SOT owns the exact sample, formula, CLI, MCP, failure-diagnostic, and skill boundaries. Nothing in this roadmap section makes those surfaces current binary behavior.
+Detailed SOT: [RSTAT dossier](../todo/TODO-RSTAT.md)
+
+This epic implements the Gaori-owned portion of the planned [run-status and timing insights contract](../todo/TODO-RSTAT.md). The dossier owns the exact sample, formula, CLI, MCP, failure-diagnostic, and skill boundaries. Nothing in this roadmap section makes those surfaces current binary behavior.
 
 | Task ID | Status | Goal | Verification | Reference |
 |---|---|---|---|---|

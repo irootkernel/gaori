@@ -1,7 +1,7 @@
-# Gaori Run Status And Timing Insights
+# RSTAT Run Status and Timing Insights Dossier
 
-- Status: Planned; not current binary behavior
-- Roadmap owner: Gaori team (`RSTAT`)
+- Roadmap epic: `RSTAT`
+- Owner: Gaori team
 - Prepared: 2026-08-26
 - Required Gaori base: `8efb2e072d814e32d4e19bf855388dde725628b4`
 
@@ -16,7 +16,7 @@ evidence into deterministic, read-only statistics and estimates.
 This document is the detailed source of truth for the planned `RSTAT` epic. The
 unchecked `GAORI-REQ-RQINS-*` requirements own its normative outcomes, proposed
 ADR-0020 owns the artifact-derived and executable-owned calculation decision,
-and `docs/roadmap.md` owns task lifecycle. If those authorities conflict, the
+and `docs/roadmap/README.md` owns task lifecycle. If those authorities conflict, the
 repository authority order still applies.
 
 Nothing in this document is implemented by its presence. It does not authorize

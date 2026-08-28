@@ -46,8 +46,8 @@ func TestParserSupportDocumentationContract(t *testing.T) {
 	}
 
 	for _, relative := range []string{
-		"README.md", "docs/README.md", "docs/architecture.md", "docs/integration-guide.md",
-		"docs/user-interface.md", "docs/implementation-note.md", "docs/todo.md",
+		"README.md", "docs/README.md", "docs/architecture/README.md", "docs/integration-guide.md",
+		"docs/user-interface.md", "docs/implementation-tips/README.md", "docs/deferred-feedback/README.md",
 	} {
 		text := readParserSupportDocument(t, root, relative)
 		if !strings.Contains(text, "parser-support.md") {
@@ -65,7 +65,7 @@ func TestParserSupportDocumentationContract(t *testing.T) {
 		t.Error("README does not disclose the Experimental parser labels")
 	}
 
-	requirements := readParserSupportDocument(t, root, "docs/requirements-specs.md")
+	requirements := readParserSupportDocument(t, root, "docs/specs/README.md")
 	if !strings.Contains(requirements, "GAORI-REQ-RQEXT-009") {
 		t.Error("requirements do not define parser support tiers")
 	}

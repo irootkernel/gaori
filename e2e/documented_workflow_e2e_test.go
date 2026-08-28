@@ -36,7 +36,7 @@ func TestArchitectureJSONContractExamplesMatchFreshRunArtifacts(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	architecture := readDocumentation(t, filepath.Join(root, "docs", "architecture.md"))
+	architecture := readDocumentation(t, filepath.Join(root, "docs", "architecture", "README.md"))
 	assertDocumentedJSONFields(t, "summary", markdownCodeBlockAfter(t, architecture, "## Summary JSON contract", "yaml"), summaryData)
 	assertDocumentedJSONFields(t, "status", markdownCodeBlockAfter(t, architecture, "## Status JSON contract", "yaml"), statusData)
 }
@@ -58,7 +58,8 @@ func TestDocumentedCLIWorkflowAgainstFreshFixture(t *testing.T) {
 		t.Fatalf("unexpected human version output %q", versionLines[0])
 	}
 	humanVersion := strings.TrimPrefix(versionLines[0], versionPrefix)
-	if !regexp.MustCompile(`^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z]+([.-][0-9A-Za-z]+)*)?(\+[0-9A-Za-z]+([.-][0-9A-Za-z]+)*)?$`).MatchString(humanVersion) {
+	const semanticVersionPattern = `[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z]+([.-][0-9A-Za-z]+)*)?(\+[0-9A-Za-z]+([.-][0-9A-Za-z]+)*)?`
+	if !regexp.MustCompile(`^` + semanticVersionPattern + `$`).MatchString(humanVersion) {
 		t.Fatalf("human version is not semantic: %q", humanVersion)
 	}
 	var jsonVersion struct {
@@ -171,7 +172,7 @@ func TestDocumentedCLIWorkflowAgainstFreshFixture(t *testing.T) {
 		}
 	}
 
-	implementationNote := readDocumentation(t, filepath.Join(root, "docs", "implementation-note.md"))
+	implementationNote := readDocumentation(t, filepath.Join(root, "docs", "implementation-tips", "README.md"))
 	vitestRulePath := filepath.Join(repo, "vitest-empty-state-v1.yaml")
 	if err := os.WriteFile(vitestRulePath, []byte(markdownCodeBlockAfter(t, implementationNote, "Fixture-backed example using the Vitest log", "yaml")), 0o644); err != nil {
 		t.Fatal(err)
@@ -183,17 +184,28 @@ func TestDocumentedCLIWorkflowAgainstFreshFixture(t *testing.T) {
 	readme := readDocumentation(t, filepath.Join(root, "README.md"))
 	integrationGuide := readDocumentation(t, filepath.Join(root, "docs", "integration-guide.md"))
 	documentationIndex := readDocumentation(t, filepath.Join(root, "docs", "README.md"))
-	for _, want := range []string{"@v" + humanVersion, "VERSION=" + humanVersion, "/v" + humanVersion + "/bin/"} {
+	releaseMatches := regexp.MustCompile(`go install github\.com/irootkernel/gaori@v(`+semanticVersionPattern+`)`).FindAllStringSubmatch(readme, -1)
+	if len(releaseMatches) != 1 || len(releaseMatches[0]) < 2 {
+		t.Fatalf("README does not declare one semantic current-release install command")
+	}
+	releaseVersion := releaseMatches[0][1]
+	for _, want := range []string{"@v" + releaseVersion, "VERSION=" + releaseVersion, "/v" + releaseVersion + "/bin/"} {
 		if !strings.Contains(readme, want) {
-			t.Fatalf("README does not match binary version %s: missing %q", humanVersion, want)
+			t.Fatalf("README current-release references disagree with %s: missing %q", releaseVersion, want)
 		}
 	}
 	for name, document := range map[string]string{
 		"integration guide":   integrationGuide,
 		"documentation index": documentationIndex,
 	} {
-		if !strings.Contains(document, "v"+humanVersion) {
-			t.Fatalf("%s does not match binary version %s", name, humanVersion)
+		if !strings.Contains(document, "v"+releaseVersion) {
+			t.Fatalf("%s does not match current release %s", name, releaseVersion)
+		}
+	}
+	if releaseVersion != humanVersion {
+		changelog := readDocumentation(t, filepath.Join(root, "CHANGELOG.md"))
+		if !strings.Contains(changelog, "## v"+humanVersion+" - Unreleased") {
+			t.Fatalf("source version %s is ahead of current release %s without an Unreleased changelog section", humanVersion, releaseVersion)
 		}
 	}
 	readmeRepo := t.TempDir()

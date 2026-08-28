@@ -3,13 +3,13 @@
 Status: Current source-tree guidance through `AWAIT-006` plus planned `RSTAT` guidance
 Scope: Maintainer guidance for standalone execution, evidence artifacts, parser/rule behavior, operator-directed cleanup, session-local STDIO MCP execution, long-running host waits, and planned run-status insights
 
-This document explains implementation constraints and verification expectations for contributors. It is not the parent-project adoption contract; integrators should start with the [integration guide](integration-guide.md).
+This document explains implementation constraints and verification expectations for contributors. It is not the parent-project adoption contract; integrators should start with the [integration guide](../integration-guide.md).
 
 ## Implementation posture
 
 Keep Gaori a small deterministic Go CLI with one attached, session-local STDIO MCP adapter. The MCP registry may coordinate live execution only inside one server process; do not move session state into durable core artifacts or add workflow, orchestration, recovery, or acceptance authority. Treat the optional run-scoped artifact layout as output path compatibility only.
 
-The post-baseline HARDE sequence is complete. Preserve the contracts in `roadmap.md#harde-post-baseline-hardening-and-contract-closure` and `requirements-specs.md#rqhar-post-baseline-hardening-and-contract-closure`, and rerun affected roadmap verification for future changes.
+The post-baseline HARDE sequence is complete. Preserve the contracts in `../roadmap/README.md#harde-post-baseline-hardening-and-contract-closure` and `../specs/README.md#rqhar-post-baseline-hardening-and-contract-closure`, and rerun affected roadmap verification for future changes.
 
 ## AWAIT terminal waiting
 
@@ -19,12 +19,12 @@ Do not pass the handler context into command execution and do not call the invoc
 
 README, `docs/user-interface.md`, `docs/integration-guide.md`, the architecture description, and `skills/use-gaori/**` must stay synchronized with the executable source interface. The completed requirement-to-test mapping cites the named focused and built-binary hardening tests; preserve that traceability when the contract changes.
 
-`AWAIT-006` is an implemented client-guidance change, not a runtime extension. Its [long-running await guidance](long-running-await-guidance.md) owns the current start-once, same-invocation, terminal-await, and same-deferred-handle policy in the source-distributed skill. Keep future changes confined to that skill and focused documentation contract test unless implementation proves a current contract mismatch. Do not represent the downstream-owned `AWAIT-007` Aquarium follow-up as current behavior or authority.
+`AWAIT-006` is an implemented client-guidance change, not a runtime extension. Its [long-running await guidance](../long-running-await-guidance.md) owns the current start-once, same-invocation, terminal-await, and same-deferred-handle policy in the source-distributed skill. Keep future changes confined to that skill and focused documentation contract test unless implementation proves a current contract mismatch. Do not represent the downstream-owned `AWAIT-007` Aquarium follow-up as current behavior or authority.
 
 ## Planned RSTAT insights
 
 `RSTAT` is planned work, not current binary behavior. Its detailed authority is
-`docs/run-status-insights.md`; do not duplicate or reinterpret its sample,
+`docs/todo/TODO-RSTAT.md`; do not duplicate or reinterpret its sample,
 rounding, percentile, trend, residual-time, failure-recurrence, CLI, MCP, or skill
 formulas elsewhere.
 
@@ -124,7 +124,7 @@ The skills hardcode their applicable CLI and MCP surfaces, so treat each present
 
 ## Extraction guidance
 
-The [parser support matrix](parser-support.md) records every available label, its support tier, verification evidence, and known limitations. Every label is declared once in the `internal/extract` parser registry; config and rule validation resolve labels through `extract.IsKnown` rather than keeping their own allow-lists. Adding a parser means adding one registry entry plus its extractor and fixture, then assigning its documented support tier independently.
+The [parser support matrix](../parser-support.md) records every available label, its support tier, verification evidence, and known limitations. Every label is declared once in the `internal/extract` parser registry; config and rule validation resolve labels through `extract.IsKnown` rather than keeping their own allow-lists. Adding a parser means adding one registry entry plus its extractor and fixture, then assigning its documented support tier independently.
 
 ### GEPIC guidance
 
@@ -159,7 +159,7 @@ Extractor status guidance:
 - `degraded`: a failed, timed-out, or killed command has no accepted failure span, extraction failed internally, extraction inspected only a bounded tail of an oversized raw log, or surfaced failure/warning records were truncated.
 - `no_match`: a passing command has no accepted failure span and extraction completed without an internal error; warnings may still be present.
 
-Extraction internal errors follow the artifact/CLI matrix in `architecture.md`. When artifact writes remain safe, Gaori preserves raw evidence and materializes empty degraded evidence; bounded, redacted diagnostics go to stderr rather than the JSON schemas.
+Extraction internal errors follow the artifact/CLI matrix in `../architecture/README.md`. When artifact writes remain safe, Gaori preserves raw evidence and materializes empty degraded evidence; bounded, redacted diagnostics go to stderr rather than the JSON schemas.
 
 For execution and summarize logs larger than 256 KiB, extraction uses the final 256 KiB beginning at the first complete line. It preserves absolute line and byte offsets into the full raw log and always reports `degraded`, including when the retained tail contains a precise match. An oversized unbroken line has no complete tail line to inspect. Rule-only `rules test` extraction remains fail closed above 256 KiB so overmatch validation is never based on a partial fixture.
 
@@ -185,7 +185,7 @@ Current fixture logs live under `internal/extract/testdata/`:
 - `dotnet-test.raw.log`
 - `gradle-test.raw.log`
 
-These fixtures back automated extraction tests. The [parser support matrix](parser-support.md), not fixture presence alone, is the source of truth for parser maturity and real-runner limitations.
+These fixtures back automated extraction tests. The [parser support matrix](../parser-support.md), not fixture presence alone, is the source of truth for parser maturity and real-runner limitations.
 
 Parser verification is split by repository test layer:
 

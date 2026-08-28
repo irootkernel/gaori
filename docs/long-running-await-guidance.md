@@ -2,7 +2,7 @@
 
 Status: Implemented under `AWAIT-006`; Aquarium adoption deferred under `AWAIT-007`
 
-Roadmap: [AWAIT: Token-efficient terminal waiting](roadmap.md#await-token-efficient-terminal-waiting)
+Roadmap: [AWAIT: Token-efficient terminal waiting](roadmap/README.md#await-token-efficient-terminal-waiting)
 
 ## Authority
 
@@ -76,7 +76,7 @@ no liveness polling, and no repeated start after observer timeout or
 cancellation.
 
 The focused test keeps the `docs/user-interface.md` AWAIT-004 runtime-interface
-completion check separate from the `docs/implementation-note.md` AWAIT-006
+completion check separate from the `docs/implementation-tips/README.md` AWAIT-006
 guidance-completion check.
 
 Run and report:

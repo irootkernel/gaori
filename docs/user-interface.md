@@ -138,7 +138,7 @@ Versioned selection uses local metadata such as:
 ```yaml
 schema_version: "gaori.toolchain.v1"
 gaori:
-  cli_version: "0.1.14"
+  cli_version: "0.1.15"
 ```
 
 An absolute override may be recorded with an optional version assertion:
@@ -146,7 +146,7 @@ An absolute override may be recorded with an optional version assertion:
 ```yaml
 schema_version: "gaori.toolchain.v1"
 gaori:
-  cli_version: "0.1.14"
+  cli_version: "0.1.15"
   binary_path: "/absolute/path/to/gaori"
 ```
 

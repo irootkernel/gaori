@@ -407,23 +407,23 @@ func TestMCPDocumentationAndSkillContract(t *testing.T) {
 	t.Parallel()
 	root := projectRoot(t)
 	paths := []string{
-		"README.md", "docs/user-interface.md", "docs/architecture.md", "docs/integration-guide.md",
+		"README.md", "docs/user-interface.md", "docs/architecture/README.md", "docs/integration-guide.md",
 		"skills/use-gaori/SKILL.md", "skills/use-gaori/references/lifecycle.md", "skills/use-gaori/references/recovery.md",
 	}
 	completionStatus := map[string]string{
-		"docs/architecture.md":   "Status: Complete through `AWAIT-004`",
-		"docs/user-interface.md": "complete through `AWAIT-004`",
+		"docs/architecture/README.md": "Status: Complete through `AWAIT-004`",
+		"docs/user-interface.md":      "complete through `AWAIT-004`",
 	}
 	drainContractPaths := map[string]bool{
 		"README.md":                                true,
-		"docs/architecture.md":                     true,
+		"docs/architecture/README.md":              true,
 		"docs/integration-guide.md":                true,
 		"docs/user-interface.md":                   true,
 		"skills/use-gaori/references/lifecycle.md": true,
 		"skills/use-gaori/references/recovery.md":  true,
 	}
 	acceptedContractPaths := []string{
-		"README.md", "docs/requirements-specs.md", "docs/architecture.md", "docs/integration-guide.md", "docs/user-interface.md",
+		"README.md", "docs/specs/README.md", "docs/architecture/README.md", "docs/integration-guide.md", "docs/user-interface.md",
 		"skills/use-gaori/references/lifecycle.md", "skills/use-gaori/references/recovery.md",
 	}
 	for _, relative := range paths {

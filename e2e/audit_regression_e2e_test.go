@@ -126,7 +126,7 @@ func TestBinaryEnforcesRuleAndConfigInputSizeLimits(t *testing.T) {
 func TestRequirementTraceabilityMatrixCoversCompletedRequirements(t *testing.T) {
 	t.Parallel()
 	root := projectRoot(t)
-	specData, err := os.ReadFile(filepath.Join(root, "docs", "requirements-specs.md"))
+	specData, err := os.ReadFile(filepath.Join(root, "docs", "specs", "README.md"))
 	if err != nil {
 		t.Fatal(err)
 	}
