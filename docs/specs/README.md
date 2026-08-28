@@ -1,7 +1,7 @@
 # Gaori Requirement Specs
 
 Status: Current source-tree requirements through `RSTAT`
-Scope: Gaori v0.1 standalone baseline, post-baseline hardening, portable project configuration, CLI usability, verified rule proposals, operator-directed cleanup, session-local STDIO MCP execution with terminal awaiting, long-running await guidance, the completed parser catalog plus Dart/Patrol extraction contract, and planned run-status and timing insights
+Scope: Gaori v0.1 standalone baseline, post-baseline hardening, portable project configuration, CLI usability, verified rule proposals, operator-directed cleanup, session-local STDIO MCP execution with terminal awaiting, long-running await guidance, the completed parser catalog plus Dart/Patrol extraction contract, and implemented run-status and timing insights
 Source context: deterministic Gaori v0.1 CLI, evidence, and attached MCP behavior.
 
 ## Requirement status legend

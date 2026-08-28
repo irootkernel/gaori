@@ -8,6 +8,7 @@ This file records concise shipped outcomes and the planned next stable release. 
 
 - A code-owned JSON parser catalog through `gaori --json parsers catalog`, using schema `gaori-parser-catalog.v1` and deterministic metadata for every registered parser label.
 - Experimental `dart-test` and `patrol` parsers. Dart keeps consecutive failures in separate bounded spans. Patrol prefers per-test assertion failures and, when none exist, retains only the last terminal infrastructure diagnostic.
+- Read-only historical run statistics and caller-elapsed estimates through CLI and MCP, with exact Git revision selectors, bounded recurring-failure evidence, and the independently installable calculation-free `use-gaori-status` skill.
 
 ### Changed
 
