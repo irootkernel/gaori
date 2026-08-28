@@ -1,7 +1,7 @@
 # Gaori Roadmap
 
-Status: Completed through `RSTAT-004`; `RSTAT` closeout in progress; `AQADP`, `AWAIT-005`, and `AWAIT-007` deferred
-Scope: Implementation tracking for the Gaori v0.1 standalone baseline, hardening, tag and parser selection, release readiness, identity migration, operator-directed standalone evidence cleanup, portable project config, CLI usability improvements, session-local MCP execution, token-efficient terminal waiting and host-wait guidance, the parser catalog plus Dart/Patrol extraction epic, planned run-status and timing insights, and deferred Aquarium qualification and downstream adoption tracking
+Status: Completed through `RSTAT`; `AQADP`, `AWAIT-005`, and `AWAIT-007` deferred
+Scope: Implementation tracking for the Gaori v0.1 standalone baseline, hardening, tag and parser selection, release readiness, identity migration, operator-directed standalone evidence cleanup, portable project config, CLI usability improvements, session-local MCP execution, token-efficient terminal waiting and host-wait guidance, the parser catalog plus Dart/Patrol extraction epic, run-status and timing insights, and deferred Aquarium qualification and downstream adoption tracking
 
 This roadmap is a delivery record, not an operator guide or a promise that out-of-scope capabilities will be added. See the [integration guide](../integration-guide.md) for the current supported/unsupported capability boundary and the [todo index](../todo/README.md) for future candidates and active epic dossiers.
 
@@ -10,8 +10,8 @@ Task status values: `Planned`, `In Progress`, `Blocked`, `Done`, `Deferred`.
 Existing `Done` entries record completion of the original v0.1 implementation slices. They do not supersede or satisfy the later `HARDE` tasks, which close correctness, safety, verification, and documentation gaps found during repository review.
 
 Current implementation snapshot:
-- `Done`: `SETUP-001` to `SETUP-003`, `RUNNR-001` to `RUNNR-003`, `ARTIF-001` to `ARTIF-003`, `PARSE-001` to `PARSE-011`, `SAFEY-001` to `SAFEY-004`, `CLIUX-001` to `CLIUX-008`, `RULES-001` to `RULES-005`, `DOCUM-001` to `DOCUM-003`, `HARDE-001` to `HARDE-007`, `TAGS-001`, `ADHOC-001`, `ADHOC-002`, `RELRV-001` to `RELRV-009`, `BRAND-001`, `CLEAN-001`, `PORTA-001`, `MCP-001` to `MCP-006`, `AWAIT-001` to `AWAIT-004`, `AWAIT-006`
-- `In Progress`: `RSTAT` closeout
+- `Done`: `SETUP-001` to `SETUP-003`, `RUNNR-001` to `RUNNR-003`, `ARTIF-001` to `ARTIF-003`, `PARSE-001` to `PARSE-011`, `SAFEY-001` to `SAFEY-004`, `CLIUX-001` to `CLIUX-008`, `RULES-001` to `RULES-005`, `DOCUM-001` to `DOCUM-003`, `HARDE-001` to `HARDE-007`, `TAGS-001`, `ADHOC-001`, `ADHOC-002`, `RELRV-001` to `RELRV-009`, `BRAND-001`, `CLEAN-001`, `PORTA-001`, `MCP-001` to `MCP-006`, `AWAIT-001` to `AWAIT-004`, `AWAIT-006`, `RSTAT-001` to `RSTAT-004`
+- `In Progress`: none
 - `Deferred`: `AQADP` (`QUALI-001`, `QUALI-002`, `CONSUMER-SUDAL-001`), `AWAIT-005`, `AWAIT-007`
 - `Planned`: none
 
@@ -216,14 +216,15 @@ Completed release-readiness findings are retained here; remaining small actionab
 
 ## RSTAT: Run status and timing insights
 
-Status: In Progress
+Status: Done
 
-Detailed SOT: [RSTAT dossier](../todo/TODO-RSTAT.md)
+Canonical Outcomes: [RQINS specifications](../specs/README.md#rqins-run-status-and-timing-insights), [ADR-0020](../architecture-decision-records/README.md#adr-0020-artifact-derived-executable-calculations-power-run-status-insights), [architecture](../architecture/README.md#data-flow-derive-historical-command-insights), [user interface](../user-interface.md#historical-statistics-and-estimates), [integration contract](../integration-guide.md#supported-capability-matrix), [`use-gaori-status`](../../skills/use-gaori-status/SKILL.md)
 
-All four implementation tasks are complete. The temporary dossier remains only
-until cold validation and closeout promote its durable outcomes and remove the
-active-epic link; current product behavior is owned by specifications, accepted
-ADR-0020, executable tests, architecture, and interface documentation.
+The completed epic derives deterministic read-only statistics and estimates
+from validated retained evidence, exposes them through CLI and session-local
+MCP surfaces, and provides a calculation-free status skill. Specifications,
+accepted ADR-0020, executable tests, architecture, interface documentation, and
+the source skill own the durable contract.
 
 | Task ID | Status | Goal | Verification | Reference |
 |---|---|---|---|---|
