@@ -96,7 +96,7 @@ Gaori does not create this ignore policy, distribute config, or stage files. The
 For ordinary local use, install and verify the pinned release:
 
 ```bash
-go install github.com/irootkernel/gaori@v0.1.14
+go install github.com/irootkernel/gaori@v0.1.15
 gaori --version
 ```
 
@@ -111,7 +111,7 @@ Example portable version selection:
 ```yaml
 schema_version: "gaori.toolchain.v1"
 gaori:
-  cli_version: "0.1.14"
+  cli_version: "0.1.15"
 ```
 
 Validate selection before invoking Gaori:

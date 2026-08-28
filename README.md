@@ -36,7 +36,7 @@ Gaori is not a test gate or verification authority. The parent project decides w
 Install the current release with Go. Command surfaces added since that release are documented here as they land, and the release notes under [docs/releases/](docs/releases/) record what each published version actually contains, so build from source when you need a surface the pinned release does not have yet:
 
 ```bash
-go install github.com/irootkernel/gaori@v0.1.14
+go install github.com/irootkernel/gaori@v0.1.15
 gaori --version
 ```
 
@@ -48,10 +48,10 @@ From a source checkout, use:
 make install
 ```
 
-Projects that pin a local Gaori toolchain can install the versioned binary at `~/.local/gaori/toolchains/v0.1.14/bin/`:
+Projects that pin a local Gaori toolchain can install the versioned binary at `~/.local/gaori/toolchains/v0.1.15/bin/`:
 
 ```bash
-VERSION=0.1.14 make install-toolchain
+VERSION=0.1.15 make install-toolchain
 ```
 
 ## Optional: configure an AI coding agent
@@ -81,7 +81,7 @@ only the skill directory into that agent-specific location:
 (
   set -eu
   gaori_skill_parent="${HOME}/.agents/skills"
-  gaori_skill_ref=v0.1.14
+  gaori_skill_ref=v0.1.15
   mkdir -p "$gaori_skill_parent"
   gaori_skill_target="$gaori_skill_parent/use-gaori"
   test ! -e "$gaori_skill_target" && test ! -L "$gaori_skill_target"
@@ -98,14 +98,13 @@ only the skill directory into that agent-specific location:
 )
 ```
 
-The skill is source-distributed in the v0.1.14 GitHub source archive. `go install`, `make install`, and `make install-toolchain` install only the Gaori binary and do not copy or activate the skill.
+The skills are source-distributed in the v0.1.15 GitHub source archive. `go install`, `make install`, and `make install-toolchain` install only the Gaori binary and do not copy or activate the skills.
 
-The current source tree also provides the separate, automatically discoverable
+The same source release also provides the separate, automatically discoverable
 [`use-gaori-status` skill](skills/use-gaori-status/SKILL.md) for read-only timing,
 outcome-history, trend, recurrence, and already-identified live-estimate
-questions. It performs no calculations or lifecycle operations. Because this
-skill is newer than v0.1.14, install it from a verified local source checkout
-until a later exact release tag contains it:
+questions. It performs no calculations or lifecycle operations. From a verified v0.1.15
+source checkout, install it with:
 
 ```bash
 (
@@ -128,7 +127,7 @@ Neither skill is installed or activated by Gaori itself.
 
 ## Use the local MCP server
 
-Gaori v0.1.14 includes the STDIO MCP server and terminal-only `await_run` for local coding agents. Register the selected v0.1.14 binary from the repository that should own test artifacts:
+Gaori v0.1.15 includes the STDIO MCP server, terminal-only `await_run`, and read-only historical statistics and live estimates for local coding agents. Register the selected v0.1.15 binary from the repository that should own test artifacts:
 
 ```bash
 make build
