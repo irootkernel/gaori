@@ -143,8 +143,8 @@ func TestLoadCommandStatsSeparatesOutcomesAndBoundsRecurringFailures(t *testing.
 	if stats.Outcomes["failed"].Count != 3 || stats.Outcomes["timed_out"].Count != 1 || stats.Outcomes["passed"].Count != 1 {
 		t.Fatalf("outcomes = %+v", stats.Outcomes)
 	}
-	if stats.UnclassifiedFailedRuns != 1 || stats.DegradedFailureEvidenceRuns != 1 {
-		t.Fatalf("failure counts = unclassified %d degraded %d", stats.UnclassifiedFailedRuns, stats.DegradedFailureEvidenceRuns)
+	if stats.ClassifiedFailedRuns != 2 || stats.UnclassifiedFailedRuns != 1 || stats.DegradedFailureEvidenceRuns != 1 {
+		t.Fatalf("failure counts = classified %d unclassified %d degraded %d", stats.ClassifiedFailedRuns, stats.UnclassifiedFailedRuns, stats.DegradedFailureEvidenceRuns)
 	}
 	if len(stats.RecurringFailures) != 3 || stats.RecurringFailures[0].Signature != "alpha" || stats.RecurringFailures[0].RunCount != 2 || stats.RecurringFailures[0].LatestFailureID != "F001" {
 		t.Fatalf("recurrence = %+v", stats.RecurringFailures)

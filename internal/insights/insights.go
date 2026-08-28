@@ -97,6 +97,7 @@ type CommandStats struct {
 	Outcomes                    map[string]Outcome `json:"outcomes"`
 	RecentChange                RecentChange       `json:"recent_change"`
 	RecurringFailures           []RecurringFailure `json:"recurring_failures"`
+	ClassifiedFailedRuns        int                `json:"classified_failed_runs"`
 	UnclassifiedFailedRuns      int                `json:"unclassified_failed_runs"`
 	DegradedFailureEvidenceRuns int                `json:"degraded_failure_evidence_runs"`
 	samples                     []sample
@@ -312,6 +313,7 @@ func calculateStats(commandID string, selector Selector, limit, skipped int, sam
 	}
 	stats.RecentChange = recentChange(passed)
 	stats.RecurringFailures, stats.UnclassifiedFailedRuns, stats.DegradedFailureEvidenceRuns = recurringFailures(samples)
+	stats.ClassifiedFailedRuns = stats.Outcomes[string(model.RunStatusFailed)].Count - stats.UnclassifiedFailedRuns
 	return stats
 }
 

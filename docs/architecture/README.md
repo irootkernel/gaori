@@ -183,6 +183,23 @@ Cleanup does not load project config and does not infer retention. It cannot tar
 
 Listing shares the cleanup selector so both commands agree on what "completed standalone evidence" means. It reports the already redacted status fields and literal artifact references without opening summaries, excerpts, or raw logs, and it writes nothing. It is an evidence index, not a gate, a retention decision, or an acceptance record.
 
+## Data flow: derive historical command insights
+
+```text
+1. User selects a configured command through `gaori runs stats` or supplies caller-observed elapsed time through `gaori runs estimate`.
+2. CLI validates the config, exact optional Git selector, dependent dirty policy, sample limit, and elapsed bound without resolving or executing the command.
+3. The shared insights engine reuses standalone listing recognition and newest-first ordering, then validates each matching regular status and adjacent summary artifact through the repository containment boundary.
+4. Status hash, summary locator and checksum, surfaced metadata, terminal state, timestamps, duration, and retained signature hashes must agree before a sample is eligible; raw logs are never opened.
+5. Revision and dirty policy filter eligible samples before the newest 1 through 50 are selected.
+6. One integer-millisecond calculation engine produces the human and versioned JSON statistics or estimate result without writing state.
+```
+
+The engine keeps terminal outcomes separate and uses successful durations only
+for trends and estimates. Empty, undersized, or exhausted samples carry explicit
+availability states. It is a read-only view over retained artifacts rather than
+a statistics database, process observer, prediction service, test gate, or
+workflow authority; explicit cleanup naturally removes samples from later views.
+
 ## Data flow: detect parser candidates
 
 ```text

@@ -13,6 +13,7 @@ import (
 	"testing"
 
 	"github.com/irootkernel/gaori/internal/artifacts"
+	"github.com/irootkernel/gaori/internal/insights"
 	"github.com/irootkernel/gaori/internal/model"
 	"github.com/irootkernel/gaori/internal/safety"
 )
@@ -1134,6 +1135,81 @@ func requireExitCode(t *testing.T, err error, expected int, output []byte) {
 	}
 	if exitErr.ExitCode() != expected {
 		t.Fatalf("expected exit code %d, got %d output=%s", expected, exitErr.ExitCode(), output)
+	}
+}
+
+func TestBinaryRunInsightsAreArtifactBackedAndReadOnly(t *testing.T) {
+	t.Parallel()
+	root := projectRoot(t)
+	bin := buildBinary(t, root)
+	repo := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(repo, ".gaori"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	configText := "version: 2\ncommands:\n  unit:\n    command: [\"sh\", \"-c\", \"true\"]\n    tags: [unit]\n    parser: generic\n    timeout_sec: 10\n"
+	for path, content := range map[string]string{
+		filepath.Join(repo, ".gaori", "tester.yaml"): configText,
+		filepath.Join(repo, ".gitignore"):            ".gaori/*\n!.gaori/tester.yaml\n",
+	} {
+		if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	for _, args := range [][]string{
+		{"init"},
+		{"config", "user.email", "gaori@example.test"},
+		{"config", "user.name", "Gaori Test"},
+		{"add", ".gitignore", ".gaori/tester.yaml"},
+		{"commit", "-m", "initial"},
+	} {
+		cmd := exec.Command("git", append([]string{"-C", repo}, args...)...)
+		if output, err := cmd.CombinedOutput(); err != nil {
+			t.Fatalf("git %v: %v: %s", args, err, output)
+		}
+	}
+	revisionOutput, err := exec.Command("git", "-C", repo, "rev-parse", "HEAD").Output()
+	if err != nil {
+		t.Fatal(err)
+	}
+	revision := strings.TrimSpace(string(revisionOutput))
+	for i := 0; i < 5; i++ {
+		output, err := exec.Command(bin, "--repo", repo, "run", "unit").CombinedOutput()
+		if err != nil {
+			t.Fatalf("run %d: %v: %s", i, err, output)
+		}
+	}
+	runsDir := filepath.Join(repo, ".gaori", "runs", "standalone")
+	before, err := os.ReadDir(runsDir)
+	if err != nil || len(before) != 5 {
+		t.Fatalf("history before insights: entries=%d err=%v", len(before), err)
+	}
+
+	statsOutput, err := exec.Command(bin, "--repo", repo, "--json", "runs", "stats", "unit", "--git-revision", revision).CombinedOutput()
+	if err != nil {
+		t.Fatalf("stats: %v: %s", err, statsOutput)
+	}
+	var stats insights.CommandStats
+	if err := json.Unmarshal(statsOutput, &stats); err != nil {
+		t.Fatal(err)
+	}
+	if stats.Schema != "gaori-command-stats.v1" || stats.Selector.Policy != "clean_only" || stats.ObservedTerminalCount != 5 || stats.Outcomes["passed"].Count != 5 {
+		t.Fatalf("built stats = %+v", stats)
+	}
+
+	estimateOutput, err := exec.Command(bin, "--repo", repo, "--json", "runs", "estimate", "unit", "--elapsed-ms", "1", "--git-revision", revision).CombinedOutput()
+	if err != nil {
+		t.Fatalf("estimate: %v: %s", err, estimateOutput)
+	}
+	var estimate insights.Estimate
+	if err := json.Unmarshal(estimateOutput, &estimate); err != nil {
+		t.Fatal(err)
+	}
+	if estimate.Schema != "gaori-command-estimate.v1" || estimate.Availability != insights.Available || estimate.SuccessfulSampleCount != 5 {
+		t.Fatalf("built estimate = %+v", estimate)
+	}
+	after, err := os.ReadDir(runsDir)
+	if err != nil || len(after) != len(before) {
+		t.Fatalf("insights changed standalone evidence: before=%d after=%d err=%v", len(before), len(after), err)
 	}
 }
 

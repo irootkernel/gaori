@@ -25,6 +25,7 @@ Use it when you want to:
 - let a coding agent inspect bounded summaries and excerpts before opening sensitive raw output;
 - give another tool stable JSON status and evidence paths;
 - summarize a log that was produced outside Gaori;
+- inspect artifact-backed command timing, outcomes, and recurring failures without rerunning a command;
 - remove completed standalone evidence after an operator-selected retention period.
 - let a local coding agent start, wait for, inspect, and explicitly cancel a long-running test through MCP without polling an operating-system process.
 
@@ -291,6 +292,24 @@ gaori --json runs list --tag go --status failed
 ```
 
 The listing reads only the redacted `status.json` of each completed run, never a raw log, and creates no artifacts. `--status` accepts `passed`, `failed`, `timed_out`, `killed`, or `internal_error`; `--tag` may repeat and requires every named tag to be present on the run. Runs whose directory name is not a Gaori timestamp, and runs with no status artifact yet, are reported only in the skipped count.
+
+Derive statistics for one configured command, or compare caller-observed elapsed
+time with its successful history:
+
+```bash
+gaori runs stats unit
+gaori --json runs stats unit --git-revision "$(git rev-parse HEAD)"
+gaori runs estimate unit --elapsed-ms 45000 --limit 30
+```
+
+Both commands default to the newest 20 matching completed standalone runs and
+accept limits from 1 through 50. A revision query requires the full lowercase
+object ID and selects clean runs by default; add `--include-dirty` to include
+both clean and dirty runs recorded at that revision. The commands validate the
+status and summary evidence, never open raw logs, never execute the configured
+command, and create nothing. JSON uses `gaori-command-stats.v1` and
+`gaori-command-estimate.v1`; insufficient or absent history is reported as an
+availability state rather than an invented estimate.
 
 Summarize an existing raw log without rerunning its command:
 

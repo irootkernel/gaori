@@ -1,6 +1,6 @@
 # Gaori User Interface
 
-Status: Current source-tree interface; complete through `AWAIT-004`
+Status: Current source-tree interface; complete through `RSTAT-002`
 Scope: CLI and local STDIO MCP interfaces for Gaori v0.1
 
 This is the complete command reference. First-time users should begin with the repository [README](../README.md); parent-project owners should use the [integration guide](integration-guide.md) for ownership boundaries and adoption steps.
@@ -28,6 +28,8 @@ gaori summarize [--parser <parser>] [--tag <tag> ...] <raw-log>
 gaori excerpt --summary <summary-path> <failure-id>
 gaori clean (--older-than <Nd> | --all) [--dry-run]
 gaori runs list [--tag <tag> ...] [--status <status>] [--limit <count>]
+gaori runs stats <command-id> [--git-revision <full-object-id>] [--include-dirty] [--limit <1..50>]
+gaori runs estimate <command-id> --elapsed-ms <1..86400000> [--git-revision <full-object-id>] [--include-dirty] [--limit <1..50>]
 gaori config check [--sample <raw-log>]
 gaori parsers list
 gaori parsers detect <raw-log>
@@ -353,6 +355,15 @@ Tags are rule selectors, not command selectors or automatic rule generators. The
 - Runs are reported newest first by run directory. `--limit <count>` truncates after selection and rejects a negative value. `--status` accepts exactly `passed`, `failed`, `timed_out`, `killed`, or `internal_error`. `--tag` may repeat and requires every named tag to be present on the run, matching rule tag selection.
 - `--json` emits `runs` and `skipped_runs`. Each run carries `run_dir`, `command_id`, `tags`, `status`, `exit_code`, `extractor_status`, `failure_count`, `updated_at`, `summary_markdown`, `summary_json`, and `status_json`. `failure_count` is the number of retained failure signatures in the status artifact.
 - Listing reports what evidence exists. It does not decide whether a check was required, whether a result is accepted, or whether evidence may be deleted.
+
+## Historical statistics and estimates
+
+- `runs stats` and `runs estimate` require a command ID present in the selected schema-v2 config. They accept only the `--repo`, `--config`, and `--json` global options; `--run-id` and `--output-dir` fail with config exit code `2`.
+- Both commands inspect only validated completed default standalone status and adjacent summary artifacts. They exclude scoped, caller-selected-output, ad-hoc, summarize, incomplete, and unrecognized evidence; never open raw logs; execute no child; resolve no executable; create no artifacts; and perform no cleanup or network request.
+- The default limit is 20 and the accepted range is 1 through 50. Selection is applied before the newest matching runs are limited. `--git-revision` requires a full lowercase 40- or 64-character object ID and selects only stored `git_dirty: false` samples by default. `--include-dirty` is valid only with that revision and then includes both clean and dirty samples for the same object ID. Missing provenance is eligible only for an unscoped query, and no revision match returns `no_matching_samples` without fallback.
+- `runs stats` reports schema `gaori-command-stats.v1`: selector and limit, sample and skipped counts, sample span, terminal-status counts, percentages and optional distributions, recent successful change, classified, unclassified and degraded failed-run counts, and up to three recurring already-redacted failure signatures.
+- `runs estimate` requires positive caller-supplied `--elapsed-ms` from 1 through 86400000. It does not observe a process. Schema `gaori-command-estimate.v1` reports elapsed time, successful sample count, availability, historical completed position, mean/median/p80/p90 total targets, conditional remaining distribution, and the same recent-change record. Fewer than five successful samples returns `insufficient_samples`; exhausted residual history returns `beyond_observed_max`.
+- Human output presents the same executable-calculated facts as JSON. Invalid config, command IDs, selectors, limits, elapsed values, or options exit `2`; malformed, inconsistent, unsafe, symlinked, or checksum-invalid evidence fails closed with artifact exit code `3`.
 
 ## Parser discovery notes
 

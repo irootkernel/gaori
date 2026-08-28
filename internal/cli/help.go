@@ -115,14 +115,29 @@ Remove explicitly selected completed standalone evidence. Use --dry-run first.
 
 Commands:
   list      List completed standalone run evidence
+  stats     Derive statistics for one configured command
+  estimate  Estimate position from caller-observed elapsed time
 
-Use "gaori help runs list" for command details.
+Use "gaori help runs <command>" for command details.
 `,
 	"runs list": `Usage: gaori runs list [--tag <tag> ...] [--status <status>] [--limit <count>]
 
 Report completed evidence under .gaori/runs/standalone/, newest first, without
 reading raw logs or creating artifacts. --status accepts passed, failed,
 timed_out, killed, or internal_error.
+`,
+	"runs stats": `Usage: gaori runs stats <command-id> [--git-revision <full-object-id>] [--include-dirty] [--limit <1..50>]
+
+Derive deterministic statistics from validated completed standalone evidence for
+one configured command. The default limit is 20. A revision selector uses clean
+samples by default; --include-dirty includes clean and dirty samples for that
+same revision. Reads no raw logs, executes nothing, and creates nothing.
+`,
+	"runs estimate": `Usage: gaori runs estimate <command-id> --elapsed-ms <1..86400000> [--git-revision <full-object-id>] [--include-dirty] [--limit <1..50>]
+
+Compare positive caller-observed elapsed time with validated successful history
+for one configured command. The default limit is 20. This command does not
+observe a live process, execute anything, or create artifacts.
 `,
 	"config": `Usage: gaori config check [--sample <raw-log>]
 
