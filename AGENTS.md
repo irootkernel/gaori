@@ -1,6 +1,6 @@
 # AGENTS.md
 
-Repository guidance for AI coding agents working on Gaori.
+Gaori's `AGENTS.md` is the canonical local guidance for AI coding agents working in this repository.
 
 Gaori is a standalone deterministic Go CLI for running test commands, preserving raw logs, extracting bounded failure evidence, and writing compact summary and status artifacts.
 
@@ -36,7 +36,16 @@ Before implementing:
 
 Gaori must not become a planner, reviewer, test gate, acceptance or waiver authority, workflow state ledger, or runtime orchestrator unless an approved requirement and architecture decision explicitly change that contract.
 
-### 3. Make Surgical Changes
+### 3. Prefer Durable Root-Cause Solutions
+
+**Fix the verified cause with the smallest complete design that fits Gaori's authority and architecture.**
+
+- Weigh correctness, performance, maintainability, and structural fit instead of optimizing only for the smallest diff.
+- Prefer durable designs over symptomatic patches while keeping the current work proportional to the verified requirement.
+- When the broader ideal design exceeds scope, implement a bounded durable step that fully satisfies the current success criteria and preserves a clear path forward.
+- Record only independent actionable follow-up in `docs/todo.md`; promote epic-sized work to `docs/roadmap.md`. Do not defer work required for current correctness or acceptance.
+
+### 4. Make Surgical Changes
 
 **Touch only what the requested outcome and its verification require. Clean up only what the change makes obsolete.**
 
@@ -55,7 +64,7 @@ When the change creates obsolete code:
 
 Every changed line must be traceable to the requested outcome, an accepted task, or verification of that outcome.
 
-### 4. Work Toward Verifiable Goals
+### 5. Work Toward Verifiable Goals
 
 **Define success before implementation and continue until the result is proved or concretely blocked.**
 
@@ -77,32 +86,42 @@ For multi-step work, keep a short plan in which every step has a corresponding v
 3. [Step] -> verify: [check]
 ```
 
-## Working And Reporting Preferences
+## Master Preferences
 
+- Address the user exactly as `Master` when speaking directly to them.
 - Use English for code, comments, documentation, tests, commit messages, CLI/help text, logs, reports, and artifacts unless the user explicitly requests another language.
 - Use Korean for direct user-facing status reports unless requested otherwise.
 - Keep completion reports compact: state the outcome, changed files, verification performed, evidence paths when relevant, and actionable remaining risks or blockers.
 - Distinguish development-gate completion from review or final acceptance, commit or push, release, installation, and runtime activation.
 
-## Development Skill References
+## Aquarium Development Guide
 
 - Use `$aquarium:task-handler` for one named roadmap task.
 - Use `$aquarium:epic-handler` to implement one roadmap epic as sequential task goals.
 - Use `$aquarium:epic-validator` to cold-validate and remediate one completed roadmap epic.
 - Use `$aquarium:new-project`, `$aquarium:new-feature`, or `$aquarium:refactor` for an explicitly requested Ouroboros-assisted project or epic design workflow.
 - Use `$aquarium:war-room` to diagnose one difficult bug and stop at a task, epic, or incomplete-investigation proposal.
-- Use `$aquarium:design-qa` to create, change, reactivate, or retire local Design Gates.
-- Use `$aquarium:dev-setup` to diagnose or configure development tooling.
+- Use `$aquarium:dev-setup` to diagnose or configure development tooling and repository operating guidance.
+- Use `$aquarium:docs-setup` to audit, establish, adopt, or migrate canonical documentation structure and roadmap IDs.
+- Use `$aquarium:test-setup` to audit or configure the repository test contract and evidence-backed legacy waivers.
+- Use `$aquarium:release-handler` for one stable release lifecycle and `$aquarium:release-qa` for exact committed-candidate verification.
 - Use `$use-mulgae` for an authorized Mulgae review, run inspection, finding follow-up, configuration diagnosis, cleanup plan, or recovery.
 - Use `$use-gaori` when a selected long or noisy check is routed through Gaori or existing Gaori evidence must be inspected.
-- Let `$aquarium:task-handler`, `$aquarium:epic-handler`, `$aquarium:epic-validator`, `$aquarium:new-project`, `$aquarium:new-feature`, `$aquarium:refactor`, `$aquarium:war-room`, and `$aquarium:design-qa` use Podway by default unless the current user opts out before the first managed-session mutation; Aquarium workflow skills retain their stricter roadmap, ownership, and approval rules.
-- Use `$use-podway` directly for an explicitly requested Procedure v2 session operation, authoring, lifecycle, diagnosis, recovery, cancellation, or current-session discard flow. Keep each handler opt-out local to its current task, epic, or validation request.
+- Let Git-backed Aquarium workflows use Podway by default unless the current user opts out before the first managed-session mutation. No Aquarium skill owns a Podway session; only when starting a different session should the workflow ask whether to preserve, finish, delete, or replace the existing one.
+- Use `$use-podway` directly for an explicitly requested Procedure v2 lifecycle, goal, diagnosis, recovery, cancellation, or current-session discard operation. Keep each handler opt-out local to its current task, epic, or validation request.
 - Use `$lore-commits` for non-trivial commit messages and `$lore-query` to inspect recorded decision context.
 - Use the separately installed upstream `$deslop` skill for task-owned cleanup when an Aquarium workflow requests it.
+- Keep `.mulgae/**`, `.gaori/runs/**`, `.podway/runtime/**`, and disposable roots as local runtime evidence. Do not cite their paths or identities as durable tracked evidence; use reviewed bounded non-sensitive promoted evidence only when a downstream consumer requires retention.
 - Treat `.podway/procedures/aquarium-*-v2.yaml` as this repository's authority for normal workflow evidence and routing.
 - Repository-specific rules below override defaults from the referenced skills.
 
-## Repository Authorities
+## Project Configuration
+
+### Repository Index and Authorities
+
+- The production binary entrypoint is `cmd/gaori`; package behavior is organized under `internal/`, and executable end-to-end evidence is under `e2e/`.
+- Go 1.26.6 or newer is required. Use the root `Makefile` for canonical build, install, format, lint, vet, guardrail, unit, integration, E2E, and full-test entrypoints.
+- Use `docs/README.md` as the documentation map and `docs/requirements-test-matrix.md` to locate executable evidence for completed requirements.
 
 When documents or behavior appear to disagree, use this order:
 
@@ -112,9 +131,14 @@ When documents or behavior appear to disagree, use this order:
 4. `docs/user-interface.md` and `README.md` for operator-facing commands, options, and examples.
 5. `docs/roadmap.md`, `docs/todo.md`, and `docs/implementation-note.md` for delivery history, accepted open work, implementation guidance, and release-readiness context.
 
-Use `docs/README.md` as the documentation map and `docs/requirements-test-matrix.md` to locate executable evidence for completed requirements. Update user-facing and integration documents in the same change whenever CLI or artifact behavior changes.
+Update user-facing and integration documents in the same change whenever CLI or artifact behavior changes.
 
-## Gaori-Specific Operating Rules
+### Commit Messages
+
+- Use `[WORKSTREAM] <imperative subject>` in English.
+- Prefer an established uppercase roadmap, epic, task, or workstream identifier such as `[AWAIT]` or `[RSTAT]`; use `[CHORE]` when no established identifier applies.
+
+### Project-Specific Operating Rules
 
 Preserve these invariants:
 
@@ -144,7 +168,7 @@ Local runtime, evidence, and tool state must stay out of source commits. The por
 
 Never run `git add`, `git commit`, or `git push` unless the user explicitly asks for that exact action after verification. An explicit request to create a release is the narrow exception: it authorizes staging release-scoped files, creating the release commit needed for exact-commit verification, tagging and pushing that verified commit, and publishing its GitHub Release without a second approval. It does not authorize unrelated changes. Do not discard, overwrite, unstage, or otherwise disturb unrelated user changes.
 
-## Patch-Only Release Verification
+#### Patch-Only Release Verification
 
 When the user requests a release, ask whether to use the full release-readiness gate or the reduced patch-only gate unless the request already selects one.
 
@@ -162,7 +186,7 @@ For an eligible reduced patch-only release:
 
 Record in the release notes and completion report that the user waived a repeated full gate and that `make test-e2e` and the extended release-readiness checks were not rerun.
 
-## Mulgae Review Overrides
+#### Mulgae Review Overrides
 
 - An explicit `$aquarium:task-handler` invocation authorizes the task-scoped Mulgae review required by that workflow. Outside that workflow, run Mulgae only when the user explicitly asks for a review.
 - Assign `logic`, `security`, `maintainability`, `product`, and `testing` to ZCode, and assign `documentation` to AGY. Do not substitute another provider unless the user explicitly changes that policy.
@@ -170,7 +194,7 @@ Record in the release notes and completion report that the user waived a repeate
 - Before provider invocation, preflight the same target and all six roles. Confirm the exact transmitted file set, the five ZCode routes, the documentation AGY route, provider timeouts, and invocation budgets; stop on unsafe or overbroad capture.
 - Verify every advisory finding against the captured target and the repository authorities before recommending a change. Do not infer review acceptance, waiver, release, or runtime activation from Mulgae output.
 
-## Verification
+#### Verification
 
 Run the narrowest meaningful verification first, then broaden when shared behavior changes.
 
