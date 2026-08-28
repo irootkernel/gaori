@@ -159,8 +159,9 @@ func TestLoadCommandStatsSeparatesOutcomesAndBoundsRecurringFailures(t *testing.
 func TestLoadCommandStatsFailsClosedOnInconsistentEvidenceWithoutRawLog(t *testing.T) {
 	t.Parallel()
 	for _, test := range []struct {
-		name   string
-		mutate func(*model.Status, *model.Summary)
+		name          string
+		mutate        func(*model.Status, *model.Summary)
+		resyncSummary bool
 	}{
 		{name: "status hash", mutate: func(status *model.Status, _ *model.Summary) { status.StatusHash = "sha256:stale" }},
 		{name: "summary checksum", mutate: func(status *model.Status, _ *model.Summary) {
@@ -170,6 +171,34 @@ func TestLoadCommandStatsFailsClosedOnInconsistentEvidenceWithoutRawLog(t *testi
 		{name: "metadata", mutate: func(status *model.Status, _ *model.Summary) {
 			status.ExitCode = 9
 			status.StatusHash = artifacts.ComputeStatusHash(*status)
+		}},
+		{name: "raw log locator", mutate: func(status *model.Status, _ *model.Summary) {
+			status.RawLogPath = ".gaori/runs/standalone/other/unit.raw.log"
+			status.StatusHash = artifacts.ComputeStatusHash(*status)
+		}},
+		{name: "revision without dirty state", resyncSummary: true, mutate: func(_ *model.Status, summary *model.Summary) {
+			summary.GitRevision = revisionA
+			summary.GitDirty = nil
+		}},
+		{name: "dirty state without revision", resyncSummary: true, mutate: func(_ *model.Status, summary *model.Summary) {
+			dirty := false
+			summary.GitDirty = &dirty
+		}},
+		{name: "malformed revision", resyncSummary: true, mutate: func(_ *model.Status, summary *model.Summary) {
+			dirty := false
+			summary.GitRevision = "abc"
+			summary.GitDirty = &dirty
+		}},
+		{name: "failure count", resyncSummary: true, mutate: func(_ *model.Status, summary *model.Summary) {
+			summary.FailureCount++
+		}},
+		{name: "warning count", resyncSummary: true, mutate: func(_ *model.Status, summary *model.Summary) {
+			summary.WarningCount++
+		}},
+		{name: "extractor status", resyncSummary: true, mutate: func(status *model.Status, summary *model.Summary) {
+			status.ExtractorStatus = model.ExtractorStatus("unknown")
+			status.StatusHash = artifacts.ComputeStatusHash(*status)
+			summary.ExtractorStatus = status.ExtractorStatus
 		}},
 		{name: "signature hashes", mutate: func(status *model.Status, _ *model.Summary) {
 			status.FailureSignatures = []string{"sha256:stale"}
@@ -183,6 +212,15 @@ func TestLoadCommandStatsFailsClosedOnInconsistentEvidenceWithoutRawLog(t *testi
 			status := readJSON[model.Status](t, statusPath)
 			summary := readJSON[model.Summary](t, summaryPath)
 			test.mutate(&status, &summary)
+			if test.resyncSummary {
+				writeJSON(t, summaryPath, summary)
+				summaryData, err := os.ReadFile(summaryPath)
+				if err != nil {
+					t.Fatal(err)
+				}
+				status.SummarySHA256 = artifacts.SHA256(summaryData)
+				status.StatusHash = artifacts.ComputeStatusHash(status)
+			}
 			writeJSON(t, statusPath, status)
 
 			selector, _ := NewSelector("", false)
@@ -244,7 +282,8 @@ func writeInsightRun(t *testing.T, repo, name string, fixture insightFixture) (s
 		CommandArgv: []string{"go", "test", "./..."}, GitRevision: fixture.revision, GitDirty: fixture.dirty,
 		ExitCode: statusExitCode(fixture.status), StartedAt: ended.Add(-time.Duration(fixture.durationMS) * time.Millisecond), EndedAt: ended,
 		DurationMS: fixture.durationMS, RawLog: filepath.ToSlash(filepath.Join(".gaori", "runs", "standalone", name, "unit.raw.log")),
-		RawLogSHA256: "sha256:raw", ExtractorStatus: fixture.extractor, Failures: slices.Clone(fixture.failures), Warnings: []model.Warning{},
+		RawLogSHA256: "sha256:raw", ExtractorStatus: fixture.extractor, FailureCount: len(fixture.failures),
+		Failures: slices.Clone(fixture.failures), Warnings: []model.Warning{},
 	}
 	runDir := filepath.Join(repo, ".gaori", "runs", "standalone", name)
 	if err := os.MkdirAll(runDir, 0o755); err != nil {

@@ -249,13 +249,29 @@ func validateSummary(status model.Status, summary model.Summary) error {
 		return fmt.Errorf("summary duration does not match execution timestamps")
 	}
 	if status.Status != summary.Status || status.CommandID != summary.CommandID || !slices.Equal(status.Tags, summary.Tags) ||
-		status.ExitCode != summary.ExitCode || status.ExtractorStatus != summary.ExtractorStatus || status.RawLogSHA256 != summary.RawLogSHA256 {
+		status.ExitCode != summary.ExitCode || status.ExtractorStatus != summary.ExtractorStatus || status.RawLogPath != summary.RawLog ||
+		status.RawLogSHA256 != summary.RawLogSHA256 {
 		return fmt.Errorf("status and summary metadata do not match")
+	}
+	if !isKnownExtractorStatus(summary.ExtractorStatus) {
+		return fmt.Errorf("summary extractor status is invalid")
+	}
+	if summary.FailureCount != len(summary.Failures) || summary.WarningCount != len(summary.Warnings) {
+		return fmt.Errorf("summary evidence counts do not match evidence arrays")
+	}
+	if (summary.GitRevision == "") != (summary.GitDirty == nil) ||
+		(summary.GitRevision != "" && !fullObjectIDPattern.MatchString(summary.GitRevision)) {
+		return fmt.Errorf("summary Git provenance is invalid")
 	}
 	if !slices.Equal(status.FailureSignatures, signatureHashes(summary.Failures)) || !slices.Equal(status.WarningSignatures, warningHashes(summary.Warnings)) {
 		return fmt.Errorf("status signature hashes do not match summary evidence")
 	}
 	return nil
+}
+
+func isKnownExtractorStatus(status model.ExtractorStatus) bool {
+	return status == model.ExtractorStatusPrecise || status == model.ExtractorStatusPartial ||
+		status == model.ExtractorStatusDegraded || status == model.ExtractorStatusNoMatch
 }
 
 func selectorMatches(summary model.Summary, selector Selector) bool {
