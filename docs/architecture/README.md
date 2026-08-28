@@ -1,7 +1,7 @@
 # Gaori Architecture
 
-Status: Complete through `AWAIT-004`
-Scope: Standalone Gaori v0.1 architecture, including session-local STDIO MCP execution and terminal awaiting
+Status: Complete through `RSTAT`
+Scope: Standalone Gaori v0.1 architecture, including session-local STDIO MCP execution, terminal awaiting, and artifact-derived run insights
 
 This document defines Gaori's technical and artifact contracts. See the [integration guide](../integration-guide.md) for parent-project ownership, supported capability status, and rollout guidance.
 
@@ -186,8 +186,8 @@ Listing shares the cleanup selector so both commands agree on what "completed st
 ## Data flow: derive historical command insights
 
 ```text
-1. User selects a configured command through `gaori runs stats` or supplies caller-observed elapsed time through `gaori runs estimate`.
-2. CLI validates the config, exact optional Git selector, dependent dirty policy, sample limit, and elapsed bound without resolving or executing the command.
+1. User selects a configured command through CLI `runs stats` or `runs estimate`, or attached MCP `get_command_stats`; MCP `estimate_run` additionally binds the query to one existing session-local invocation.
+2. The selected surface validates the config, exact optional Git selector, dependent dirty policy, sample limit, and any elapsed bound without resolving or executing the command.
 3. The shared insights engine reuses standalone listing recognition and newest-first ordering, then validates each matching regular status and adjacent summary artifact through the repository containment boundary.
 4. Status hash, summary locator and checksum, surfaced metadata, terminal state, timestamps, duration, and retained signature hashes must agree before a sample is eligible; raw logs are never opened.
 5. Revision and dirty policy filter eligible samples before the newest 1 through 50 are selected.
@@ -199,6 +199,19 @@ for trends and estimates. Empty, undersized, or exhausted samples carry explicit
 availability states. It is a read-only view over retained artifacts rather than
 a statistics database, process observer, prediction service, test gate, or
 workflow authority; explicit cleanup naturally removes samples from later views.
+
+For a live MCP estimate, the existing invocation stores only its first
+`executing` transition time. An explicit `estimate_run` call reads the current
+phase without changing revision, waiter, cancellation, or result state. It
+returns no ETA while queued or materializing, embeds the shared historical
+estimate only while a configured command is executing, and returns the existing
+authoritative result and actual duration after finish. Ad-hoc runs report
+`configured_runs_only`; a disconnected server cannot recover the invocation.
+
+The source-distributed `use-gaori-status` skill selects these read-only CLI or
+MCP calculations and explains returned fields without arithmetic. It owns no
+runtime component and is not installed by the binary. Execution, lifecycle,
+recovery, and detailed evidence inspection remain with `use-gaori`.
 
 ## Data flow: detect parser candidates
 

@@ -42,8 +42,8 @@ func TestAwaitRunDocumentationContract(t *testing.T) {
 	}
 
 	completionStatus := map[string]string{
-		"docs/user-interface.md":             "Status: Current source-tree interface; complete through `AWAIT-004`",
-		"docs/implementation-tips/README.md": "Status: Current source-tree guidance through `AWAIT-006`",
+		"docs/user-interface.md":             "Status: Current source-tree interface; complete through `RSTAT`",
+		"docs/implementation-tips/README.md": "Status: Current source-tree guidance through `RSTAT`",
 	}
 	for relative, expected := range completionStatus {
 		content := readAwaitDocument(t, root, relative)

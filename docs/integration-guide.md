@@ -42,6 +42,7 @@ The default adoption model is selective: route commands through Gaori when their
 | Standalone cleanup | Yes | `clean (--older-than <Nd> \| --all) [--dry-run]` applies an explicit operator policy only to completed default standalone runs. |
 | Standalone run listing | Yes | `runs list [--tag <tag> ...] [--status <status>] [--limit <count>]` reports completed default standalone evidence from redacted status artifacts without executing anything or opening raw logs. |
 | Historical command insights | Yes | `runs stats <command-id>`, caller-elapsed `runs estimate <command-id> --elapsed-ms <ms>`, MCP `get_command_stats`, and session-local MCP `estimate_run` derive deterministic versioned results from validated completed default standalone evidence, with optional exact Git revision and dirty-state selection. They execute nothing, create nothing, and never open raw logs. |
+| Read-only status skill | Yes | The independently installed `skills/use-gaori-status/` package forwards historical or already-identified same-session questions to executable CLI/MCP calculations. It performs no arithmetic, execution, lifecycle, recovery, cleanup, or evidence inspection and is never installed by Gaori. |
 | Human output | Yes | Compact console output, Markdown summary, and bounded excerpts. |
 | Machine output | Yes | `--json` with explicit Markdown/JSON artifact paths, summary JSON, and deterministic status JSON. |
 | Redacted derived evidence | Yes | Configured redaction covers surfaced metadata, summaries, status, warnings, failures, and excerpts. |

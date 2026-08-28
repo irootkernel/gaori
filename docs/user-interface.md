@@ -1,6 +1,6 @@
 # Gaori User Interface
 
-Status: Current source-tree interface; complete through `RSTAT-003`
+Status: Current source-tree interface; complete through `RSTAT`
 Scope: CLI and local STDIO MCP interfaces for Gaori v0.1
 
 This is the complete command reference. First-time users should begin with the repository [README](../README.md); parent-project owners should use the [integration guide](integration-guide.md) for ownership boundaries and adoption steps.
@@ -366,6 +366,22 @@ Tags are rule selectors, not command selectors or automatic rule generators. The
 - `runs stats` reports schema `gaori-command-stats.v1`: selector and limit, sample and skipped counts, sample span, terminal-status counts, percentages and optional distributions, recent successful change, classified, unclassified and degraded failed-run counts, and up to three recurring already-redacted failure signatures.
 - `runs estimate` requires positive caller-supplied `--elapsed-ms` from 1 through 86400000. It does not observe a process. Schema `gaori-command-estimate.v1` reports elapsed time, successful sample count, availability, historical completed position, mean/median/p80/p90 total targets, conditional remaining distribution, and the same recent-change record. Fewer than five successful samples returns `insufficient_samples`; exhausted residual history returns `beyond_observed_max`.
 - Human output presents the same executable-calculated facts as JSON. Invalid config, command IDs, selectors, limits, elapsed values, or options exit `2`; malformed, inconsistent, unsafe, symlinked, or checksum-invalid evidence fails closed with artifact exit code `3`.
+
+## Read-only status skill
+
+`skills/use-gaori-status/SKILL.md` is an independently installable,
+automatically discoverable agent skill for questions about historical duration,
+outcomes, recent change, recurring failures, or an already-known invocation in
+the same attached MCP session. It forwards to `get_command_stats`, `estimate_run`,
+or CLI `gaori --json runs stats` and explains only the versioned calculations
+returned by Gaori. It may place two independently revision-scoped results side
+by side but performs no pairwise or other arithmetic.
+
+The skill never starts, awaits, polls, retries, cancels, cleans, summarizes, or
+recovers a run; changes config or rules; opens evidence or raw logs; or claims
+workflow, review, release, or acceptance authority. Execution, lifecycle,
+recovery, and detailed evidence inspection remain with `use-gaori`. Neither
+skill is installed or activated by the binary or a Make target.
 
 ## Parser discovery notes
 

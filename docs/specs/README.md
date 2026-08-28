@@ -1,6 +1,6 @@
 # Gaori Requirement Specs
 
-Status: Current source-tree requirements plus accepted planned requirements for `RSTAT`
+Status: Current source-tree requirements through `RSTAT`
 Scope: Gaori v0.1 standalone baseline, post-baseline hardening, portable project configuration, CLI usability, verified rule proposals, operator-directed cleanup, session-local STDIO MCP execution with terminal awaiting, long-running await guidance, the completed parser catalog plus Dart/Patrol extraction contract, and planned run-status and timing insights
 Source context: deterministic Gaori v0.1 CLI, evidence, and attached MCP behavior.
 
@@ -11,7 +11,7 @@ Source context: deterministic Gaori v0.1 CLI, evidence, and attached MCP behavio
 - `[x]` Complete
 - `Blocked` means external decision or missing dependency prevents implementation.
 
-Implementation note: the original v0.1 roadmap and the recorded `RQHAR` hardening requirements are implemented. A checked requirement means that specific behavior is implemented and mapped to evidence; an unchecked requirement is planned and must not be read as current binary behavior. See the [integration guide](../integration-guide.md) for the current capability matrix and explicit v0.1 boundaries. Accepted work is recorded in the [roadmap](../roadmap/README.md), active dossiers and future epic candidates in the [todo index](../todo/README.md), and small postponed findings in [deferred feedback](../deferred-feedback/README.md). The implemented [long-running await guidance](../long-running-await-guidance.md), durable [Aquarium parser handoff](../handoffs/aquarium-test-framework-parser.md), and planned [run-status insights dossier](../todo/TODO-RSTAT.md) retain their narrower authorities.
+Implementation note: the original v0.1 roadmap and the recorded `RQHAR` hardening requirements are implemented. A checked requirement means that specific behavior is implemented and mapped to evidence; an unchecked requirement is planned and must not be read as current binary behavior. See the [integration guide](../integration-guide.md) for the current capability matrix and explicit v0.1 boundaries. Accepted work is recorded in the [roadmap](../roadmap/README.md), active dossiers and future epic candidates in the [todo index](../todo/README.md), and small postponed findings in [deferred feedback](../deferred-feedback/README.md). The implemented [long-running await guidance](../long-running-await-guidance.md) and durable [Aquarium parser handoff](../handoffs/aquarium-test-framework-parser.md) retain their narrower authorities.
 
 ## RQCLI: Command-line interface
 
@@ -126,12 +126,76 @@ Implementation note: the original v0.1 roadmap and the recorded `RQHAR` hardenin
 
 ## RQINS: Run-status and timing insights
 
+### Normative calculation and selection contract
+
+One configured command ID identifies one retained timing series. Eligible
+samples are completed default standalone executions with a regular top-level
+`<command-id>.status.json`, a contained adjacent summary, non-empty executed
+argv, valid non-zero execution timestamps, and one known terminal status.
+Ad-hoc, summarize, scoped, caller-selected-output, incomplete, malformed,
+unsafe, symlinked, relocated, or integrity-inconsistent evidence is excluded or
+fails closed under the artifact contract. Status hash, literal summary locator,
+summary checksum, surfaced metadata, terminal values, and retained signature
+hashes must agree; insights never open raw logs or create another ledger.
+
+The default sample limit is the newest 20 matching executions and the accepted
+range is 1 through 50. A selector is applied before that limit. Unscoped history
+includes clean, dirty, legacy, and unavailable-provenance samples. A revision
+selector requires the exact stored full lowercase 40- or 64-character object
+ID and defaults to `git_dirty: false`; `include_dirty` adds dirty samples at the
+same revision and is invalid without a revision. It never means dirty-only,
+resolves no prefix, reads no diff, checks out nothing, and falls back to neither
+another revision nor unscoped history. Two revisions require two independent
+queries and no pairwise calculation.
+
+Actual configured and ad-hoc executions capture the full `HEAD` object ID and
+whether staged, unstaged, or untracked non-ignored content makes the resolved
+repository root dirty immediately before child execution. Both fields are
+omitted atomically for summarize, a non-worktree, an unresolved `HEAD`, or any
+inspection failure; provenance unavailability never changes execution or the
+command result.
+
+All duration inputs are integer milliseconds. Calculated milliseconds round to
+the nearest integer with exact halves away from zero; percentages round to one
+decimal place. For sorted durations `D` of size `n`, distribution fields are
+count `n`, minimum, maximum, arithmetic mean, middle-value median (or the rounded
+mean of the two middle values), and nearest-rank p80 and p90 at
+`ceil(0.80*n)` and `ceil(0.90*n)`. Each terminal status has its own count,
+percentage, and optional distribution. Only passed durations contribute to
+trends and estimates.
+
+Recent change requires the newest ten passed durations. It compares the median
+of the newest five with the median of the preceding five, returning
+`delta_ms`, `delta_percent`, and `increasing`, `decreasing`, or `stable`. A
+change is directional only when its absolute delta reaches the larger of 1,000
+milliseconds and ten percent of the previous median. Fewer than ten passed
+samples returns `insufficient_samples` without a direction or delta.
+
+For positive elapsed time `e`, historical completed count is the number of
+passed durations `d <= e`, and its percentage uses all passed samples. Mean,
+median, p80, and p90 remain total-duration targets: a target greater than `e`
+returns `remaining_ms = target - e`; a reached target instead returns
+`target_reached: true`. An estimate needs at least five passed samples.
+Conditional remaining values use exactly `R = {d - e | d in D and d > e}` and
+return its mean, median, and nearest-rank p80 only with at least three residuals;
+fewer returns `insufficient_samples`, and an empty set returns
+`beyond_observed_max`.
+
+Failure recurrence uses already-redacted signatures from failed command results
+only. One signature contributes once per failed run. At most three records are
+ordered by descending distinct run count, descending latest run time, then
+ascending signature bytes, and carry the latest summary path and failure ID.
+Failed runs without a retained signature are counted as unclassified;
+timed-out, killed, and internal-error outcomes stay separate. None of these
+statistics predicts success, establishes reliability or cause, changes command
+authority, or grants workflow or acceptance authority.
+
 - [x] `GAORI-REQ-RQINS-001` Derive command-history samples only from validated completed default standalone artifacts for one configured command ID, defaulting to the newest 20 matching executions and allowing a limit from 1 through 50, while excluding ad-hoc, summarize, scoped, caller-selected-output, incomplete, unsafe, or inconsistent evidence and never opening raw logs or creating a separate statistics ledger.
-- [x] `GAORI-REQ-RQINS-002` Compute deterministic status-separated count, percentage, min, max, arithmetic mean, median, nearest-rank p80 and p90, recent-five versus previous-five successful median change, elapsed-position, total-target remaining time, and conditional residual mean, median, and p80 exactly as defined by `docs/todo/TODO-RSTAT.md`, returning explicit insufficient or exhausted-sample states instead of fabricated zeroes.
+- [x] `GAORI-REQ-RQINS-002` Compute deterministic status-separated count, percentage, min, max, arithmetic mean, median, nearest-rank p80 and p90, recent-five versus previous-five successful median change, elapsed-position, total-target remaining time, and conditional residual mean, median, and p80 exactly as defined by the normative contract above, returning explicit insufficient or exhausted-sample states instead of fabricated zeroes.
 - [x] `GAORI-REQ-RQINS-003` Report child-command failure duration independently from success estimates, keep timed-out, killed, and internal-error outcomes distinct, and surface at most three deterministic recurring already-redacted failure signatures by distinct failed-run count plus unclassified and degraded failure-evidence counts without changing command authority or claiming reliability, cause, flakiness, or success probability.
-- [x] `GAORI-REQ-RQINS-004` Provide read-only `gaori runs stats` and caller-elapsed `gaori runs estimate` commands with the optional exact `--git-revision <full-object-id>` and dependent `--include-dirty` selectors defined by `docs/todo/TODO-RSTAT.md`; their human and JSON outputs must use the shared executable calculation engine, execute no child command, create no artifact, and fail closed under the planned config, option, evidence, and output contracts.
+- [x] `GAORI-REQ-RQINS-004` Provide read-only `gaori runs stats` and caller-elapsed `gaori runs estimate` commands with the optional exact `--git-revision <full-object-id>` and dependent `--include-dirty` selectors defined above; their human and JSON outputs must use the shared executable calculation engine, execute no child command, create no artifact, and fail closed under the config, option, evidence, and output contracts.
 - [x] `GAORI-REQ-RQINS-005` Provide read-only MCP `get_command_stats` and session-local `estimate_run` tools with the same optional exact Git revision and dirty-state selectors as the CLI; they must reuse the shared executable calculation engine, keep live timing ephemeral to one attached server, report queued, executing, materializing, and finished behavior explicitly, reject unsupported history locations and ad-hoc live estimates, and never poll, revise, wait for, cancel, or otherwise change an invocation.
-- [ ] `GAORI-REQ-RQINS-006` Provide an independently installable, automatically discoverable `use-gaori-status` skill that explains only CLI- or MCP-calculated status, duration, trend, outcome, and failure-recurrence values; it must not implement calculations, start or mutate a run, poll, retry, cancel, clean, inspect raw logs, or imply workflow, review, release, or acceptance authority.
+- [x] `GAORI-REQ-RQINS-006` Provide an independently installable, automatically discoverable `use-gaori-status` skill that explains only CLI- or MCP-calculated status, duration, trend, outcome, and failure-recurrence values; it must not implement calculations, start or mutate a run, poll, retry, cancel, clean, inspect raw logs, or imply workflow, review, release, or acceptance authority.
 - [x] `GAORI-REQ-RQINS-007` Add the full `git_revision` and boolean `git_dirty` snapshot to actual configured and ad-hoc command summaries when Git provenance is available immediately before execution, omit both fields for `summarize` or unavailable provenance without changing command authority, and support exact revision-scoped statistics that default to clean samples while optionally including both clean and dirty samples for the same revision. Legacy or unavailable provenance remains eligible only for unscoped history; the feature must not backfill artifacts, resolve hash prefixes, fingerprint dirty content, inspect diffs, check out revisions, or calculate a direct two-revision comparison.
 
 ## RQDOC: Documentation and operator guidance

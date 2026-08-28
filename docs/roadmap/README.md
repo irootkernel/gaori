@@ -1,6 +1,6 @@
 # Gaori Roadmap
 
-Status: Completed through `AWAIT-006` and `GEPIC`; `RSTAT` planned; `AQADP`, `AWAIT-005`, and `AWAIT-007` deferred
+Status: Completed through `RSTAT-004`; `RSTAT` closeout in progress; `AQADP`, `AWAIT-005`, and `AWAIT-007` deferred
 Scope: Implementation tracking for the Gaori v0.1 standalone baseline, hardening, tag and parser selection, release readiness, identity migration, operator-directed standalone evidence cleanup, portable project config, CLI usability improvements, session-local MCP execution, token-efficient terminal waiting and host-wait guidance, the parser catalog plus Dart/Patrol extraction epic, planned run-status and timing insights, and deferred Aquarium qualification and downstream adoption tracking
 
 This roadmap is a delivery record, not an operator guide or a promise that out-of-scope capabilities will be added. See the [integration guide](../integration-guide.md) for the current supported/unsupported capability boundary and the [todo index](../todo/README.md) for future candidates and active epic dossiers.
@@ -11,9 +11,9 @@ Existing `Done` entries record completion of the original v0.1 implementation sl
 
 Current implementation snapshot:
 - `Done`: `SETUP-001` to `SETUP-003`, `RUNNR-001` to `RUNNR-003`, `ARTIF-001` to `ARTIF-003`, `PARSE-001` to `PARSE-011`, `SAFEY-001` to `SAFEY-004`, `CLIUX-001` to `CLIUX-008`, `RULES-001` to `RULES-005`, `DOCUM-001` to `DOCUM-003`, `HARDE-001` to `HARDE-007`, `TAGS-001`, `ADHOC-001`, `ADHOC-002`, `RELRV-001` to `RELRV-009`, `BRAND-001`, `CLEAN-001`, `PORTA-001`, `MCP-001` to `MCP-006`, `AWAIT-001` to `AWAIT-004`, `AWAIT-006`
-- `In Progress`: none
+- `In Progress`: `RSTAT` closeout
 - `Deferred`: `AQADP` (`QUALI-001`, `QUALI-002`, `CONSUMER-SUDAL-001`), `AWAIT-005`, `AWAIT-007`
-- `Planned`: `RSTAT` (`RSTAT-001` to `RSTAT-004`)
+- `Planned`: none
 
 ## SETUP: Project foundation
 
@@ -220,11 +220,14 @@ Status: In Progress
 
 Detailed SOT: [RSTAT dossier](../todo/TODO-RSTAT.md)
 
-This epic implements the Gaori-owned portion of the planned [run-status and timing insights contract](../todo/TODO-RSTAT.md). The dossier owns the exact sample, formula, CLI, MCP, failure-diagnostic, and skill boundaries. Nothing in this roadmap section makes those surfaces current binary behavior.
+All four implementation tasks are complete. The temporary dossier remains only
+until cold validation and closeout promote its durable outcomes and remove the
+active-epic link; current product behavior is owned by specifications, accepted
+ADR-0020, executable tests, architecture, and interface documentation.
 
 | Task ID | Status | Goal | Verification | Reference |
 |---|---|---|---|---|
-| RSTAT-001 | Done | Capture best-effort execution-time Git revision and dirty state in command summaries, then build one safe artifact-backed statistics engine for configured commands, including exact revision and dirty-policy selection, status-separated distributions, recent change, elapsed-position and conditional-remaining calculations, and bounded recurring-failure diagnostics without opening raw logs or creating a durable ledger. | Focused provenance availability, summarize omission, formula, ordering, post-filter sample-bound, checksum, metadata, containment, symlink, malformed-evidence, cleanup, legacy-artifact, and no-raw-log tests. | `GAORI-REQ-RQINS-001` to `GAORI-REQ-RQINS-003`, `GAORI-REQ-RQINS-007`, proposed `ADR-0020` |
-| RSTAT-002 | Done | Expose `gaori runs stats` and caller-elapsed `gaori runs estimate`, including optional exact Git revision and dirty-state selectors, through deterministic human and versioned JSON contracts backed only by the shared calculation engine. | Focused CLI and integration tests plus built-binary success, clean-only default, include-dirty, missing-provenance, no-match, invalid-selector, insufficient-sample, unsafe-evidence, and no-side-effect coverage. | `GAORI-REQ-RQINS-002` to `GAORI-REQ-RQINS-004`, `GAORI-REQ-RQINS-007`, proposed `ADR-0020` |
-| RSTAT-003 | Done | Expose read-only MCP `get_command_stats` and session-local `estimate_run` with the same Git selectors while preserving invocation revision, waiter, cancellation, output-bound, and non-recovery contracts. | MCP manager, selector parity, schema, lifecycle, concurrency, bounded-error, output-directory rejection, disconnected-ID, and built-binary protocol coverage. | `GAORI-REQ-RQINS-001` to `GAORI-REQ-RQINS-005`, `GAORI-REQ-RQINS-007`, `GAORI-REQ-RQMCP-003` to `GAORI-REQ-RQMCP-006`, proposed `ADR-0020` |
-| RSTAT-004 | Planned | Add the independently installable automatic `use-gaori-status` read-only skill, synchronize implemented user and integration documentation, complete requirement traceability, and close the epic with the full repository gate. | Skill validation and realistic read-only forward checks, documentation/tool parity tests, named requirement-to-test mappings, `make test`, and `git diff --check`. | `GAORI-REQ-RQINS-006`, `GAORI-REQ-RQDOC-001`, proposed `ADR-0020` |
+| RSTAT-001 | Done | Capture best-effort execution-time Git revision and dirty state in command summaries, then build one safe artifact-backed statistics engine for configured commands, including exact revision and dirty-policy selection, status-separated distributions, recent change, elapsed-position and conditional-remaining calculations, and bounded recurring-failure diagnostics without opening raw logs or creating a durable ledger. | Focused provenance availability, summarize omission, formula, ordering, post-filter sample-bound, checksum, metadata, containment, symlink, malformed-evidence, cleanup, legacy-artifact, and no-raw-log tests. | `GAORI-REQ-RQINS-001` to `GAORI-REQ-RQINS-003`, `GAORI-REQ-RQINS-007`, `ADR-0020` |
+| RSTAT-002 | Done | Expose `gaori runs stats` and caller-elapsed `gaori runs estimate`, including optional exact Git revision and dirty-state selectors, through deterministic human and versioned JSON contracts backed only by the shared calculation engine. | Focused CLI and integration tests plus built-binary success, clean-only default, include-dirty, missing-provenance, no-match, invalid-selector, insufficient-sample, unsafe-evidence, and no-side-effect coverage. | `GAORI-REQ-RQINS-002` to `GAORI-REQ-RQINS-004`, `GAORI-REQ-RQINS-007`, `ADR-0020` |
+| RSTAT-003 | Done | Expose read-only MCP `get_command_stats` and session-local `estimate_run` with the same Git selectors while preserving invocation revision, waiter, cancellation, output-bound, and non-recovery contracts. | MCP manager, selector parity, schema, lifecycle, concurrency, bounded-error, output-directory rejection, disconnected-ID, and built-binary protocol coverage. | `GAORI-REQ-RQINS-001` to `GAORI-REQ-RQINS-005`, `GAORI-REQ-RQINS-007`, `GAORI-REQ-RQMCP-003` to `GAORI-REQ-RQMCP-006`, `ADR-0020` |
+| RSTAT-004 | Done | Add the independently installable automatic `use-gaori-status` read-only skill, synchronize implemented user and integration documentation, complete requirement traceability, and close the epic with the full repository gate. | Skill validation and realistic read-only forward checks, documentation/tool parity tests, named requirement-to-test mappings, `make test`, and `git diff --check`. | `GAORI-REQ-RQINS-006`, `GAORI-REQ-RQDOC-001`, `ADR-0020` |

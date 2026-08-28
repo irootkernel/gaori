@@ -60,7 +60,7 @@ For Gaori maintainers:
 3. Read the [implementation tips](implementation-tips/README.md) before changing runner, parser, artifact, redaction, rule, or release behavior.
 4. Use the [roadmap](roadmap/README.md) for lifecycle state, the [todo index](todo/README.md) for active dossiers and future epic candidates, and [deferred feedback](deferred-feedback/README.md) for small postponed findings.
 5. For `GEPIC` and `AQADP`, read the durable [Aquarium parser handoff](handoffs/aquarium-test-framework-parser.md); for active `AQADP`, also read its [dossier](todo/TODO-AQADP.md).
-6. For planned `RSTAT`, read its [active dossier](todo/TODO-RSTAT.md).
+6. For implemented `RSTAT`, read the RQINS [specifications](specs/README.md#rqins-run-status-and-timing-insights), [ADR-0020](architecture-decision-records/README.md#adr-0020-artifact-derived-executable-calculations-power-run-status-insights), and the source-distributed [status skill](../skills/use-gaori-status/SKILL.md). The temporary [dossier](todo/TODO-RSTAT.md) remains only until epic closeout.
 7. For implemented `AWAIT-006` or deferred `AWAIT-007`, read the [long-running await guidance](long-running-await-guidance.md).
 8. Track current unreleased changes in the root [changelog](../CHANGELOG.md) and use the matching document under [release notes](releases/) when publishing a release.
 
@@ -68,7 +68,7 @@ For Gaori maintainers:
 
 The standalone v0.1 baseline and session-local STDIO MCP interface are implemented. The current published release is [v0.1.14](releases/v0.1.14.md); the source tree can be ahead of that release, and release notes record what each published version contains.
 
-`GEPIC` delivered the code-owned JSON parser catalog and Experimental `dart-test` and `patrol` parsers. `AQADP`, `AWAIT-005`, and `AWAIT-007` remain deferred under their roadmap-owned activation conditions. `RSTAT` is planned and not current binary behavior. Terminal-only `await_run` is implemented, and `AWAIT-006` strengthens its source-distributed `use-gaori` guidance without changing the Gaori runtime surface.
+`GEPIC` delivered the code-owned JSON parser catalog and Experimental `dart-test` and `patrol` parsers. `RSTAT` implements artifact-derived CLI and MCP insights plus the calculation-free `use-gaori-status` skill; its temporary dossier remains only for cold-validation closeout. `AQADP`, `AWAIT-005`, and `AWAIT-007` remain deferred under their roadmap-owned activation conditions. Terminal-only `await_run` is implemented, and `AWAIT-006` strengthens its source-distributed `use-gaori` guidance without changing the Gaori runtime surface.
 
 ## Roadmap identity and dossier lifecycle
 

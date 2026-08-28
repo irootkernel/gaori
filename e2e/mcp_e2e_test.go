@@ -453,8 +453,8 @@ func TestMCPDocumentationAndSkillContract(t *testing.T) {
 		"skills/use-gaori/SKILL.md", "skills/use-gaori/references/lifecycle.md", "skills/use-gaori/references/recovery.md",
 	}
 	completionStatus := map[string]string{
-		"docs/architecture/README.md": "Status: Complete through `AWAIT-004`",
-		"docs/user-interface.md":      "complete through `RSTAT-003`",
+		"docs/architecture/README.md": "Status: Complete through `RSTAT`",
+		"docs/user-interface.md":      "complete through `RSTAT`",
 	}
 	drainContractPaths := map[string]bool{
 		"README.md":                                true,
@@ -524,6 +524,74 @@ func TestMCPDocumentationAndSkillContract(t *testing.T) {
 	for _, required := range []string{`gaori_skill_parent="${HOME}/.agents/skills"`, `test ! -e "$gaori_skill_target" && test ! -L "$gaori_skill_target"`, `mktemp -d "$gaori_skill_parent/.use-gaori.XXXXXX"`} {
 		if !strings.Contains(string(readme), required) {
 			t.Errorf("README use-gaori installation guidance is missing %q", required)
+		}
+	}
+}
+
+func TestUseGaoriStatusSkillContract(t *testing.T) {
+	t.Parallel()
+	root := projectRoot(t)
+	skillRoot := filepath.Join(root, "skills", "use-gaori-status")
+	entries, err := os.ReadDir(skillRoot)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(entries) != 1 || entries[0].Name() != "SKILL.md" || entries[0].IsDir() {
+		t.Fatalf("status skill must remain independently installable as one entrypoint: %+v", entries)
+	}
+	data, err := os.ReadFile(filepath.Join(skillRoot, "SKILL.md"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	text := string(data)
+	for _, required := range []string{
+		"name: use-gaori-status", "automatically", "get_command_stats", "gaori --json runs stats <command-id>",
+		"estimate_run", "exactly once", "already known", "same attached MCP server", "phase", "elapsed_ms",
+		"two independently revision-scoped", "side by side", "calculate a delta", "configured_runs_only",
+		"no_matching_samples", "insufficient_samples", "beyond_observed_max", "use-gaori",
+		"Never start, await, poll, retry, cancel, clean, or summarize a run", "raw logs",
+		"review acceptance", "release", "runtime activation",
+	} {
+		if !strings.Contains(text, required) {
+			t.Errorf("use-gaori-status is missing contract %q", required)
+		}
+	}
+	if strings.Contains(text, "gaori --json run ") || strings.Contains(text, "start_configured_run(") || strings.Contains(text, "start_ad_hoc_run(") {
+		t.Error("use-gaori-status contains an executable run recipe")
+	}
+
+	documents := map[string][]string{
+		"README.md":                   {"use-gaori-status", "verified local source checkout", "Neither skill is installed or activated by Gaori itself"},
+		"docs/architecture/README.md": {"Status: Complete through `RSTAT`", "use-gaori-status", "without arithmetic"},
+		"docs/architecture-decision-records/README.md": {"ADR-0020", "Status: Accepted", "use-gaori-status"},
+		"docs/implementation-tips/README.md":           {"Status: Current source-tree guidance through `RSTAT`", "use-gaori-status", "calculation-free"},
+		"docs/integration-guide.md":                    {"Read-only status skill", "use-gaori-status", "never installed by Gaori"},
+		"docs/specs/README.md":                         {"GAORI-REQ-RQINS-006", "[x]", "Normative calculation and selection contract"},
+		"docs/user-interface.md":                       {"Read-only status skill", "use-gaori-status", "performs no pairwise or other arithmetic"},
+	}
+	for relative, required := range documents {
+		content, err := os.ReadFile(filepath.Join(root, relative))
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, fragment := range required {
+			if !strings.Contains(string(content), fragment) {
+				t.Errorf("%s is missing RSTAT contract %q", relative, fragment)
+			}
+		}
+	}
+
+	readme, err := os.ReadFile(filepath.Join(root, "README.md"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, required := range []string{
+		`gaori_status_skill_parent="${HOME}/.agents/skills"`,
+		`test ! -e "$gaori_status_skill_target" && test ! -L "$gaori_status_skill_target"`,
+		`mktemp -d "$gaori_status_skill_parent/.use-gaori-status.XXXXXX"`,
+	} {
+		if !strings.Contains(string(readme), required) {
+			t.Errorf("README use-gaori-status installation guidance is missing %q", required)
 		}
 	}
 }

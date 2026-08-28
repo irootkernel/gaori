@@ -100,6 +100,32 @@ only the skill directory into that agent-specific location:
 
 The skill is source-distributed in the v0.1.14 GitHub source archive. `go install`, `make install`, and `make install-toolchain` install only the Gaori binary and do not copy or activate the skill.
 
+The current source tree also provides the separate, automatically discoverable
+[`use-gaori-status` skill](skills/use-gaori-status/SKILL.md) for read-only timing,
+outcome-history, trend, recurrence, and already-identified live-estimate
+questions. It performs no calculations or lifecycle operations. Because this
+skill is newer than v0.1.14, install it from a verified local source checkout
+until a later exact release tag contains it:
+
+```bash
+(
+  set -eu
+  gaori_status_skill_parent="${HOME}/.agents/skills"
+  gaori_status_skill_source="$PWD/skills/use-gaori-status/SKILL.md"
+  gaori_status_skill_target="$gaori_status_skill_parent/use-gaori-status"
+  test -f "$gaori_status_skill_source"
+  mkdir -p "$gaori_status_skill_parent"
+  test ! -e "$gaori_status_skill_target" && test ! -L "$gaori_status_skill_target"
+  gaori_status_skill_tmp="$(mktemp -d "$gaori_status_skill_parent/.use-gaori-status.XXXXXX")"
+  trap 'rm -rf "$gaori_status_skill_tmp"' EXIT
+  mkdir -p "$gaori_status_skill_tmp/use-gaori-status"
+  cp "$gaori_status_skill_source" "$gaori_status_skill_tmp/use-gaori-status/SKILL.md"
+  mv "$gaori_status_skill_tmp/use-gaori-status" "$gaori_status_skill_target"
+)
+```
+
+Neither skill is installed or activated by Gaori itself.
+
 ## Use the local MCP server
 
 Gaori v0.1.14 includes the STDIO MCP server and terminal-only `await_run` for local coding agents. Register the selected v0.1.14 binary from the repository that should own test artifacts:

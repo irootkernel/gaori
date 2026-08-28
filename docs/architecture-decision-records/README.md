@@ -1,7 +1,7 @@
 # Gaori Architecture Decision Records
 
-Status: Accepted baseline decisions plus proposed `ADR-0020`
-Scope: Accepted Gaori decisions and the planned run-status insights decision
+Status: Accepted baseline decisions through `ADR-0020`
+Scope: Accepted Gaori decisions, including run-status insights
 
 ## ADR status legend
 
@@ -454,7 +454,7 @@ Planned `dart-test` and `patrol` entries begin as Experimental. Their specialize
 
 ## ADR-0020: Artifact-derived executable calculations power run-status insights
 
-Status: Proposed
+Status: Accepted
 Date: 2026-08-26
 
 ### Context
@@ -476,7 +476,7 @@ ADR-0012 and ADR-0016.
 
 ### Decision
 
-Gaori will derive planned run-status and timing insights at read time from
+Gaori derives run-status and timing insights at read time from
 validated completed default standalone artifacts. It will not add a statistics
 database, compacted ledger, daemon, heartbeat, process discovery, or restart
 recovery. When explicit cleanup removes source artifacts, their observations
@@ -487,7 +487,7 @@ distributions, arithmetic mean, median, nearest-rank percentiles, recent-window
 change, elapsed-position, total-target remaining time, conditional residual
 time, and recurring already-redacted failure signatures. The exact formulas,
 minimum sample sizes, ordering, rounding, and unsupported states are defined once
-in `docs/todo/TODO-RSTAT.md`. CLI and MCP surfaces must return those values
+in the RQINS contract in `docs/specs/README.md`. CLI and MCP surfaces return those values
 directly; an agent skill may explain them but must not recalculate, adjust, or
 invent them.
 
@@ -499,7 +499,7 @@ killed, and internal-error durations remain separate observations, and failure
 recurrence never changes or predicts the authoritative command result.
 
 Immediately before an actual configured or ad-hoc child command starts, Gaori
-will capture the full `HEAD` object ID and whether staged, unstaged, or untracked
+captures the full `HEAD` object ID and whether staged, unstaged, or untracked
 non-ignored content makes the repository dirty. These optional `git_revision`
 and `git_dirty` fields are added only to the structured summary. Both are omitted
 for `summarize` and when provenance is unavailable; collection failure never
@@ -512,14 +512,14 @@ unavailable-provenance evidence. The selector is applied before the sample
 limit, never falls back on no match, never fingerprints dirty content or opens a
 diff, and does not introduce a pairwise revision-comparison formula.
 
-Historical statistics will be available through read-only CLI and MCP surfaces.
+Historical statistics are available through read-only CLI and MCP surfaces.
 Caller-elapsed CLI estimation is a pure historical calculation and does not
 attach to a process. Live MCP estimation is limited to a configured invocation
 owned by the same attached server, records only its session-local executing
 transition time, and must not revise, wait for, poll, cancel, or otherwise change
 the invocation.
 
-`use-gaori-status` will be a separate automatically discoverable read-only skill
+`use-gaori-status` is a separate automatically discoverable read-only skill
 for historical and already-identified live status questions. Execution,
 lifecycle, cancellation, recovery, and detailed evidence inspection remain with
 `use-gaori`. Neither skill is installed or activated by the binary.
@@ -536,9 +536,8 @@ lifecycle, cancellation, recovery, and detailed evidence inspection remain with
 - Percentiles, trends, and estimates describe retained observations; they do not
   predict success, establish project reliability, explain a cause, or grant
   review, release, workflow, or acceptance authority.
-- This Proposed ADR records planned behavior only. No CLI command, MCP tool, or
-  skill described by `RSTAT` exists until its unchecked requirements and roadmap
-  tasks are implemented and verified.
+- The source-distributed skill remains independently installed and is never
+  copied or activated by the Gaori binary or its Make targets.
 
 ## Future ADR candidates
 

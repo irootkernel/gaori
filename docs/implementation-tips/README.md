@@ -1,7 +1,7 @@
 # Gaori Implementation Note
 
-Status: Current source-tree guidance through `AWAIT-006` plus planned `RSTAT` guidance
-Scope: Maintainer guidance for standalone execution, evidence artifacts, parser/rule behavior, operator-directed cleanup, session-local STDIO MCP execution, long-running host waits, and planned run-status insights
+Status: Current source-tree guidance through `RSTAT`
+Scope: Maintainer guidance for standalone execution, evidence artifacts, parser/rule behavior, operator-directed cleanup, session-local STDIO MCP execution, long-running host waits, and run-status insights
 
 This document explains implementation constraints and verification expectations for contributors. It is not the parent-project adoption contract; integrators should start with the [integration guide](../integration-guide.md).
 
@@ -21,12 +21,11 @@ README, `docs/user-interface.md`, `docs/integration-guide.md`, the architecture 
 
 `AWAIT-006` is an implemented client-guidance change, not a runtime extension. Its [long-running await guidance](../long-running-await-guidance.md) owns the current start-once, same-invocation, terminal-await, and same-deferred-handle policy in the source-distributed skill. Keep future changes confined to that skill and focused documentation contract test unless implementation proves a current contract mismatch. Do not represent the downstream-owned `AWAIT-007` Aquarium follow-up as current behavior or authority.
 
-## Planned RSTAT insights
+## RSTAT insights
 
-`RSTAT` is planned work, not current binary behavior. Its detailed authority is
-`docs/todo/TODO-RSTAT.md`; do not duplicate or reinterpret its sample,
-rounding, percentile, trend, residual-time, failure-recurrence, CLI, MCP, or skill
-formulas elsewhere.
+`GAORI-REQ-RQINS-*` and accepted `ADR-0020` own the implemented contract. Keep
+sample, rounding, percentile, trend, residual-time, failure-recurrence, CLI,
+MCP, and skill behavior synchronized with their executable tests.
 
 Implement one shared calculation package beneath both CLI and MCP. It must read
 only validated completed default standalone status and summary artifacts, enforce
@@ -85,7 +84,7 @@ The module root also holds a `main.go` whose executable content matches `cmd/gao
 
 ## Agent skills
 
-`skills/use-gaori/` is optional, source-distributed AI-agent guidance (a `SKILL.md` plus `references/`). It is not linked into the binary or installed by any Make target. Unlike the illustrative package names above, the `skills/use-gaori/` path is fixed: the Agent Skills convention and the README install URLs depend on it, so do not rename it. Planned `RSTAT-004` adds a separate `skills/use-gaori-status/` package only after its executable CLI and MCP dependencies exist and pass their contracts.
+`skills/use-gaori/` is optional, source-distributed AI-agent guidance (a `SKILL.md` plus `references/`). It is not linked into the binary or installed by any Make target. Unlike the illustrative package names above, the `skills/use-gaori/` path is fixed: the Agent Skills convention and the README install URLs depend on it, so do not rename it. `skills/use-gaori-status/` is the separate automatically discoverable, read-only insight package; keep it independently installable as a self-contained skill and do not merge its calculation-free status scope into the lifecycle skill.
 
 Keep skills agent-agnostic and subordinate to the executable and documentation contracts. They may teach safe use of Gaori, but must not add runtime behavior or imply workflow or acceptance authority. They must distinguish portable `.gaori/tester.yaml` and reviewed `.gaori/tester/rules/*.yaml` from local toolchain metadata, proposals, and run evidence. Source archives include the skill only from the first release tag created after `skills/` was added; binary installation and toolchain installation never copy or activate it.
 
