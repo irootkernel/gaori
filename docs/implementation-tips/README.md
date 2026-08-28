@@ -260,6 +260,8 @@ Raw-log policy is fixed: raw logs remain original local evidence and are not red
 
 ## Testing guidance
 
+The root [`TESTING.md`](../../TESTING.md) is the canonical test contract. Use `make test` for the complete serial gate, or `make test-prepare`, `make test-unit`, `make test-int`, and `make test-e2e` for its individual stages. Repository documentation and traceability checks run through `make guardrails`; they are not black-box E2E scenarios.
+
 Tests should cover:
 
 - Passing command.

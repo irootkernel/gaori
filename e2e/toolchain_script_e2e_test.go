@@ -271,7 +271,7 @@ func requirePython3(t *testing.T) string {
 	t.Helper()
 	python, err := exec.LookPath("python3")
 	if err != nil {
-		t.Skip("python3 is required for toolchain script e2e tests")
+		t.Fatalf("python3 is required for toolchain script e2e tests: %v", err)
 	}
 	return python
 }

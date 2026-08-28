@@ -9,9 +9,10 @@ TOOLCHAIN_ROOT ?= $(HOME)/.local/gaori/toolchains
 TOOLCHAIN_VERSION ?= $(shell git describe --tags --exact-match 2>/dev/null | sed 's/^v//' || true)
 LDFLAGS := -X main.version=$(VERSION) -X main.commit=$(COMMIT) -X main.buildDate=$(BUILD_DATE)
 
-UNIT_PACKAGES := ./internal/artifacts ./internal/config ./internal/extract ./internal/insights ./internal/rules ./internal/runner ./internal/safety ./internal/tagset
+UNIT_PACKAGES := ./internal/artifacts ./internal/cli ./internal/config ./internal/extract ./internal/insights ./internal/rules ./internal/runner ./internal/safety ./internal/tagset
 INTEGRATION_PACKAGES := ./internal/cli
 E2E_PACKAGES := ./e2e
+GUARDRAIL_TEST_PATTERN := ^(TestAwaitRunDocumentationContract|TestMCPDocumentationAndSkillContract|TestParserSupportDocumentationContract|TestRepositoryTestFunctions|TestRepositoryTestStageClassification|TestRepositoryUsesGaoriIdentity|TestRequirementTraceabilityAuditRejectsInvalidEvidence|TestRequirementTraceabilityMatrixCoversCompletedRequirements|TestUseGaoriCleanupAdvisoryContract|TestUseGaoriStatusSkillContract)$$
 
 .PHONY: build install install-toolchain test test-prepare test-unit test-int test-e2e format lint vet guardrails clean
 
@@ -23,26 +24,7 @@ install:
 	env -u GOPATH $(GO) install -ldflags "$(LDFLAGS)" ./cmd/$(BINARY)
 
 install-toolchain:
-	@set -e; \
-	VERSION_VALUE="$(VERSION)"; \
-	if [ "$$VERSION_VALUE" = "0.0.0-dev" ]; then VERSION_VALUE="$(TOOLCHAIN_VERSION)"; fi; \
-	VERSION_VALUE="$${VERSION_VALUE#v}"; \
-	if [ -z "$$VERSION_VALUE" ] || [ "$$VERSION_VALUE" = "0.0.0-dev" ]; then \
-		echo "ERROR: install-toolchain requires a real version; set VERSION=0.1.x or run from an exact v0.1.x tag" >&2; \
-		exit 1; \
-	fi; \
-	$(MAKE) build VERSION="$$VERSION_VALUE"; \
-	VERSION_TAG="v$$VERSION_VALUE"; \
-	case "$$VERSION_TAG" in v[0-9]*.[0-9]*.[0-9]*) ;; *) echo "ERROR: unsupported $(BINARY) version for toolchain install: $$VERSION_VALUE" >&2; exit 1 ;; esac; \
-	INSTALL_DIR="$(TOOLCHAIN_ROOT)/$$VERSION_TAG/bin"; \
-	mkdir -p "$$INSTALL_DIR"; \
-	install -m 0755 "$(BIN_DIR)/$(BINARY)" "$$INSTALL_DIR/$(BINARY)"; \
-	INSTALLED_VERSION="$$($$INSTALL_DIR/$(BINARY) --version | awk '{print $$2}')"; \
-	if [ "$${INSTALLED_VERSION#v}" != "$$VERSION_VALUE" ]; then \
-		echo "ERROR: installed version mismatch: expected $$VERSION_VALUE, got $$INSTALLED_VERSION" >&2; \
-		exit 1; \
-	fi; \
-	echo "installed $(BINARY) $$VERSION_TAG to $$INSTALL_DIR/$(BINARY)"
+	@GAORI_INSTALL_VERSION="$(VERSION)" GAORI_INSTALL_TOOLCHAIN_VERSION="$(TOOLCHAIN_VERSION)" GAORI_INSTALL_ROOT="$(TOOLCHAIN_ROOT)" GAORI_INSTALL_BIN_DIR="$(BIN_DIR)" GAORI_INSTALL_BINARY="$(BINARY)" ./scripts/install-toolchain
 
 test:
 	$(MAKE) test-prepare
@@ -55,32 +37,34 @@ test-prepare:
 	$(MAKE) lint
 	$(MAKE) vet
 	$(MAKE) guardrails
+	$(MAKE) build
+	@echo "[test] test-prepare complete"
 
 format:
 	$(GO) fmt ./...
 
 lint:
 	$(GOLANGCI_LINT) run ./...
+	$(GOLANGCI_LINT) run --build-tags integration ./internal/cli
 
 vet:
 	$(GO) vet ./...
+	$(GO) vet -tags=integration ./internal/cli
 
 guardrails:
-	$(GO) test -count=1 ./internal/config -run '^TestValidateRejectsUnknownParser$$'
-	$(GO) test -count=1 ./internal/artifacts -run '^(TestBoundSummaryEvidenceCapsRecordsAndKeepsCountsAligned|TestBoundSummaryEvidenceIncludesJSONTrailingNewlineInByteBudget|TestBoundSummaryEvidenceUsesRenderedByteBudget|TestCleanStandaloneRejectsUnsafeTargetsBeforeDeletion|TestCleanStandaloneSelectsCompletedRunsAndPreservesOtherState|TestWriteSummaryJSONFailsWhenTooLarge|TestWriteSummaryJSONIncludesFalseTruncationFields)$$'
-	$(GO) test -count=1 ./internal/extract -run '^(TestDetectParsersDoesNotChangeExtraction|TestProcessExtractorStatusContract|TestSupportedParsersMatchesDocumentedLabels)$$'
-	$(GO) test -count=1 ./internal/rules -run '^(TestLoadApplicableFailsOnInvalidDiscoveredFutureParserRule|TestLoadApplicableFailsOnInvalidMatchingRule|TestLoadApplicableRequiresAllRuleTags|TestRuleDetectsOvermatch)$$'
-	$(GO) test -count=1 ./internal/cli -run '^(TestAdHocParserAndTagsSelectRules|TestAdHocParserMissPreservesCommandResult|TestAdHocParserOptionValidationPreventsExecution|TestCleanCommandContract|TestMaterializeArtifactsExtractionErrorContract|TestNoisyRunsWriteBoundedTerminalArtifacts|TestOversizedFailedRunPreservesRawLog|TestOversizedPassingRunUsesBoundedExtraction|TestConfigCheckSampleReportsPerPatternCountsWithoutEchoingContent|TestOversizedSummarizeUsesBoundedExtraction|TestParsersDetectOutputContainsNoRawLogText|TestParsersDetectReportsCandidatesWithoutArtifacts|TestRunAndSummarizeSelectRulesByAllTags|TestSummarizeRebuildsArtifactsFromRawLogOnly|TestRulesLifecycleCommands)$$'
-	$(GO) test -count=1 ./e2e -run '^(TestBinaryAdHocParserContract|TestBinaryAdHocParserValidationFailsBeforeExecution|TestBinaryCleanContract|TestBinaryConfigCheckSampleReportsCountsWithoutLeakingSampleContent|TestBinaryTagInterfacesFailBeforeExecution|TestBinaryTagsSelectRulesByAllTags|TestRepositoryTestFunctions|TestRequirementTraceabilityAuditRejectsInvalidEvidence|TestRequirementTraceabilityMatrixCoversCompletedRequirements)$$'
+	$(GO) test -count=1 $(E2E_PACKAGES) -run '$(GUARDRAIL_TEST_PATTERN)'
 
 test-unit:
-	$(GO) test -count=1 $(UNIT_PACKAGES)
+	$(GO) test -race -count=1 $(UNIT_PACKAGES)
+	@echo "[test] test-unit complete"
 
 test-int:
-	$(GO) test -count=1 $(INTEGRATION_PACKAGES)
+	$(GO) test -race -count=1 -tags=integration $(INTEGRATION_PACKAGES)
+	@echo "[test] test-int complete"
 
 test-e2e:
-	$(GO) test -count=1 $(E2E_PACKAGES)
+	$(GO) test -count=1 -parallel=1 $(E2E_PACKAGES) -skip '$(GUARDRAIL_TEST_PATTERN)'
+	@echo "[test] test-e2e complete"
 
 clean:
 	rm -rf $(BIN_DIR)

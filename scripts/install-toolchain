@@ -1,0 +1,34 @@
+#!/bin/sh
+
+set -eu
+
+version_value=${GAORI_INSTALL_VERSION}
+if [ "$version_value" = "0.0.0-dev" ]; then
+	version_value=${GAORI_INSTALL_TOOLCHAIN_VERSION}
+fi
+version_value=${version_value#v}
+if [ -z "$version_value" ] || [ "$version_value" = "0.0.0-dev" ]; then
+	echo "ERROR: install-toolchain requires a real version; set VERSION=0.1.x or run from an exact v0.1.x tag" >&2
+	exit 1
+fi
+
+version_tag="v$version_value"
+case "$version_tag" in
+	v[0-9]*.[0-9]*.[0-9]*) ;;
+	*)
+		echo "ERROR: unsupported ${GAORI_INSTALL_BINARY} version for toolchain install: $version_value" >&2
+		exit 1
+		;;
+esac
+
+make build VERSION="$version_value"
+install_dir="${GAORI_INSTALL_ROOT}/${version_tag}/bin"
+mkdir -p "$install_dir"
+install -m 0755 "${GAORI_INSTALL_BIN_DIR}/${GAORI_INSTALL_BINARY}" "$install_dir/${GAORI_INSTALL_BINARY}"
+installed_version=$("$install_dir/${GAORI_INSTALL_BINARY}" --version | awk '{print $2}')
+if [ "${installed_version#v}" != "$version_value" ]; then
+	echo "ERROR: installed version mismatch: expected $version_value, got $installed_version" >&2
+	exit 1
+fi
+
+echo "installed ${GAORI_INSTALL_BINARY} $version_tag to $install_dir/${GAORI_INSTALL_BINARY}"

@@ -266,6 +266,55 @@ func TestIgnored(t *testing.T) {}
 	})
 }
 
+func TestRepositoryTestStageClassification(t *testing.T) {
+	t.Parallel()
+	root := projectRoot(t)
+	testFunctions, err := repositoryTestFunctions(filepath.Join(root, "e2e"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for name := range testFunctions {
+		isGuardrail := guardrailTestPattern.MatchString(name)
+		isE2E := e2eTestPattern.MatchString(name)
+		if isGuardrail == isE2E {
+			t.Errorf("e2e package test %s must match exactly one test stage", name)
+		}
+	}
+
+	makefile, err := os.ReadFile(filepath.Join(root, "Makefile"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	makePattern := strings.ReplaceAll(guardrailTestPatternText, "$", "$$")
+	if !strings.Contains(string(makefile), "GUARDRAIL_TEST_PATTERN := "+makePattern) {
+		t.Error("Makefile guardrail selector differs from the audited stage classification")
+	}
+	makeText := string(makefile)
+	completionHandlers := []struct {
+		target string
+		next   string
+		marker string
+	}{
+		{target: "test-prepare", next: "format", marker: `[test] test-prepare complete`},
+		{target: "test-unit", next: "test-int", marker: `[test] test-unit complete`},
+		{target: "test-int", next: "test-e2e", marker: `[test] test-int complete`},
+		{target: "test-e2e", next: "clean", marker: `[test] test-e2e complete`},
+	}
+	for _, handler := range completionHandlers {
+		start := strings.Index(makeText, "\n"+handler.target+":\n")
+		end := strings.Index(makeText, "\n"+handler.next+":\n")
+		if start < 0 || end <= start {
+			t.Errorf("Makefile stage section %s is missing or out of order", handler.target)
+			continue
+		}
+		section := makeText[start:end]
+		markerLine := "\t@echo \"" + handler.marker + "\""
+		if strings.Count(section, markerLine) != 1 || !strings.HasSuffix(strings.TrimSpace(section), markerLine) {
+			t.Errorf("Makefile stage %s must end with exactly one completion marker", handler.target)
+		}
+	}
+}
+
 func TestRepositoryUsesGaoriIdentity(t *testing.T) {
 	t.Parallel()
 	root := projectRoot(t)
@@ -319,10 +368,17 @@ func writeAuditGoFixture(t *testing.T, root, relativePath, contents string) {
 	}
 }
 
+const (
+	guardrailTestPatternText = `^(TestAwaitRunDocumentationContract|TestMCPDocumentationAndSkillContract|TestParserSupportDocumentationContract|TestRepositoryTestFunctions|TestRepositoryTestStageClassification|TestRepositoryUsesGaoriIdentity|TestRequirementTraceabilityAuditRejectsInvalidEvidence|TestRequirementTraceabilityMatrixCoversCompletedRequirements|TestUseGaoriCleanupAdvisoryContract|TestUseGaoriStatusSkillContract)$`
+	e2eTestPatternText       = `^(TestArchitectureJSONContractExamplesMatchFreshRunArtifacts|TestBinary.*|TestDocumentedCLIWorkflowAgainstFreshFixture|TestMakeInstallTargetsAndResolver|TestToolchainScript.*)$`
+)
+
 var (
 	completedRequirementPattern = regexp.MustCompile(`(?m)^- \[x\] \x60(GAORI-REQ-[A-Z0-9-]+)\x60`)
 	traceabilityRowPattern      = regexp.MustCompile(`(?m)^\| \x60(GAORI-REQ-[A-Z0-9-]+)\x60 \| ([^|]+) \|$`)
 	testCitationPattern         = regexp.MustCompile(`\x60(Test[A-Za-z0-9_]*)\x60`)
+	guardrailTestPattern        = regexp.MustCompile(guardrailTestPatternText)
+	e2eTestPattern              = regexp.MustCompile(e2eTestPatternText)
 	nonTestEvidenceRequirements = map[string]bool{
 		"GAORI-REQ-RQDOC-004": true,
 		"GAORI-REQ-RQHAR-007": true,

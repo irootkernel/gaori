@@ -13,17 +13,17 @@ commands:
   test-unit:
     command: ["make", "test-unit"]
     tags: [go, test, unit]
-    parser: go-test
+    parser: generic
     timeout_sec: 1200
   test-int:
     command: ["make", "test-int"]
     tags: [go, integration, test]
-    parser: go-test
+    parser: generic
     timeout_sec: 1800
   test-e2e:
     command: ["make", "test-e2e"]
     tags: [e2e, go, test]
-    parser: go-test
+    parser: generic
     timeout_sec: 1800
   diff-check:
     command: ["git", "diff", "--check"]

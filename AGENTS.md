@@ -209,7 +209,7 @@ make test
 git diff --check
 ```
 
-Use focused `go test` commands for the affected package or regression before broader targets. `make test` is the full local development gate and includes format, lint, vet, guardrails, unit, integration, and E2E checks; report optional tooling failures without bypassing them.
+Use focused `go test` commands for the affected package or regression before broader targets. `make test` is the full local development gate and includes format, lint, vet, repository guardrails, build, race-enabled unit and integration tests, and black-box E2E checks; report optional tooling failures without bypassing them. `TESTING.md` is the canonical stage, environment, diagnostics, parser-mapping, and waiver authority.
 
 Verification expectations:
 

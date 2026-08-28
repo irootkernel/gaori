@@ -34,6 +34,7 @@ These documents remain outside the role directories but have one explicit owner 
 | [Parser support matrix](parser-support.md) | Specifications-owned support-tier, evidence, limitation, and promotion contract |
 | [Integration guide](integration-guide.md) | Specifications-owned parent-project capability and adoption contract |
 | [Requirements-to-test matrix](requirements-test-matrix.md) | Specifications-owned traceability from completed requirements to executable evidence |
+| [Testing contract](../TESTING.md) | Root Make-owned stage mapping, environment safety, diagnostics, Gaori parser mapping, and approved legacy waiver authority |
 | [Aquarium parser handoff](handoffs/aquarium-test-framework-parser.md) | Specifications-owned durable cross-project parser and adoption contract |
 | [Long-running await guidance](long-running-await-guidance.md) | Implementation-tips-owned source-skill guidance and downstream adoption boundary |
 | [Release notes](releases/) | Public release-history supplements owned by the root [changelog](../CHANGELOG.md) |
@@ -56,7 +57,7 @@ For a parent project integrating Gaori:
 For Gaori maintainers:
 
 1. Follow [AGENTS.md](../AGENTS.md) for repository workflow and verification expectations.
-2. Read the [specifications](specs/README.md) and use the [requirements-to-test matrix](requirements-test-matrix.md) to locate executable evidence.
+2. Follow the root [testing contract](../TESTING.md), then read the [specifications](specs/README.md) and use the [requirements-to-test matrix](requirements-test-matrix.md) to locate executable evidence.
 3. Read the [implementation tips](implementation-tips/README.md) before changing runner, parser, artifact, redaction, rule, or release behavior.
 4. Use the [roadmap](roadmap/README.md) for lifecycle state, the [todo index](todo/README.md) for active dossiers and future epic candidates, and [deferred feedback](deferred-feedback/README.md) for small postponed findings.
 5. For `GEPIC` and `AQADP`, read the durable [Aquarium parser handoff](handoffs/aquarium-test-framework-parser.md); for active `AQADP`, also read its [dossier](todo/TODO-AQADP.md).
@@ -92,10 +93,10 @@ Update user-facing and integration documents in the same change whenever executa
 
 ## Documentation checks
 
-Repository-native documentation checks are part of the E2E package:
+Repository-native documentation checks are repository guardrails rather than black-box E2E scenarios:
 
 ```bash
-go test -count=1 ./e2e -run '^(TestAwaitRunDocumentationContract|TestParserSupportDocumentationContract|TestMCPDocumentationAndSkillContract|TestRequirementTraceabilityMatrixCoversCompletedRequirements)$'
+make guardrails
 make test-e2e
 git --no-pager diff --check
 ```
