@@ -91,6 +91,7 @@ This matrix records the primary evidence for every requirement marked complete. 
 | `GAORI-REQ-RQINS-002` | `TestDistributionRecentChangeAndEstimateUseExactFormulas`; `TestLoadCommandStatsSeparatesOutcomesAndBoundsRecurringFailures` |
 | `GAORI-REQ-RQINS-003` | `TestLoadCommandStatsSeparatesOutcomesAndBoundsRecurringFailures`; `TestLoadCommandStatsFailsClosedOnInconsistentEvidenceWithoutRawLog` |
 | `GAORI-REQ-RQINS-004` | `TestRunsStatsSelectorsAndHumanJSONParity`; `TestRunsEstimateAvailableInsufficientAndReadOnly`; `TestRunsInsightsRejectInvalidInputAndUnsafeEvidence`; `TestBinaryRunInsightsAreArtifactBackedAndReadOnly` |
+| `GAORI-REQ-RQINS-005` | `TestMCPServerAdvertisesExpectedTools`; `TestMCPCommandStatsMatchesCLIAndDoesNotExecuteCommand`; `TestMCPEstimateRunPhaseSemanticsAreEphemeralAndReadOnly`; `TestMCPInsightsRejectOutputDirectoryAndInvalidSelectorsWithoutMutation`; `TestMCPInvocationLookupErrorsAreBoundedAndNonReflective`; `TestBinaryMCPLifecycleAndBoundedEvidence` |
 | `GAORI-REQ-RQINS-007` | `TestExecuteCapturesCleanAndDirtyGitProvenance`; `TestExecuteOmitsUnavailableGitProvenance`; `TestConfiguredRunPersistsGitProvenance`; `TestSummarizeRawLogUsesConfigRedaction`; `TestLoadCommandStatsAppliesSelectorBeforeLimitAndHandlesLegacy` |
 | `GAORI-REQ-RQDOC-001` | authoritative documents listed in `AGENTS.md` and `README.md`; `TestArchitectureJSONContractExamplesMatchFreshRunArtifacts` |
 | `GAORI-REQ-RQDOC-002` | `TestDocumentedCLIWorkflowAgainstFreshFixture` |

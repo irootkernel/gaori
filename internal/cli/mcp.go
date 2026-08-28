@@ -15,6 +15,8 @@ import (
 
 	"github.com/google/jsonschema-go/jsonschema"
 	"github.com/irootkernel/gaori/internal/artifacts"
+	"github.com/irootkernel/gaori/internal/config"
+	"github.com/irootkernel/gaori/internal/insights"
 	"github.com/irootkernel/gaori/internal/model"
 	"github.com/irootkernel/gaori/internal/runner"
 	"github.com/irootkernel/gaori/internal/safety"
@@ -63,6 +65,9 @@ type mcpInvocation struct {
 	startGate            *runner.StartGate
 	done                 chan struct{}
 	finalizedSummaryPath string
+	mode                 model.RunMode
+	commandID            string
+	executingAt          time.Time
 }
 
 func (i *mcpInvocation) read() mcpSnapshot {
@@ -80,6 +85,9 @@ func (i *mcpInvocation) transition(phase mcpPhase) {
 		return
 	}
 	i.snapshot.Phase = phase
+	if phase == mcpPhaseExecuting && i.executingAt.IsZero() {
+		i.executingAt = time.Now().UTC()
+	}
 	i.bumpLocked()
 }
 
@@ -166,6 +174,8 @@ func (m *mcpManager) start(req model.RunRequest) mcpSnapshot {
 		cancel:    cancel,
 		startGate: startGate,
 		done:      make(chan struct{}),
+		mode:      req.Mode,
+		commandID: req.CommandID,
 	}
 	m.invocations[id] = inv
 	m.mu.Unlock()
@@ -339,6 +349,32 @@ type excerptOutput struct {
 	Content     string `json:"content"`
 }
 
+type commandStatsInput struct {
+	CommandID    string `json:"command_id" jsonschema:"configured command identifier"`
+	GitRevision  string `json:"git_revision,omitempty" jsonschema:"optional full lowercase Git object ID"`
+	IncludeDirty bool   `json:"include_dirty,omitempty" jsonschema:"include dirty samples for the selected revision"`
+	Limit        *int   `json:"limit,omitempty" jsonschema:"maximum matching runs from 1 through 50; defaults to 20"`
+}
+
+type runEstimateInput struct {
+	InvocationID string `json:"invocation_id" jsonschema:"session-local invocation identifier"`
+	GitRevision  string `json:"git_revision,omitempty" jsonschema:"optional full lowercase Git object ID"`
+	IncludeDirty bool   `json:"include_dirty,omitempty" jsonschema:"include dirty samples for the selected revision"`
+}
+
+type mcpRunEstimate struct {
+	Schema            string             `json:"schema"`
+	InvocationID      string             `json:"invocation_id"`
+	Revision          int64              `json:"revision"`
+	Phase             mcpPhase           `json:"phase"`
+	UnsupportedReason string             `json:"unsupported_reason,omitempty"`
+	ElapsedMS         *int64             `json:"elapsed_ms,omitempty"`
+	Estimate          *insights.Estimate `json:"estimate,omitempty"`
+	ActualDurationMS  *int64             `json:"actual_duration_ms,omitempty"`
+	Result            *runResult         `json:"result,omitempty"`
+	Error             *mcpRunError       `json:"gaori_error,omitempty"`
+}
+
 // listRunsInput mirrors the `runs list` selectors. Every field carries omitempty
 // because jsonschema-go marks any field without it required, which would reject a
 // call with no arguments.
@@ -397,6 +433,108 @@ func boundMCPRunListings(runs []artifacts.RunListing, limit int) ([]artifacts.Ru
 		}
 	}
 	return runs[:0], len(runs) > 0
+}
+
+func (m *mcpManager) commandStats(commandID, gitRevision string, includeDirty bool, limit int) (insights.CommandStats, error) {
+	if m.outputDir != "" {
+		return insights.CommandStats{}, fmt.Errorf("historical insights are unavailable when the server uses a caller-selected output directory")
+	}
+	cfg, _, err := config.Load(m.repoRoot, m.configPath, false)
+	if err != nil {
+		return insights.CommandStats{}, errors.New(safeMCPErrorMessage(err, nil))
+	}
+	if _, ok := cfg.Commands[commandID]; !ok {
+		return insights.CommandStats{}, errors.New("validate insights command: request failed")
+	}
+	selector, err := insights.NewSelector(gitRevision, includeDirty)
+	if err != nil {
+		return insights.CommandStats{}, errors.New(safeMCPErrorMessage(err, nil))
+	}
+	stats, err := insights.LoadCommandStats(m.repoRoot, commandID, selector, limit)
+	if err != nil {
+		return insights.CommandStats{}, errors.New(safeMCPErrorMessage(err, nil))
+	}
+	if err := ensureBoundedMCPInsight(stats); err != nil {
+		return insights.CommandStats{}, err
+	}
+	return stats, nil
+}
+
+func ensureBoundedMCPInsight(value any) error {
+	encoded, err := json.Marshal(value)
+	if err != nil {
+		return errors.New("historical insight response is unavailable")
+	}
+	fallback, err := json.Marshal(string(encoded))
+	if err != nil || len(encoded)+len(fallback)+mcpResponseEnvelopeBytes > safety.MaxSummaryBytes {
+		return errors.New("historical insight response is unavailable")
+	}
+	return nil
+}
+
+func (m *mcpManager) estimateRun(invocationID, gitRevision string, includeDirty bool) (mcpRunEstimate, error) {
+	if m.outputDir != "" {
+		return mcpRunEstimate{}, fmt.Errorf("historical insights are unavailable when the server uses a caller-selected output directory")
+	}
+	inv, err := m.lookup(invocationID)
+	if err != nil {
+		return mcpRunEstimate{}, err
+	}
+	if _, err := insights.NewSelector(gitRevision, includeDirty); err != nil {
+		return mcpRunEstimate{}, errors.New(safeMCPErrorMessage(err, nil))
+	}
+
+	inv.mu.Lock()
+	snapshot := inv.snapshot
+	mode := inv.mode
+	commandID := inv.commandID
+	executingAt := inv.executingAt
+	inv.mu.Unlock()
+
+	out := mcpRunEstimate{
+		Schema:       "gaori-run-estimate.v1",
+		InvocationID: snapshot.InvocationID,
+		Revision:     snapshot.Revision,
+		Phase:        snapshot.Phase,
+	}
+	if mode != model.RunModeConfigured {
+		out.UnsupportedReason = "configured_runs_only"
+		return out, nil
+	}
+	switch snapshot.Phase {
+	case mcpPhaseQueued:
+		return out, nil
+	case mcpPhaseExecuting:
+		if executingAt.IsZero() {
+			return mcpRunEstimate{}, errors.New("run estimate is unavailable")
+		}
+		elapsedMS := time.Since(executingAt).Milliseconds()
+		if elapsedMS < 1 {
+			elapsedMS = 1
+		}
+		stats, err := m.commandStats(commandID, gitRevision, includeDirty, insights.DefaultLimit)
+		if err != nil {
+			return mcpRunEstimate{}, err
+		}
+		estimate := insights.EstimateCommand(stats, elapsedMS)
+		out.ElapsedMS = &elapsedMS
+		out.Estimate = &estimate
+	case mcpPhaseMaterializing:
+		return out, nil
+	case mcpPhaseFinished:
+		out.Result = snapshot.Result
+		out.Error = snapshot.Error
+		if snapshot.Result != nil {
+			duration := snapshot.Result.DurationMS
+			out.ActualDurationMS = &duration
+		}
+	default:
+		return mcpRunEstimate{}, errors.New("run estimate is unavailable")
+	}
+	if err := ensureBoundedMCPInsight(out); err != nil {
+		return mcpRunEstimate{}, err
+	}
+	return out, nil
 }
 
 func newMCPServer(manager *mcpManager, info BuildInfo) *mcp.Server {
@@ -466,6 +604,33 @@ func newMCPServer(manager *mcpManager, info BuildInfo) *mcp.Server {
 			return nil, excerptOutput{}, fmt.Errorf("get excerpt: evidence unavailable")
 		}
 		return nil, out, nil
+	})
+	mcp.AddTool(server, &mcp.Tool{
+		Name:        "get_command_stats",
+		Description: "Return bounded artifact-backed statistics for one configured command without starting or changing a run.",
+		Annotations: &readOnly,
+		InputSchema: boundedIntegerInputSchema[commandStatsInput]("limit", insights.MinimumLimit, insights.MaximumLimit),
+	}, func(_ context.Context, _ *mcp.CallToolRequest, in commandStatsInput) (*mcp.CallToolResult, insights.CommandStats, error) {
+		if in.CommandID == "" {
+			return nil, insights.CommandStats{}, fmt.Errorf("command_id is required")
+		}
+		limit := insights.DefaultLimit
+		if in.Limit != nil {
+			if *in.Limit < insights.MinimumLimit || *in.Limit > insights.MaximumLimit {
+				return nil, insights.CommandStats{}, fmt.Errorf("limit must be between %d and %d", insights.MinimumLimit, insights.MaximumLimit)
+			}
+			limit = *in.Limit
+		}
+		stats, err := manager.commandStats(in.CommandID, in.GitRevision, in.IncludeDirty, limit)
+		return nil, stats, err
+	})
+	mcp.AddTool(server, &mcp.Tool{
+		Name:        "estimate_run",
+		Description: "Read one session-local invocation phase and, only while a configured command is executing, calculate a historical estimate without changing the invocation.",
+		Annotations: &readOnly,
+	}, func(_ context.Context, _ *mcp.CallToolRequest, in runEstimateInput) (*mcp.CallToolResult, mcpRunEstimate, error) {
+		out, err := manager.estimateRun(in.InvocationID, in.GitRevision, in.IncludeDirty)
+		return nil, out, err
 	})
 	mcp.AddTool(server, &mcp.Tool{
 		Name:        "list_runs",

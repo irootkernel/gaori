@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/irootkernel/gaori/internal/artifacts"
+	"github.com/irootkernel/gaori/internal/insights"
 	"github.com/irootkernel/gaori/internal/model"
 	"github.com/irootkernel/gaori/internal/runner"
 	"github.com/irootkernel/gaori/internal/safety"
@@ -90,8 +91,17 @@ func TestMCPServerAdvertisesExpectedTools(t *testing.T) {
 				t.Fatalf("list_runs description does not separate evidence from session state: %q", tool.Description)
 			}
 		}
+		if tool.Name == "get_command_stats" {
+			assertOptionalIntegerBounds(t, tool.InputSchema, "limit", insights.MinimumLimit, insights.MaximumLimit)
+			if tool.Annotations == nil || !tool.Annotations.ReadOnlyHint || !tool.Annotations.IdempotentHint {
+				t.Fatalf("get_command_stats is not read-only and idempotent: %+v", tool.Annotations)
+			}
+		}
+		if tool.Name == "estimate_run" && (tool.Annotations == nil || !tool.Annotations.ReadOnlyHint || !tool.Annotations.IdempotentHint) {
+			t.Fatalf("estimate_run is not read-only and idempotent: %+v", tool.Annotations)
+		}
 	}
-	want := []string{"await_run", "cancel_run", "get_excerpt", "get_run", "list_runs", "start_ad_hoc_run", "start_configured_run", "wait_run"}
+	want := []string{"await_run", "cancel_run", "estimate_run", "get_command_stats", "get_excerpt", "get_run", "list_runs", "start_ad_hoc_run", "start_configured_run", "wait_run"}
 	slices.Sort(names)
 	if !slices.Equal(names, want) {
 		t.Fatalf("tools = %v, want %v", names, want)
@@ -132,6 +142,7 @@ func TestMCPInvocationLookupErrorsAreBoundedAndNonReflective(t *testing.T) {
 		{name: "await_run", arguments: map[string]any{}},
 		{name: "cancel_run", arguments: map[string]any{}},
 		{name: "get_excerpt", arguments: map[string]any{"failure_id": "F001"}},
+		{name: "estimate_run", arguments: map[string]any{}},
 	}
 	for _, invocationID := range []string{"run-999999", "run-000001-token=secret", "run-" + strings.Repeat("9", safety.MaxExcerptBytes*2)} {
 		for _, tool := range tools {
@@ -152,6 +163,133 @@ func TestMCPInvocationLookupErrorsAreBoundedAndNonReflective(t *testing.T) {
 				t.Fatalf("%s reflected or failed to bound invocation %q: %s", tool.name, invocationID, encoded)
 			}
 		}
+	}
+}
+
+func TestMCPCommandStatsMatchesCLIAndDoesNotExecuteCommand(t *testing.T) {
+	t.Parallel()
+	repo := t.TempDir()
+	writeRunsInsightConfig(t, repo)
+	clean := false
+	writeRunsInsightRun(t, repo, "20260801T000000", runsInsightFixture{durationMS: 1000, revision: runsRevisionA, dirty: &clean})
+	writeRunsInsightRun(t, repo, "20260802T000000", runsInsightFixture{durationMS: 3000, revision: runsRevisionA, dirty: &clean})
+
+	session := newMCPTestSession(t, newMCPManager(globalOptions{RepoRoot: repo}))
+	result, err := session.CallTool(context.Background(), &mcp.CallToolParams{Name: "get_command_stats", Arguments: map[string]any{
+		"command_id": "unit", "git_revision": runsRevisionA, "limit": 1,
+	}})
+	if err != nil || result.IsError {
+		t.Fatalf("get_command_stats: result=%+v err=%v", result, err)
+	}
+	mcpStats := decodeMCPOutput[insights.CommandStats](t, result)
+
+	expected, _, err := loadRunsInsightStats(globalOptions{RepoRoot: repo}, "stats", []string{"unit", "--git-revision", runsRevisionA, "--limit", "1"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	mcpJSON, _ := json.Marshal(mcpStats)
+	expectedJSON, _ := json.Marshal(expected)
+	if !bytes.Equal(mcpJSON, expectedJSON) {
+		t.Fatalf("MCP stats differ from CLI engine:\nMCP  %s\nCLI  %s", mcpJSON, expectedJSON)
+	}
+	if _, err := os.Stat(filepath.Join(repo, "must-not-run")); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("historical lookup executed the configured command: %v", err)
+	}
+}
+
+func TestMCPEstimateRunPhaseSemanticsAreEphemeralAndReadOnly(t *testing.T) {
+	t.Parallel()
+	repo := t.TempDir()
+	writeRunsInsightConfig(t, repo)
+	clean := false
+	writeRunsInsightRun(t, repo, "20260801T000000", runsInsightFixture{durationMS: 2000, revision: runsRevisionA, dirty: &clean})
+	writeRunsInsightRun(t, repo, "20260802T000000", runsInsightFixture{durationMS: 4000, revision: runsRevisionA, dirty: &clean})
+
+	manager := newMCPManager(globalOptions{RepoRoot: repo})
+	finishedResult := &runResult{Command: "unit", Status: model.RunStatusPassed, ExitCode: 0, DurationMS: 2500}
+	invocations := map[string]*mcpInvocation{
+		"run-000001": testMCPInsightInvocation("run-000001", model.RunModeConfigured, mcpPhaseQueued, 7, time.Time{}, nil),
+		"run-000002": testMCPInsightInvocation("run-000002", model.RunModeConfigured, mcpPhaseExecuting, 9, time.Now().Add(-1500*time.Millisecond), nil),
+		"run-000003": testMCPInsightInvocation("run-000003", model.RunModeConfigured, mcpPhaseMaterializing, 11, time.Now().Add(-2*time.Second), nil),
+		"run-000004": testMCPInsightInvocation("run-000004", model.RunModeConfigured, mcpPhaseFinished, 13, time.Now().Add(-2500*time.Millisecond), finishedResult),
+		"run-000005": testMCPInsightInvocation("run-000005", model.RunModeAdHoc, mcpPhaseExecuting, 3, time.Now().Add(-time.Second), nil),
+	}
+	manager.invocations = invocations
+
+	queued, err := manager.estimateRun("run-000001", runsRevisionA, false)
+	if err != nil || queued.ElapsedMS != nil || queued.Estimate != nil || queued.Result != nil {
+		t.Fatalf("queued estimate = %+v, err=%v", queued, err)
+	}
+	executing, err := manager.estimateRun("run-000002", runsRevisionA, false)
+	if err != nil || executing.ElapsedMS == nil || *executing.ElapsedMS < 1400 || executing.Estimate == nil || executing.Estimate.Schema != "gaori-command-estimate.v1" {
+		t.Fatalf("executing estimate = %+v, err=%v", executing, err)
+	}
+	materializing, err := manager.estimateRun("run-000003", runsRevisionA, false)
+	if err != nil || materializing.ElapsedMS != nil || materializing.Estimate != nil || materializing.Result != nil {
+		t.Fatalf("materializing estimate = %+v, err=%v", materializing, err)
+	}
+	finished, err := manager.estimateRun("run-000004", runsRevisionA, false)
+	if err != nil || finished.ElapsedMS != nil || finished.Estimate != nil || finished.Result != finishedResult || finished.ActualDurationMS == nil || *finished.ActualDurationMS != 2500 {
+		t.Fatalf("finished estimate = %+v, err=%v", finished, err)
+	}
+	adHoc, err := manager.estimateRun("run-000005", "", false)
+	if err != nil || adHoc.UnsupportedReason != "configured_runs_only" || adHoc.ElapsedMS != nil || adHoc.Estimate != nil {
+		t.Fatalf("ad-hoc estimate = %+v, err=%v", adHoc, err)
+	}
+
+	before := invocations["run-000002"].read()
+	unchanged, err := manager.wait(context.Background(), "run-000002", before.Revision, 10*time.Millisecond)
+	if err != nil || unchanged.Changed || unchanged.Revision != before.Revision || unchanged.CancellationRequested {
+		t.Fatalf("estimate changed or woke invocation: before=%+v after=%+v err=%v", before, unchanged, err)
+	}
+}
+
+func testMCPInsightInvocation(id string, mode model.RunMode, phase mcpPhase, revision int64, executingAt time.Time, result *runResult) *mcpInvocation {
+	now := time.Now().UTC()
+	return &mcpInvocation{
+		snapshot: mcpSnapshot{InvocationID: id, Revision: revision, Phase: phase, CreatedAt: now, UpdatedAt: now, Result: result},
+		changed:  make(chan struct{}), done: make(chan struct{}), mode: mode, commandID: "unit", executingAt: executingAt,
+	}
+}
+
+func TestMCPInsightsRejectOutputDirectoryAndInvalidSelectorsWithoutMutation(t *testing.T) {
+	t.Parallel()
+	repo := t.TempDir()
+	writeRunsInsightConfig(t, repo)
+	manager := newMCPManager(globalOptions{RepoRoot: repo, OutputDir: filepath.Join(repo, "elsewhere")})
+	manager.invocations["run-000001"] = testMCPInsightInvocation("run-000001", model.RunModeConfigured, mcpPhaseExecuting, 4, time.Now().Add(-time.Second), nil)
+
+	if _, err := manager.commandStats("unit", "", false, insights.DefaultLimit); err == nil || len(err.Error()) > safety.MaxExcerptBytes {
+		t.Fatalf("output-dir stats error = %v", err)
+	}
+	if _, err := manager.estimateRun("run-000001", "", false); err == nil || len(err.Error()) > safety.MaxExcerptBytes {
+		t.Fatalf("output-dir estimate error = %v", err)
+	}
+
+	manager.outputDir = ""
+	before := manager.invocations["run-000001"].read()
+	if _, err := manager.estimateRun("run-000001", "not-a-revision", false); err == nil || strings.Contains(err.Error(), "not-a-revision") || len(err.Error()) > safety.MaxExcerptBytes {
+		t.Fatalf("unsafe selector error = %v", err)
+	}
+	after := manager.invocations["run-000001"].read()
+	if before.Revision != after.Revision || before.CancellationRequested != after.CancellationRequested || before.Phase != after.Phase {
+		t.Fatalf("invalid estimate mutated invocation: before=%+v after=%+v", before, after)
+	}
+}
+
+func TestMCPCommandStatsRejectsOversizedWireResponse(t *testing.T) {
+	t.Parallel()
+	repo := t.TempDir()
+	writeRunsInsightConfig(t, repo)
+	for index, runName := range []string{"20260801T000000", "20260802T000000", "20260803T000000"} {
+		writeRunsInsightRun(t, repo, runName, runsInsightFixture{
+			status: model.RunStatusFailed, durationMS: 1000,
+			failures: []model.Failure{{ID: "F001", Signature: fmt.Sprintf("failure-%d-%s", index, strings.Repeat("x", 12_000))}},
+		})
+	}
+	manager := newMCPManager(globalOptions{RepoRoot: repo})
+	if _, err := manager.commandStats("unit", "", false, insights.DefaultLimit); err == nil || err.Error() != "historical insight response is unavailable" {
+		t.Fatalf("oversized MCP insight error = %v", err)
 	}
 }
 

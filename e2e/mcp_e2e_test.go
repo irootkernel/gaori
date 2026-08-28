@@ -185,6 +185,18 @@ type mcpBinaryCancelOutput struct {
 	Snapshot mcpBinarySnapshot `json:"snapshot"`
 }
 
+type mcpBinaryRunEstimate struct {
+	Schema            string           `json:"schema"`
+	InvocationID      string           `json:"invocation_id"`
+	Revision          int64            `json:"revision"`
+	Phase             string           `json:"phase"`
+	UnsupportedReason string           `json:"unsupported_reason"`
+	ElapsedMS         *int64           `json:"elapsed_ms"`
+	Estimate          *json.RawMessage `json:"estimate"`
+	ActualDurationMS  *int64           `json:"actual_duration_ms"`
+	Result            binaryRunResult  `json:"result"`
+}
+
 func TestBinaryMCPLifecycleAndBoundedEvidence(t *testing.T) {
 	root := projectRoot(t)
 	bin := buildBinary(t, root)
@@ -213,7 +225,7 @@ func TestBinaryMCPLifecycleAndBoundedEvidence(t *testing.T) {
 	}()
 
 	tools, err := session.ListTools(ctx, nil)
-	if err != nil || len(tools.Tools) != 8 {
+	if err != nil || len(tools.Tools) != 10 {
 		t.Fatalf("list tools: count=%d err=%v", len(tools.Tools), err)
 	}
 	assertMCPToolErrorDoesNotContain(t, ctx, session, "get_run", map[string]any{
@@ -233,6 +245,18 @@ func TestBinaryMCPLifecycleAndBoundedEvidence(t *testing.T) {
 
 	failed := callMCPTool[mcpBinarySnapshot](t, ctx, session, "start_configured_run", map[string]any{"command_id": "fail"})
 	failed = awaitMCPFinish(t, ctx, session, failed)
+	stats := callMCPTool[struct {
+		Schema                string `json:"schema"`
+		CommandID             string `json:"command_id"`
+		ObservedTerminalCount int    `json:"observed_terminal_count"`
+	}](t, ctx, session, "get_command_stats", map[string]any{"command_id": "fail"})
+	if stats.Schema != "gaori-command-stats.v1" || stats.CommandID != "fail" || stats.ObservedTerminalCount != 1 {
+		t.Fatalf("historical stats = %+v", stats)
+	}
+	finishedEstimate := callMCPTool[mcpBinaryRunEstimate](t, ctx, session, "estimate_run", map[string]any{"invocation_id": failed.InvocationID})
+	if finishedEstimate.Schema != "gaori-run-estimate.v1" || finishedEstimate.Phase != "finished" || finishedEstimate.Estimate != nil || finishedEstimate.ActualDurationMS == nil || finishedEstimate.Result.ExitCode != 7 {
+		t.Fatalf("finished estimate = %+v", finishedEstimate)
+	}
 	assertMCPToolError(t, ctx, session, "wait_run", map[string]any{
 		"invocation_id": failed.InvocationID, "after_revision": 0, "timeout_ms": nil,
 	})
@@ -288,6 +312,12 @@ func TestBinaryMCPLifecycleAndBoundedEvidence(t *testing.T) {
 		"invocation_id": failed.InvocationID,
 		"failure_id":    "F001",
 	}, "relocated")
+	if err := os.Remove(summaryDir); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Rename(relocatedSummaryDir, summaryDir); err != nil {
+		t.Fatal(err)
+	}
 
 	passed := callMCPTool[mcpBinarySnapshot](t, ctx, session, "start_ad_hoc_run", map[string]any{
 		"argv": []string{"sh", "-c", "echo ok"}, "tags": []string{"unit"}, "parser": "generic", "timeout_sec": 10,
@@ -295,6 +325,10 @@ func TestBinaryMCPLifecycleAndBoundedEvidence(t *testing.T) {
 	passed = awaitMCPFinish(t, ctx, session, passed)
 	if passed.Result.Status != model.RunStatusPassed || passed.Result.ExitCode != 0 {
 		t.Fatalf("ad-hoc result = %+v", passed.Result)
+	}
+	adHocEstimate := callMCPTool[mcpBinaryRunEstimate](t, ctx, session, "estimate_run", map[string]any{"invocation_id": passed.InvocationID})
+	if adHocEstimate.UnsupportedReason != "configured_runs_only" || adHocEstimate.Estimate != nil {
+		t.Fatalf("ad-hoc estimate = %+v", adHocEstimate)
 	}
 
 	timedOut := callMCPTool[mcpBinarySnapshot](t, ctx, session, "start_ad_hoc_run", map[string]any{
@@ -321,6 +355,14 @@ func TestBinaryMCPLifecycleAndBoundedEvidence(t *testing.T) {
 	slow = callMCPTool[mcpBinarySnapshot](t, ctx, session, "wait_run", map[string]any{"invocation_id": slow.InvocationID, "after_revision": slow.Revision, "timeout_ms": 5000})
 	if slow.Phase != "executing" {
 		t.Fatalf("slow phase = %q", slow.Phase)
+	}
+	liveEstimate := callMCPTool[mcpBinaryRunEstimate](t, ctx, session, "estimate_run", map[string]any{"invocation_id": slow.InvocationID})
+	if liveEstimate.Phase != "executing" || liveEstimate.Revision != slow.Revision || liveEstimate.ElapsedMS == nil || liveEstimate.Estimate == nil {
+		t.Fatalf("executing estimate = %+v", liveEstimate)
+	}
+	insightCurrent := callMCPTool[mcpBinarySnapshot](t, ctx, session, "get_run", map[string]any{"invocation_id": slow.InvocationID})
+	if insightCurrent.Revision != slow.Revision || insightCurrent.CancellationRequested {
+		t.Fatalf("estimate_run changed invocation: before=%+v after=%+v", slow, insightCurrent)
 	}
 	waiterCtx, cancelWaiter := context.WithTimeout(ctx, 50*time.Millisecond)
 	_, err = session.CallTool(waiterCtx, &mcp.CallToolParams{Name: "await_run", Arguments: map[string]any{"invocation_id": slow.InvocationID}})
@@ -412,7 +454,7 @@ func TestMCPDocumentationAndSkillContract(t *testing.T) {
 	}
 	completionStatus := map[string]string{
 		"docs/architecture/README.md": "Status: Complete through `AWAIT-004`",
-		"docs/user-interface.md":      "complete through `AWAIT-004`",
+		"docs/user-interface.md":      "complete through `RSTAT-003`",
 	}
 	drainContractPaths := map[string]bool{
 		"README.md":                                true,
@@ -506,6 +548,10 @@ func callMCPTool[T any](t *testing.T, ctx context.Context, session *mcp.ClientSe
 	result, err := session.CallTool(ctx, &mcp.CallToolParams{Name: name, Arguments: arguments})
 	if err != nil {
 		t.Fatalf("call %s: %v", name, err)
+	}
+	if result.IsError {
+		data, _ := json.Marshal(result)
+		t.Fatalf("call %s returned tool error: %s", name, data)
 	}
 	output, err := decodeMCPToolResult[T](result)
 	if err != nil {
