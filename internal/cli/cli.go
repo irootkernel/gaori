@@ -581,6 +581,8 @@ func materializeArtifactsWithExtractor(req model.RunRequest, cfg model.Config, p
 		Tags:            slices.Clone(metadata.Tags),
 		Parser:          metadata.Parser,
 		CommandArgv:     slices.Clone(metadata.CommandArgv),
+		GitRevision:     metadata.GitRevision,
+		GitDirty:        metadata.GitDirty,
 		ExitCode:        metadata.ExitCode,
 		StartedAt:       metadata.StartedAt,
 		EndedAt:         metadata.EndedAt,

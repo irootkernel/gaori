@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -12,6 +13,90 @@ import (
 
 	"github.com/irootkernel/gaori/internal/model"
 )
+
+func TestExecuteCapturesCleanAndDirtyGitProvenance(t *testing.T) {
+	t.Parallel()
+	repo := t.TempDir()
+	runGit(t, repo, "init")
+	runGit(t, repo, "config", "user.email", "gaori@example.test")
+	runGit(t, repo, "config", "user.name", "Gaori Test")
+	if err := os.WriteFile(filepath.Join(repo, "tracked.txt"), []byte("tracked\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(repo, ".gitignore"), []byte("ignored.txt\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	runGit(t, repo, "add", "tracked.txt", ".gitignore")
+	runGit(t, repo, "commit", "-m", "initial")
+	revision := strings.TrimSpace(runGit(t, repo, "rev-parse", "HEAD"))
+
+	var raw bytes.Buffer
+	clean, err := ExecuteContextOnly(context.Background(), repo, "unit", []string{"unit"}, "generic", []string{"sh", "-c", "true"}, 10, &raw)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if clean.Metadata.GitRevision != revision || clean.Metadata.GitDirty == nil || *clean.Metadata.GitDirty {
+		t.Fatalf("clean provenance = revision %q dirty %v", clean.Metadata.GitRevision, clean.Metadata.GitDirty)
+	}
+	if err := os.WriteFile(filepath.Join(repo, "ignored.txt"), []byte("ignored\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	ignored, err := ExecuteContextOnly(context.Background(), repo, "unit", []string{"unit"}, "generic", []string{"sh", "-c", "true"}, 10, &raw)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if ignored.Metadata.GitDirty == nil || *ignored.Metadata.GitDirty {
+		t.Fatalf("ignored evidence made repository dirty: %v", ignored.Metadata.GitDirty)
+	}
+
+	if err := os.WriteFile(filepath.Join(repo, "untracked.txt"), []byte("dirty\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	dirty, err := ExecuteContextOnly(context.Background(), repo, "unit", []string{"unit"}, "generic", []string{"sh", "-c", "true"}, 10, &raw)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if dirty.Metadata.GitRevision != revision || dirty.Metadata.GitDirty == nil || !*dirty.Metadata.GitDirty {
+		t.Fatalf("dirty provenance = revision %q dirty %v", dirty.Metadata.GitRevision, dirty.Metadata.GitDirty)
+	}
+	if err := os.Remove(filepath.Join(repo, "untracked.txt")); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(repo, "tracked.txt"), []byte("unstaged\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	unstaged, err := ExecuteContextOnly(context.Background(), repo, "unit", []string{"unit"}, "generic", []string{"sh", "-c", "true"}, 10, &raw)
+	if err != nil || unstaged.Metadata.GitDirty == nil || !*unstaged.Metadata.GitDirty {
+		t.Fatalf("unstaged provenance = %+v error %v", unstaged.Metadata, err)
+	}
+	runGit(t, repo, "add", "tracked.txt")
+	staged, err := ExecuteContextOnly(context.Background(), repo, "unit", []string{"unit"}, "generic", []string{"sh", "-c", "true"}, 10, &raw)
+	if err != nil || staged.Metadata.GitDirty == nil || !*staged.Metadata.GitDirty {
+		t.Fatalf("staged provenance = %+v error %v", staged.Metadata, err)
+	}
+}
+
+func TestExecuteOmitsUnavailableGitProvenance(t *testing.T) {
+	t.Parallel()
+	var raw bytes.Buffer
+	output, err := ExecuteContextOnly(context.Background(), t.TempDir(), "unit", []string{"unit"}, "generic", []string{"sh", "-c", "true"}, 10, &raw)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if output.Metadata.GitRevision != "" || output.Metadata.GitDirty != nil {
+		t.Fatalf("unexpected provenance: %+v", output.Metadata)
+	}
+}
+
+func runGit(t *testing.T, repo string, args ...string) string {
+	t.Helper()
+	cmd := exec.Command("git", append([]string{"-C", repo}, args...)...)
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		t.Fatalf("git %v: %v: %s", args, err, output)
+	}
+	return string(output)
+}
 
 var errInjectedRawLogWrite = errors.New("injected raw-log write failure")
 

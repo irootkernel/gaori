@@ -9,6 +9,7 @@ import (
 	"errors"
 	"io"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -20,6 +21,52 @@ import (
 	"github.com/irootkernel/gaori/internal/runner"
 	"github.com/irootkernel/gaori/internal/safety"
 )
+
+func TestConfiguredRunPersistsGitProvenance(t *testing.T) {
+	t.Parallel()
+	repo := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(repo, ".gaori"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	configText := "version: 2\ncommands:\n  unit:\n    command: [\"sh\", \"-c\", \"true\"]\n    tags: [unit]\n    parser: generic\n    timeout_sec: 10\n"
+	for path, content := range map[string]string{
+		filepath.Join(repo, ".gaori", "tester.yaml"): configText,
+		filepath.Join(repo, ".gitignore"):            ".gaori/*\n!.gaori/tester.yaml\n",
+	} {
+		if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	runCLIGit(t, repo, "init")
+	runCLIGit(t, repo, "config", "user.email", "gaori@example.test")
+	runCLIGit(t, repo, "config", "user.name", "Gaori Test")
+	runCLIGit(t, repo, "add", ".gitignore", ".gaori/tester.yaml")
+	runCLIGit(t, repo, "commit", "-m", "initial")
+	revision := strings.TrimSpace(runCLIGit(t, repo, "rev-parse", "HEAD"))
+
+	result := runJSONCommand(t, "--repo", repo, "--json", "run", "unit")
+	summaryData, err := os.ReadFile(filepath.Join(repo, filepath.FromSlash(result.SummaryJSON)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var summary model.Summary
+	if err := json.Unmarshal(summaryData, &summary); err != nil {
+		t.Fatal(err)
+	}
+	if summary.GitRevision != revision || summary.GitDirty == nil || *summary.GitDirty {
+		t.Fatalf("summary provenance = revision %q dirty %v", summary.GitRevision, summary.GitDirty)
+	}
+}
+
+func runCLIGit(t *testing.T, repo string, args ...string) string {
+	t.Helper()
+	cmd := exec.Command("git", append([]string{"-C", repo}, args...)...)
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		t.Fatalf("git %v: %v: %s", args, err, output)
+	}
+	return string(output)
+}
 
 func TestConfiguredRunAndExcerpt(t *testing.T) {
 	t.Parallel()
@@ -846,6 +893,9 @@ func TestSummarizeRawLogUsesConfigRedaction(t *testing.T) {
 	}
 	if summary.CommandArgv == nil {
 		t.Fatal("expected summarize command_argv to remain an empty array")
+	}
+	if summary.GitRevision != "" || summary.GitDirty != nil {
+		t.Fatalf("summarize must omit Git provenance, got revision=%q dirty=%v", summary.GitRevision, summary.GitDirty)
 	}
 	if summary.CommandID != "unit_<redacted>" || !slices.Equal(summary.Tags, []string{"unit_<redacted>"}) {
 		t.Fatalf("expected redacted summarize identifiers, got command=%q tags=%q", summary.CommandID, summary.Tags)

@@ -155,6 +155,8 @@ type RunMetadata struct {
 	Tags        []string  `json:"tags"`
 	Parser      string    `json:"parser"`
 	CommandArgv []string  `json:"command_argv"`
+	GitRevision string    `json:"git_revision,omitempty"`
+	GitDirty    *bool     `json:"git_dirty,omitempty"`
 	ExitCode    int       `json:"exit_code"`
 	StartedAt   time.Time `json:"started_at"`
 	EndedAt     time.Time `json:"ended_at"`
@@ -167,6 +169,8 @@ type Summary struct {
 	Tags              []string        `json:"tags"`
 	Parser            string          `json:"parser"`
 	CommandArgv       []string        `json:"command_argv"`
+	GitRevision       string          `json:"git_revision,omitempty"`
+	GitDirty          *bool           `json:"git_dirty,omitempty"`
 	ExitCode          int             `json:"exit_code"`
 	StartedAt         time.Time       `json:"started_at"`
 	EndedAt           time.Time       `json:"ended_at"`

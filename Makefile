@@ -9,7 +9,7 @@ TOOLCHAIN_ROOT ?= $(HOME)/.local/gaori/toolchains
 TOOLCHAIN_VERSION ?= $(shell git describe --tags --exact-match 2>/dev/null | sed 's/^v//' || true)
 LDFLAGS := -X main.version=$(VERSION) -X main.commit=$(COMMIT) -X main.buildDate=$(BUILD_DATE)
 
-UNIT_PACKAGES := ./internal/artifacts ./internal/config ./internal/extract ./internal/rules ./internal/runner ./internal/safety ./internal/tagset
+UNIT_PACKAGES := ./internal/artifacts ./internal/config ./internal/extract ./internal/insights ./internal/rules ./internal/runner ./internal/safety ./internal/tagset
 INTEGRATION_PACKAGES := ./internal/cli
 E2E_PACKAGES := ./e2e
 
