@@ -4,7 +4,7 @@ Load for installation diagnostics, initialization, run start or fixed-path repla
 
 ## Installation diagnostics
 
-Check without installing or changing toolchain state:
+Confirm MCP and CLI availability separately using [the entrypoint](../SKILL.md#establish-current-state). A connected Gaori MCP server does not require a CLI on PATH; compare its reported server version with any project pin. For CLI operations, check without installing or changing toolchain state:
 
 ```bash
 command -v gaori
@@ -18,7 +18,7 @@ scripts/gaori-toolchain --toolchain-status
 scripts/gaori-toolchain --version
 ```
 
-Report an absent binary, resolver failure, or version mismatch. Do not run `go install`, `make install`, `make install-toolchain`, or edit `.gaori/toolchain.yaml` without explicit user intent.
+Report an absent CLI binary, resolver failure, or version mismatch for the affected transport. Do not abandon an independently verified MCP connection merely because CLI discovery fails. CLI-only diagnostics and cleanup advisories may be unavailable while MCP execution remains usable. Do not run `go install`, `make install`, `make install-toolchain`, or edit `.gaori/toolchain.yaml` without explicit user intent.
 
 ## Workspace initialization
 
@@ -26,11 +26,9 @@ Gaori has no `init` command. A configured workspace exists only when the selecte
 
 ## Run start and replacement
 
-Gaori has no durable task registry. When all Gaori MCP tools are connected, start only the concrete command selected by the user or parent project with `start_configured_run` or `start_ad_hoc_run`. Record its session-local invocation ID and revision, then use `await_run` for terminal completion or `wait_run` for bounded phase/revision observation; `queued`, `executing`, `materializing`, and `finished` are live phases, not command results. `await_run` accepts only the invocation ID and relies on the host's tool-call deadline. Otherwise use the CLI:
+Gaori has no durable task registry. When the selected MCP start tool and `await_run` are connected, start only the concrete command selected by the user or parent project with `start_configured_run` or `start_ad_hoc_run`, exactly once. Record its session-local invocation ID and revision, then use `await_run` for terminal completion. Missing unrelated tools does not prevent this path. `queued`, `executing`, `materializing`, and `finished` are live phases, not command results. `await_run` accepts only the invocation ID and relies on the host's tool-call deadline. Keep the same pending host handle when one is returned; required progress reports do not require status polling.
 
-```bash
-gaori --json run unit
-```
+An unknown host deadline alone does not prevent terminal awaiting; try `await_run` first. Use [the entrypoint's fallbacks](../SKILL.md#fallbacks) when the tool is unavailable or a verified deadline or observed premature host timeout prevents sustained awaiting: prefer bounded revision-based `wait_run`, and use paced `get_run` polling only when neither wait interface can be used. If the selected MCP start tool or every usable MCP observation path is missing before a new run, follow that section's CLI workflow. Never duplicate an already-started command to change transports. User-requested timing queries follow [the entrypoint's one-off query guidance](../SKILL.md#default-start-once-await-completion) and leave the pending await intact; detailed timing explanations belong to the separate `use-gaori-status` skill.
 
 Standalone runs allocate a new collision-free directory. A fixed `--run-id` plus command ID reuses fixed artifact paths and can replace prior artifacts, so require explicit user intent or a parent-provided unique identity before using it:
 

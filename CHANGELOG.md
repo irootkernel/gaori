@@ -4,6 +4,10 @@ This file records concise shipped outcomes and the planned next stable release. 
 
 ## v0.1.16 - Unreleased
 
+### Changed
+
+- The source-distributed `use-gaori` skill and README agent template now lead with MCP asynchronous start and terminal awaiting, keep CLI availability separate, and reserve polling for cases where neither wait tool is usable while preserving pending awaits during user-requested timing queries.
+
 ## v0.1.15 - 2026-08-29
 
 ### Added
