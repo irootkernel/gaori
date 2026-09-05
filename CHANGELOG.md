@@ -4,8 +4,13 @@ This file records concise shipped outcomes and the planned next stable release. 
 
 ## v0.1.16 - Unreleased
 
+### Added
+
+- An exact-commit Aquarium development producer for clean local `main`, with isolated builds, contained executable output, and version and checksum manifests.
+
 ### Changed
 
+- CLI version JSON now includes the `v` prefix and the selected binary's commit identity, matching the human version prefix and Aquarium development manifests.
 - The source-distributed `use-gaori` skill and README agent template now lead with MCP asynchronous start and terminal awaiting, keep CLI availability separate, and reserve polling for cases where neither wait tool is usable while preserving pending awaits during user-requested timing queries.
 
 ## v0.1.15 - 2026-08-29

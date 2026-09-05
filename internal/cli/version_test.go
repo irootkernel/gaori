@@ -39,12 +39,39 @@ func TestVersionJSONOutput(t *testing.T) {
 	if err := json.Unmarshal(stdout.Bytes(), &payload); err != nil {
 		t.Fatalf("stdout is not valid JSON: %v\n%s", err, stdout.String())
 	}
-	want := versionOutput{Name: "gaori", Version: "1.2.3"}
+	want := versionOutput{Name: "gaori", Version: "v1.2.3", Commit: "abc123"}
 	if payload != want {
 		t.Fatalf("payload = %#v, want %#v", payload, want)
 	}
 	if stderr.Len() != 0 {
 		t.Fatalf("stderr = %q, want empty", stderr.String())
+	}
+}
+
+func TestVersionPrefixesAndCommitIdentity(t *testing.T) {
+	const commit = "1234567890abcdef1234567890abcdef12345678"
+	for _, version := range []string{"1.2.3", "v1.2.3", "1.2.3-dev.1234567890ab", "v1.2.3-dev.1234567890ab"} {
+		for _, args := range [][]string{{"version"}, {"--version"}, {"version", "--json"}, {"--version", "--json"}} {
+			t.Run(version+"/"+strings.Join(args, " "), func(t *testing.T) {
+				var stdout, stderr bytes.Buffer
+				info := BuildInfo{Name: "gaori", Version: version, Commit: commit}
+				if code := Run(args, &stdout, &stderr, info); code != 0 || stderr.Len() != 0 {
+					t.Fatalf("exit=%d stderr=%s", code, stderr.String())
+				}
+				want := "v" + strings.TrimPrefix(version, "v")
+				if args[len(args)-1] == "--json" {
+					var payload map[string]string
+					if err := json.Unmarshal(stdout.Bytes(), &payload); err != nil {
+						t.Fatal(err)
+					}
+					if len(payload) != 3 || payload["name"] != "gaori" || payload["version"] != want || payload["commit"] != commit {
+						t.Fatalf("unexpected identity: %v", payload)
+					}
+				} else if stdout.String() != "gaori "+want+"\n" {
+					t.Fatalf("unexpected human version: %q", stdout.String())
+				}
+			})
+		}
 	}
 }
 

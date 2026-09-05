@@ -69,7 +69,7 @@ func TestDocumentedCLIWorkflowAgainstFreshFixture(t *testing.T) {
 	if err := json.Unmarshal([]byte(versionLines[1]), &jsonVersion); err != nil {
 		t.Fatalf("decode JSON version output %q: %v", versionLines[1], err)
 	}
-	if jsonVersion.Name != "gaori" || jsonVersion.Version != humanVersion {
+	if jsonVersion.Name != "gaori" || jsonVersion.Version != "v"+humanVersion {
 		t.Fatalf("version surfaces disagree: human=%q JSON=%+v", versionLines[0], jsonVersion)
 	}
 	if got := strings.Count(userInterface, `cli_version: "`+humanVersion+`"`); got != 2 {

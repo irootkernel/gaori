@@ -64,7 +64,9 @@ The tracked mapping is `.gaori/tester.yaml`. Parser availability is checked inde
 - **Teardown:** Go test cleanup removes the exact temporary roots, and process tests terminate only the child process or process group they created.
 - **Credentials and cost:** No credential variables, paid requests, containers, databases, or external sandbox resources are used.
 
-`python3` is a required prerequisite for the toolchain-script E2E scenarios. Its absence fails the E2E stage with an explicit diagnostic; it is never converted into a successful skip.
+`python3` is a required prerequisite for the toolchain-script and Aquarium producer E2E scenarios. Its absence fails the E2E stage with an explicit diagnostic; it is never converted into a successful skip.
+
+The Unix Aquarium producer tests invoke the public Make targets in temporary primary Git repositories. Fixture-only Git trees and commits establish clean-main, dirty, non-main, committed-source, and remote-ahead cases without committing the working source checkout. The real producer builds the current Gaori source copied into a fixture; ignored Go source and external Go workspace/overlay settings must not enter that build. Output and symlink rejection, manifest checksum, embedded version and full SHA, and temporary-build cleanup are verified. Builds require the supported Go toolchain and may download the pinned Go modules; they contact no provider. Aquarium manager enrollment and native-hook host integration are separately verified after an approved producer commit and do not run against the real host from `make test`.
 
 ## Language Diagnostics
 

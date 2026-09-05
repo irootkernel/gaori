@@ -7,6 +7,9 @@ This matrix records the primary evidence for every requirement marked complete. 
 
 | Requirement | Primary evidence |
 |---|---|
+| `GAORI-REQ-RQDEV-001` | `TestBinaryAquariumProducerMakeContext`; `TestBinaryAquariumProducerAdmission`; `TestBinaryAquariumProducerRejectsInvalidCommittedInput`; `TestBinaryAquariumProducerCommittedArtifact` |
+| `GAORI-REQ-RQDEV-002` | `TestBinaryAquariumProducerAdmission`; `TestBinaryAquariumProducerOutputContainment`; `TestBinaryAquariumProducerRejectsInvalidCommittedInput`; `TestBinaryAquariumProducerRevalidatesSource`; `TestBinaryAquariumProducerCommittedArtifact` |
+| `GAORI-REQ-RQDEV-003` | `TestVersionPrefixesAndCommitIdentity`; `TestVersionJSONOutput`; `TestBinaryAquariumProducerCommittedArtifact`; `TestDocumentedCLIWorkflowAgainstFreshFixture` |
 | `GAORI-REQ-RQCLI-001` | `TestDocumentedCLIWorkflowAgainstFreshFixture`; `TestMakeInstallTargetsAndResolver` |
 | `GAORI-REQ-RQCLI-002` | `TestConfiguredRunAndExcerpt`; `TestBinaryConfiguredRunAndExcerpt` |
 | `GAORI-REQ-RQCLI-003` | `TestAdHocRunWithoutConfig`; `TestBinaryTagsSelectRulesByAllTags`; `TestBinaryTagInterfacesFailBeforeExecution`; `TestDocumentedCLIWorkflowAgainstFreshFixture` |

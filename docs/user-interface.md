@@ -123,6 +123,8 @@ gaori --version
 gaori version --json
 ```
 
+Both human commands print `gaori v<version>`; the JSON object contains `name`, `version`, and `commit`. The `version` string always includes the `v` prefix, including development versions such as `v0.1.16-dev.<sha12>`. `commit` reports the selected binary's build identity. Aquarium development builds guarantee the full 40-character SHA; other builds may report a short revision such as `abc123def456` or the literal `unknown` when commit metadata is unavailable. This changes the older JSON version format, which omitted `v` and did not include `commit`.
+
 For deterministic automation, the bundled `scripts/gaori-toolchain` resolver uses this precedence:
 
 1. Absolute executable path from `GAORI_BIN`.

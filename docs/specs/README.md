@@ -1,6 +1,6 @@
 # Gaori Requirement Specs
 
-Status: Current source-tree requirements through `RSTAT`
+Status: Current source-tree requirements through `RSTAT` and the Aquarium development producer
 Scope: Gaori v0.1 standalone baseline, post-baseline hardening, portable project configuration, CLI usability, verified rule proposals, operator-directed cleanup, session-local STDIO MCP execution with terminal awaiting, long-running await guidance, the completed parser catalog plus Dart/Patrol extraction contract, and implemented run-status and timing insights
 Source context: deterministic Gaori v0.1 CLI, evidence, and attached MCP behavior.
 
@@ -30,6 +30,12 @@ Implementation note: the original v0.1 roadmap and the recorded `RQHAR` hardenin
 - [x] `GAORI-REQ-RQCLI-013` Provide `gaori runs list` as a side-effect-free listing of completed `.gaori/runs/standalone/` evidence, sourced only from redacted status artifacts, ordered newest first, filterable by repeatable `--tag`, one `--status`, and a non-negative `--limit`, applying the same recognition and completeness rules as cleanup, skipping unrecognized or incomplete runs, and failing closed on unsafe or unreadable evidence without executing commands, opening raw logs, or creating artifacts.
 - [x] `GAORI-REQ-RQCLI-014` Provide side-effect-free parser discovery through `gaori parsers list` and `gaori parsers detect <raw-log>`, where `list` enumerates every available parser label in ascending order and `detect` reports, per label, the candidate failure count and that label's own summary-heuristic verdict for one caller-named raw log in a deterministic order that never names a recommended label, accepting only the `--repo` and `--json` global options, exiting `0` even when no label reports a candidate, and creating no artifacts.
 - [x] `GAORI-REQ-RQCLI-015` Provide `parsers catalog` as a JSON-only, read-only catalog with schema `gaori-parser-catalog.v1`, requiring `--json`, preserving every existing human and JSON `parsers list` contract, accepting only the read-only `--repo` and `--json` global options, and failing closed without loading project configuration, executing or resolving a command, selecting a parser, creating an artifact, or performing a network request.
+
+## RQDEV: Aquarium development producer
+
+- [x] `GAORI-REQ-RQDEV-001` Expose a read-only `aquarium-dev-describe` Make target on primary local main that returns exactly the v1 executable description for `gaori` at `bin/gaori`, reading the unique stable v-prefixed planned Unreleased version from committed `CHANGELOG.md` bytes, independently of uncommitted edits and release Make overrides.
+- [x] `GAORI-REQ-RQDEV-002` Expose `aquarium-dev-build` for clean primary local main, allowing remote-ahead commits, building only admitted committed bytes, rejecting unsafe committed entries and invalid output directories, containing build scratch state and the regular executable under the supplied empty absolute non-symlink directory, and emitting the exact v1 manifest with full SHA, matching development version, and independently verifiable executable checksum. Revalidate source identity before exposing the artifact; keep command/evidence behavior and stable installation independent.
+- [x] `GAORI-REQ-RQDEV-003` Prefix the version with exactly one `v` in `gaori version`, `gaori --version`, and JSON version output; include the selected build's `commit` in version JSON and preserve the full development SHA so runtime identity matches the producer manifest. Keep internal and MCP version handling unchanged.
 
 ## RQCFG: Project configuration
 

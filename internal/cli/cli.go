@@ -876,11 +876,12 @@ func isSafeExcerptReference(reference string) bool {
 }
 
 func writeVersion(w io.Writer, info BuildInfo, jsonMode bool) {
+	version := "v" + normalizeModuleVersion(info.Version)
 	if jsonMode {
-		_ = json.NewEncoder(w).Encode(versionOutput{Name: info.Name, Version: info.Version})
+		_ = json.NewEncoder(w).Encode(versionOutput{Name: info.Name, Version: version, Commit: info.Commit})
 		return
 	}
-	writef(w, "%s v%s\n", info.Name, info.Version)
+	writef(w, "%s %s\n", info.Name, version)
 }
 
 func writeLine(w io.Writer, args ...any) {

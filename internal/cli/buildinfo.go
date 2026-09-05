@@ -21,6 +21,7 @@ type BuildInfo struct {
 type versionOutput struct {
 	Name    string `json:"name"`
 	Version string `json:"version"`
+	Commit  string `json:"commit"`
 }
 
 // NewBuildInfo returns the CLI version payload. Explicit linker-provided values

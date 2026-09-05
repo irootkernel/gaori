@@ -1,6 +1,7 @@
 GO ?= go
 GOLANGCI_LINT ?= golangci-lint
 BINARY := gaori
+.DEFAULT_GOAL := build
 BIN_DIR := bin
 VERSION ?= 0.1.15
 COMMIT ?= $(shell git rev-parse --short HEAD 2>/dev/null || echo unknown)
@@ -14,7 +15,15 @@ INTEGRATION_PACKAGES := ./internal/cli
 E2E_PACKAGES := ./e2e
 GUARDRAIL_TEST_PATTERN := ^(TestAwaitRunDocumentationContract|TestMCPDocumentationAndSkillContract|TestParserSupportDocumentationContract|TestRepositoryTestFunctions|TestRepositoryTestStageClassification|TestRepositoryUsesGaoriIdentity|TestRequirementTraceabilityAuditRejectsInvalidEvidence|TestRequirementTraceabilityMatrixCoversCompletedRequirements|TestUseGaoriCleanupAdvisoryContract|TestUseGaoriStatusSkillContract)$$
 
-.PHONY: build install install-toolchain test test-prepare test-unit test-int test-e2e format lint vet guardrails clean
+.PHONY: build install install-toolchain aquarium-dev-describe aquarium-dev-build test test-prepare test-unit test-int test-e2e format lint vet guardrails clean
+
+aquarium-dev-describe:
+	@python3 scripts/aquarium-dev describe
+
+aquarium-dev-build: export AQUARIUM_DEV_OUTPUT := $(AQUARIUM_DEV_OUTPUT)
+aquarium-dev-build: export GO := $(GO)
+aquarium-dev-build:
+	@python3 scripts/aquarium-dev build
 
 build:
 	mkdir -p $(BIN_DIR)

@@ -47,7 +47,7 @@ Omit ad-hoc `timeout_sec` for the 600-second default; never send `null` or zero 
 
 ## Establish current state
 
-1. Confirm the selected transport without installing anything. A connected Gaori MCP server is availability evidence for the MCP path. A missing CLI on PATH does not make a connected Gaori MCP server unavailable. If the project pins a version, compare the connected server's reported `serverInfo.version` from host initialization metadata with that pin. If the host does not expose it, report the version as unverified and follow the project's pinned-tool policy; do not substitute an unrelated PATH binary's version or declare MCP absent.
+1. Confirm the selected transport without installing anything. A connected Gaori MCP server is availability evidence for the MCP path. A missing CLI on PATH does not make a connected Gaori MCP server unavailable. If the project pins a version, compare the connected server's reported `serverInfo.version` from host initialization metadata with that pin. Normalize one optional leading `v` on both values before comparison: CLI JSON `version` includes it, while MCP `serverInfo.version` does not. If the host does not expose it, report the version as unverified and follow the project's pinned-tool policy; do not substitute an unrelated PATH binary's version or declare MCP absent.
 
    Discover the CLI separately when a CLI operation is needed:
 

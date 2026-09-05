@@ -4,7 +4,7 @@ Load for installation diagnostics, initialization, run start or fixed-path repla
 
 ## Installation diagnostics
 
-Confirm MCP and CLI availability separately using [the entrypoint](../SKILL.md#establish-current-state). A connected Gaori MCP server does not require a CLI on PATH; compare its reported server version with any project pin. For CLI operations, check without installing or changing toolchain state:
+Confirm MCP and CLI availability separately using [the entrypoint](../SKILL.md#establish-current-state). A connected Gaori MCP server does not require a CLI on PATH; compare its reported server version with any project pin after removing one optional leading `v` from both values. Apply the same normalization to CLI JSON `version`, which includes the prefix; MCP `serverInfo.version` does not. For CLI operations, check without installing or changing toolchain state:
 
 ```bash
 command -v gaori

@@ -1,0 +1,160 @@
+#!/usr/bin/env python3
+"""Produce Gaori's committed Aquarium development executable."""
+
+import argparse
+import hashlib
+import json
+import os
+from pathlib import Path, PurePosixPath
+import re
+import subprocess
+import sys
+import tempfile
+
+
+class ProducerError(Exception):
+    pass
+
+
+def git(*arguments):
+    result = subprocess.run(["git", "--no-replace-objects", *arguments], capture_output=True, check=False)
+    if result.returncode:
+        raise ProducerError("Git rejected the producer request")
+    return result.stdout
+
+
+def repository_state(require_clean, scratch=None):
+    root = Path(os.fsdecode(git("rev-parse", "--show-toplevel")).strip())
+    if root.resolve() != Path.cwd() or not (root / ".git").is_dir():
+        raise ProducerError("run the producer from the primary Git root")
+    if git("rev-parse", "--symbolic-full-name", "HEAD").strip() != b"refs/heads/main":
+        raise ProducerError("the producer requires local main; detached HEAD is not supported")
+    sha = git("rev-parse", "HEAD").decode().strip()
+    if not re.fullmatch(r"[0-9a-f]{40}", sha):
+        raise ProducerError("the producer requires a 40-character commit SHA")
+    if require_clean:
+        arguments = ["status", "--porcelain=v1", "--untracked-files=all"]
+        if scratch is not None:
+            try:
+                relative = scratch.relative_to(root)
+            except ValueError:
+                pass
+            else:
+                arguments.extend(["--", ".", ":(top,exclude,literal)" + relative.as_posix()])
+        if git(*arguments):
+            raise ProducerError("the producer requires a clean working tree")
+    return sha
+
+
+def next_version(sha):
+    changelog = git("show", f"{sha}:CHANGELOG.md").decode("utf-8")
+    headings = re.findall(r"^## (.+) - Unreleased$", changelog, re.MULTILINE)
+    if len(headings) != 1 or not re.fullmatch(
+        r"v(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)", headings[0]
+    ):
+        raise ProducerError("CHANGELOG.md must declare one stable v-prefixed Unreleased version")
+    return headings[0]
+
+
+def describe(sha):
+    return {
+        "schema": "aquarium-dev-producer-description/v1",
+        "project_id": "gaori",
+        "next_version": next_version(sha),
+        "artifact_kind": "executable",
+        "artifact_path": "bin/gaori",
+    }
+
+
+def output_directory():
+    value = os.environ.get("AQUARIUM_DEV_OUTPUT", "")
+    output = Path(value)
+    if not value or not output.is_absolute() or not output.is_dir():
+        raise ProducerError("AQUARIUM_DEV_OUTPUT must be an existing absolute empty directory")
+    if any(path.is_symlink() for path in (output, *output.parents)):
+        raise ProducerError("AQUARIUM_DEV_OUTPUT must not traverse symlinks")
+    if any(output.iterdir()):
+        raise ProducerError("AQUARIUM_DEV_OUTPUT must be empty")
+    return output
+
+
+def snapshot(sha, destination):
+    for entry in git("ls-tree", "-rz", sha).split(b"\0"):
+        if not entry:
+            continue
+        metadata, name = entry.split(b"\t", 1)
+        mode, kind, oid = metadata.decode().split()
+        relative = PurePosixPath(os.fsdecode(name))
+        if (
+            kind != "blob"
+            or mode not in {"100644", "100755"}
+            or relative.is_absolute()
+            or ".." in relative.parts
+            or ".git" in relative.parts
+        ):
+            raise ProducerError("the committed snapshot contains an unsupported Git entry")
+        target = destination.joinpath(*relative.parts)
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_bytes(git("cat-file", "blob", oid))
+        target.chmod(int(mode, 8) & 0o777)
+
+
+def build(sha):
+    version = next_version(sha) + "-dev." + sha[:12]
+    output = output_directory()
+    with tempfile.TemporaryDirectory(prefix=".build-", dir=output) as temporary:
+        work = Path(temporary)
+        source = work / "source"
+        source.mkdir()
+        snapshot(sha, source)
+        environment = os.environ.copy()
+        environment.update({
+            "GOENV": "off", "GOFLAGS": "", "GOWORK": "off", "GOTOOLCHAIN": "local",
+            "GOOS": "", "GOARCH": "", "CGO_ENABLED": "0",
+            "GOCACHE": str(work / "cache"), "GOMODCACHE": str(work / "modules"),
+            "GOPATH": str(work / "gopath"), "GOTMPDIR": str(work), "TMPDIR": str(work),
+        })
+        build_date = git("show", "-s", "--format=%cI", sha).decode().strip()
+        flags = f"-X main.version={version} -X main.commit={sha} -X main.buildDate={build_date}"
+        binary = work / "gaori"
+        result = subprocess.run(
+            [os.environ.get("GO", "go"), "build", "-trimpath", "-buildvcs=false",
+             "-mod=readonly", "-ldflags", flags, "-o", str(binary), "./cmd/gaori"],
+            cwd=source, env=environment, stdout=sys.stderr, stderr=sys.stderr, check=False,
+        )
+        if result.returncode:
+            raise ProducerError("Go development build failed")
+        if binary.is_symlink() or not binary.is_file() or not os.access(binary, os.X_OK):
+            raise ProducerError("Go must produce one regular executable")
+        if repository_state(require_clean=True, scratch=work) != sha:
+            raise ProducerError("the source revision changed during the build")
+        checksum = "sha256:" + hashlib.sha256(binary.read_bytes()).hexdigest()
+        (output / "bin").mkdir()
+        binary.rename(output / "bin" / "gaori")
+    return {
+        "schema": "aquarium-dev-artifact-manifest/v1",
+        "project_id": "gaori",
+        "git_sha": sha,
+        "development_version": version,
+        "artifact_kind": "executable",
+        "artifact_path": "bin/gaori",
+        "sha256": checksum,
+    }
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("operation", choices=("describe", "build"))
+    arguments = parser.parse_args()
+    try:
+        sha = repository_state(require_clean=arguments.operation == "build")
+        result = describe(sha) if arguments.operation == "describe" else build(sha)
+    except (ProducerError, OSError, UnicodeError) as error:
+        print(f"gaori aquarium-dev: {error}", file=sys.stderr)
+        return 1
+    print(json.dumps(result, separators=(",", ":")))
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

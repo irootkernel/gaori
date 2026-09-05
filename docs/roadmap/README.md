@@ -1,7 +1,7 @@
 # Gaori Roadmap
 
-Status: Completed through `RSTAT`; `AQADP`, `AWAIT-005`, and `AWAIT-007` deferred
-Scope: Implementation tracking for the Gaori v0.1 standalone baseline, hardening, tag and parser selection, release readiness, identity migration, operator-directed standalone evidence cleanup, portable project config, CLI usability improvements, session-local MCP execution, token-efficient terminal waiting and host-wait guidance, the parser catalog plus Dart/Patrol extraction epic, run-status and timing insights, and deferred Aquarium qualification and downstream adoption tracking
+Status: Completed through `RSTAT`; `AQDEV-001` in progress; `AQADP`, `AWAIT-005`, and `AWAIT-007` deferred
+Scope: Implementation tracking for the Gaori v0.1 standalone baseline, hardening, tag and parser selection, release readiness, identity migration, operator-directed standalone evidence cleanup, portable project config, CLI usability improvements, session-local MCP execution, token-efficient terminal waiting and host-wait guidance, the parser catalog plus Dart/Patrol extraction epic, run-status and timing insights, Aquarium development-channel integration, and deferred Aquarium qualification and downstream adoption tracking
 
 This roadmap is a delivery record, not an operator guide or a promise that out-of-scope capabilities will be added. See the [integration guide](../integration-guide.md) for the current supported/unsupported capability boundary and the [todo index](../todo/README.md) for future candidates and active epic dossiers.
 
@@ -11,9 +11,15 @@ Existing `Done` entries record completion of the original v0.1 implementation sl
 
 Current implementation snapshot:
 - `Done`: `SETUP-001` to `SETUP-003`, `RUNNR-001` to `RUNNR-003`, `ARTIF-001` to `ARTIF-003`, `PARSE-001` to `PARSE-011`, `SAFEY-001` to `SAFEY-004`, `CLIUX-001` to `CLIUX-008`, `RULES-001` to `RULES-005`, `DOCUM-001` to `DOCUM-003`, `HARDE-001` to `HARDE-007`, `TAGS-001`, `ADHOC-001`, `ADHOC-002`, `RELRV-001` to `RELRV-009`, `BRAND-001`, `CLEAN-001`, `PORTA-001`, `MCP-001` to `MCP-006`, `AWAIT-001` to `AWAIT-004`, `AWAIT-006`, `RSTAT-001` to `RSTAT-004`
-- `In Progress`: none
+- `In Progress`: `AQDEV-001`
 - `Deferred`: `AQADP` (`QUALI-001`, `QUALI-002`, `CONSUMER-SUDAL-001`), `AWAIT-005`, `AWAIT-007`
 - `Planned`: none
+
+## AQDEV: Aquarium development channel
+
+| Task ID | Status | Goal | Verification | Reference |
+|---|---|---|---|---|
+| AQDEV-001 | In Progress | Produce exact committed local-main development executables through Aquarium's v1 Make contract; unify CLI version prefixes and expose commit identity; enroll the canonical checkout and hand off integration to Aquarium TASK-013. | Producer admission, provenance, containment, checksum and version E2E tests; full development gate; approved exact-commit enrollment and initial publication; isolated native-hook update; launcher CLI and STDIO MCP checks; production and environment isolation. Development verification and host integration are separate milestones, both required before final completion. | Aquarium development producer v1 contract; `GAORI-REQ-RQDEV-001` to `GAORI-REQ-RQDEV-003` |
 
 ## SETUP: Project foundation
 
