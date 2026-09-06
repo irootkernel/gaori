@@ -117,6 +117,8 @@ For multi-step work, keep a short plan in which every step has a corresponding v
 
 ## Project Configuration
 
+Aquarium release notes: CHANGELOG.md
+
 ### Repository Index and Authorities
 
 - The production binary entrypoint is `cmd/gaori`; package behavior is organized under `internal/`, and executable end-to-end evidence is under `e2e/`.
