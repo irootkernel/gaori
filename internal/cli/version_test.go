@@ -17,7 +17,7 @@ func TestVersionHumanOutput(t *testing.T) {
 	if exitCode != 0 {
 		t.Fatalf("exitCode = %d, want 0", exitCode)
 	}
-	if got, want := stdout.String(), "gaori v0.1.15\n"; got != want {
+	if got, want := stdout.String(), "gaori v0.1.16\n"; got != want {
 		t.Fatalf("stdout = %q, want %q", got, want)
 	}
 	if stderr.Len() != 0 {
