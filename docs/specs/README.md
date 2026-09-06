@@ -35,7 +35,7 @@ Implementation note: the original v0.1 roadmap and the recorded `RQHAR` hardenin
 
 - [x] `GAORI-REQ-RQDEV-001` Expose a read-only `aquarium-dev-describe` Make target on primary local main that returns exactly the v1 executable description for `gaori` at `bin/gaori`, reading the unique stable v-prefixed planned Unreleased version from committed `CHANGELOG.md` bytes, independently of uncommitted edits and release Make overrides.
 - [x] `GAORI-REQ-RQDEV-002` Expose `aquarium-dev-build` for clean primary local main, allowing remote-ahead commits, building only admitted committed bytes, rejecting unsafe committed entries and invalid output directories, containing build scratch state and the regular executable under the supplied empty absolute non-symlink directory, and emitting the exact v1 manifest with full SHA, matching development version, and independently verifiable executable checksum. Revalidate source identity before exposing the artifact; keep command/evidence behavior and stable installation independent.
-- [x] `GAORI-REQ-RQDEV-003` Prefix the version with exactly one `v` in `gaori version`, `gaori --version`, and JSON version output; include the selected build's `commit` in version JSON and preserve the full development SHA so runtime identity matches the producer manifest. Keep internal and MCP version handling unchanged.
+- [x] `GAORI-REQ-RQDEV-003` Prefix the version with exactly one `v` in `gaori version`, `gaori --version`, and JSON version output; emit exactly `name` and `version` in version JSON. The development producer manifest retains the full Git SHA and executable checksum. Keep internal and MCP version handling unchanged.
 
 ## RQCFG: Project configuration
 

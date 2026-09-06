@@ -90,7 +90,7 @@ Use "gaori help <command>" for command details.
 	"version": `Usage: gaori version [--json]
 
 Show the selected Gaori binary name and v-prefixed semantic version.
-JSON output also includes the embedded commit identity.
+JSON output contains exactly name and version.
 `,
 	"run": `Usage:
   gaori run <command-id>

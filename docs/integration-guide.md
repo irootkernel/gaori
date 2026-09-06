@@ -369,13 +369,13 @@ Success leaves one regular executable at `bin/gaori` and emits exactly these sev
 | `artifact_path` | `bin/gaori` |
 | `sha256` | `sha256:` plus the executable's 64-character lowercase SHA-256 |
 
-`gaori version`, `gaori --version`, and the `version` value from `gaori version --json` use the same `v`-prefixed version. JSON also exposes `commit`, which is the full manifest SHA for development builds. Other build identities retain their existing provenance. MCP initialization continues to use its existing internal version representation; enrollment does not change an existing host's MCP registration.
+`gaori version`, `gaori --version`, and the `version` value from `gaori version --json` use the same `v`-prefixed version. JSON contains exactly `name` and `version`; it does not expose commit or build-date metadata. Development build provenance is recorded in the producer manifest through its full `git_sha` and executable checksum. MCP initialization continues to use its existing internal version representation; enrollment does not change an existing host's MCP registration.
 
 ### Enrollment and verification
 
 After verifying the producer and explicitly approving its commit, invoke `$aquarium:aquarium-dev` for the exact canonical checkout on Darwin arm64. Use its supported manager diagnosis first. Enrollment metadata, the owned native hook block, and the initial build require separate approvals. Inspect an existing `~/.local/bin/aquarium-dev` before considering separately approved installation or replacement. Do not manually edit manager-owned state.
 
-Verify the approved SHA through the manifest, independent executable checksum, runtime version JSON, healthy manager diagnosis, and `~/.aquarium-dev/bin/gaori` resolving through the selected immutable generation. A successful command alone is insufficient: absent foreground generations may fall back to the global executable, while invalid selected generations must fail closed. Verify subsequent native-hook publication using authorized real work or an isolated fixture rather than an unrelated commit.
+Verify the approved SHA through the manifest and independent executable checksum, and check the matching development version through runtime version JSON. Confirm healthy manager diagnosis and `~/.aquarium-dev/bin/gaori` resolving through the selected immutable generation. A successful command alone is insufficient: absent foreground generations may fall back to the global executable, while invalid selected generations must fail closed. Verify subsequent native-hook publication using authorized real work or an isolated fixture rather than an unrelated commit.
 
 Exercise local success and failure commands through `aquarium-dev gaori ...`, checking authoritative exit status, raw evidence preservation and bounded derived evidence. Exercise STDIO MCP in a temporary client session without changing host registration. Compare production executable identity before and after integration and verify caller environment preservation, including `CODEX_HOME`, apart from the documented PATH prepend.
 

@@ -4,6 +4,10 @@ This file records concise shipped outcomes and the planned next stable release. 
 
 ## v0.1.17 - Unreleased
 
+### Changed
+
+- CLI version JSON now contains only `name` and the `v`-prefixed `version`; the `commit` field has been removed.
+
 ## v0.1.16 - 2026-09-06
 
 ### Added

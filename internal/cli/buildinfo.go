@@ -10,7 +10,7 @@ const devVersion = "0.0.0-dev"
 
 var pseudoModuleVersionPattern = regexp.MustCompile(`^v?[0-9]+[.][0-9]+[.][0-9]+(-[0-9]{14}-|-0[.][0-9]{14}-|-[0-9A-Za-z.-]+[.]0[.][0-9]{14}-)[0-9a-f]{12}([+][0-9A-Za-z.-]+)?$`)
 
-// BuildInfo is the public version payload returned by the CLI.
+// BuildInfo holds build metadata used by the CLI.
 type BuildInfo struct {
 	Name      string `json:"name"`
 	Version   string `json:"version"`
@@ -21,7 +21,6 @@ type BuildInfo struct {
 type versionOutput struct {
 	Name    string `json:"name"`
 	Version string `json:"version"`
-	Commit  string `json:"commit"`
 }
 
 // NewBuildInfo returns the CLI version payload. Explicit linker-provided values

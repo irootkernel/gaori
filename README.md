@@ -60,7 +60,7 @@ On Darwin arm64, maintainers can use `aquarium-dev gaori ...` after explicitly e
 
 The source exposes `make aquarium-dev-describe` and `make aquarium-dev-build AQUARIUM_DEV_OUTPUT=<absolute-empty-directory>`. See the [development producer contract and setup workflow](docs/integration-guide.md#aquarium-development-channel) for JSON fields, admission rules, approvals, and verification. Enrollment does not update a Codex MCP registration or install a stable release.
 
-`gaori version` and `gaori --version` print `gaori v<version>`. `gaori version --json` reports `name`, a `v`-prefixed `version`, and `commit`. Aquarium development builds guarantee the full 40-character commit SHA; other builds may report a short revision such as `abc123def456` or the literal `unknown` when commit metadata is unavailable.
+`gaori version` and `gaori --version` print `gaori v<version>`. `gaori version --json` reports exactly `name` and a `v`-prefixed `version`, for example `{"name":"gaori","version":"v0.1.16"}`.
 
 ## Optional: configure an AI coding agent
 

@@ -364,7 +364,7 @@ func TestBinaryAquariumProducerCommittedArtifact(t *testing.T) {
 			if err := json.Unmarshal([]byte(runExpectedExit(t, exec.Command(binary, "version", "--json"), 0)), &version); err != nil {
 				t.Fatal(err)
 			}
-			if version["version"] != wantVersion || version["commit"] != sha {
+			if len(version) != 2 || version["name"] != "gaori" || version["version"] != wantVersion {
 				t.Fatalf("runtime identity mismatch: %v", version)
 			}
 			if human := runExpectedExit(t, exec.Command(binary, "version"), 0); human != "gaori "+wantVersion+"\n" {
