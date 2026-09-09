@@ -101,7 +101,7 @@ This matrix records the primary evidence for every requirement marked complete. 
 | `GAORI-REQ-RQDOC-002` | `TestDocumentedCLIWorkflowAgainstFreshFixture` |
 | `GAORI-REQ-RQDOC-003` | parser fixtures under `internal/extract/testdata`; `TestTestRuleMatchesExpectedSpan`; `TestDocumentedCLIWorkflowAgainstFreshFixture` |
 | `GAORI-REQ-RQDOC-004` | release-readiness checklist in `implementation-tips/README.md`; `make test` |
-| `GAORI-REQ-RQDOC-005` | `TestAwaitRunDocumentationContract` |
+| `GAORI-REQ-RQDOC-005` | `TestAwaitRunDocumentationContract`; Master manual scenarios in [long-running await guidance](long-running-await-guidance.md#verification-and-delivery-history), with completion owned by `SKMOD-001` |
 | `GAORI-REQ-RQHAR-001` | `TestBinaryArtifactContainment`; `TestBinaryMCPLifecycleAndBoundedEvidence` (relocated MCP evidence); path, artifact, and rule symlink tests |
 | `GAORI-REQ-RQHAR-002` | `TestBinaryPreservesInterruptedEvidence`; `TestExecuteInterruptedReportsRawLogWriteFailure`; Unix runner signal tests |
 | `GAORI-REQ-RQHAR-003` | `TestBinaryStandaloneCollisionResistance`; concurrent artifact allocation tests |

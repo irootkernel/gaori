@@ -1,145 +1,114 @@
 # Long-Running Await Guidance
 
-Status: Implemented under `AWAIT-006`; Aquarium adoption deferred under `AWAIT-007`
-
-Roadmap: [AWAIT: Token-efficient terminal waiting](roadmap/README.md#await-token-efficient-terminal-waiting)
+Status: Current source guidance; `AWAIT-006` delivered the original guidance, `SKMOD-001` owns its modernization, and `AWAIT-007` adoption remains deferred
 
 ## Authority
 
-This document is the detailed source of truth for the implemented `AWAIT-006`
-agent-guidance change and the separately owned `AWAIT-007` Aquarium follow-up.
-It describes current source-distributed `use-gaori` behavior but does not
-authorize downstream adoption, a release, installation, or cross-repository
-mutation. Current runtime behavior remains owned by source, tests,
-`GAORI-REQ-RQMCP-008`, and ADR-0018.
+This implementation guidance describes the source-distributed `use-gaori`
+skill. Runtime contracts belong to `GAORI-REQ-RQMCP-008`, ADR-0018, and their
+executable tests; `GAORI-REQ-RQDOC-005` owns the agent guidance. The
+[roadmap](roadmap/README.md) owns completion and downstream adoption. This
+document grants no installation, release, or cross-repository authority.
 
-## Problem
+## Current execution guidance
 
-Gaori already exposes session-local asynchronous start tools and terminal-only
-`await_run`. A host may keep that request pending until completion or may return
-a deferred execution handle or cell. Re-entering model reasoning for short empty
-waits, or issuing repeated status calls merely to prove liveness, wastes model
-turns and context without improving completion authority.
+When the selected MCP start tool and `await_run` are connected:
 
-Mulgae addresses the same host behavior by preserving one invocation and one
-pending handle, waiting on that handle for up to five minutes at a time, and
-resuming early only when the call completes. Gaori provides equivalent client
-guidance while preserving its existing execution and evidence contracts.
+1. Start the selected command exactly once and preserve its session-local
+   invocation ID and revision. Missing unrelated tools or a PATH CLI does not
+   disable this MCP path.
+2. Await terminal completion with that invocation ID. Keep a pending host call
+   suspended, or wait on the same returned handle or cell under the host's wait
+   limits and communication requirements. Progress reports do not require
+   additional Gaori status calls.
+3. If an observer times out or is cancelled, re-await the same invocation while
+   the MCP session remains alive. Do not restart the command or infer command
+   cancellation. Disconnects and unknown identities require recovery.
+4. On `finished`, read the authoritative result or Gaori error. Keep child exit,
+   extraction quality, and the parent workflow's acceptance decision separate.
 
-## AWAIT-006: Implemented Gaori guidance
+An unknown host deadline does not establish that `await_run` is unavailable.
+Report the uncertainty and try it. Host waiting intervals do not extend command
+timeouts, the host tool-call deadline, or the 50-second `wait_run.timeout_ms`
+maximum. `await_run` remains terminal-only with no Gaori-owned timeout.
 
-The source-distributed `use-gaori` skill directs an attached agent to follow
-this lifecycle when the selected MCP start tool and `await_run` are available.
-Unrelated missing tools do not force CLI execution:
+For a user-requested progress snapshot or remaining-time question, make a
+one-off query for the known invocation and then continue its pending await.
+Report only Gaori-returned timing and availability. Detailed timing and history
+belong to the independently installable `use-gaori-status` skill. Its absence
+does not prevent the execution skill's one-off `estimate_run` call.
 
-1. When terminal completion is the next required event, call
-   `start_configured_run` or `start_ad_hoc_run` exactly once and preserve the
-   returned session-local invocation ID.
-2. Call `await_run` with that same invocation ID. Prefer a host-native wait that
-   keeps the pending tool call suspended until terminal completion.
-3. If the host returns a deferred execution handle or cell, wait only on that
-   same handle for up to five minutes at a time, or for the longest shorter
-   duration the host supports and higher-priority instructions permit, and
-   return early when the call completes.
-4. Do not resume model reasoning merely to report liveness or perform a shorter
-   empty wait unless higher-priority host instructions require it. Required
-   progress reports do not require another Gaori status call. Do not repeatedly
-   call `get_run`, `wait_run`, or `list_runs` only to confirm that the invocation
-   is still active during terminal awaiting.
-5. When the user asks for current progress, allow a one-off snapshot or revision
-   observation. For a remaining-time question, call `estimate_run` once on the
-   known same-session invocation without deriving an ETA in the agent.
-   Detailed timing explanations belong to the separately installable
-   [`use-gaori-status` skill](../skills/use-gaori-status/SKILL.md).
-   These observations do not cancel or replace the pending await, and do not
-   require the status skill to be installed.
-6. If the await request ends because of host timeout or observer cancellation,
-   do not treat the run as cancelled. While the same MCP session remains alive,
-   call `await_run` again for the preserved invocation and never repeat start.
+## Conditional references
 
-The five-minute duration governs waiting on a host-owned deferred handle. It
-does not extend the selected command timeout, the MCP host tool-call deadline,
-or Gaori's current 50-second maximum for `wait_run.timeout_ms`. `await_run`
-remains terminal-only and has no Gaori-owned timeout.
+The [execution entrypoint](../skills/use-gaori/SKILL.md) owns ordinary command
+preparation, start-once awaiting, terminal interpretation, and essential safety
+boundaries. Load these references only for their stated conditions:
 
-### Async-first entrypoint and conditional fallbacks
+| Condition | Owner |
+| --- | --- |
+| A required start/wait tool is unavailable, or a verified deadline or observed host timeout prevents terminal awaiting | [Fallbacks](../skills/use-gaori/references/fallbacks.md) |
+| Analyze an existing log or diagnose a parser mismatch without rerunning its command | [Existing logs](../skills/use-gaori/references/existing-logs.md) |
+| First standalone run/summarize in the root task, retained-run inventory, or cleanup advice | [Retention](../skills/use-gaori/references/retention.md) |
+| Installation diagnostics, initialization, fixed-path replacement, cancellation, cleanup, or unsupported session/service/reset requests | [Lifecycle](../skills/use-gaori/references/lifecycle.md) |
+| Parser choice, configuration/rule changes, or unsupported policy/workflow authoring | [Authoring](../skills/use-gaori/references/authoring.md) |
+| Disconnect, unknown mutation outcome, stale evidence, or operational failure | [Recovery](../skills/use-gaori/references/recovery.md) |
 
-The skill description and opening example lead with asynchronous start, one
-terminal await, and final evidence. Preparation, result reporting, existing-log
-summarization, and permission boundaries remain shared guidance. The final
-section contains the fallback decision order. A connected MCP server is
-availability evidence independently of CLI discovery; a project pin is checked
-against its reported server version, with unavailable version metadata reported
-explicitly under the project's pinned-tool policy. CLI-only config checks and
-cleanup dry-runs may be unavailable without disabling MCP execution. Preserve
-stronger project-required checks and never claim an unavailable check ran:
+Fallbacks retain the existing order: revision-based `wait_run` when terminal
+awaiting cannot work, CLI before a new run when its selected MCP start or all
+observation paths are unavailable, and paced `get_run` only for an existing
+invocation with neither wait interface usable. Switching transports never
+justifies duplicate execution. Status-file existence, OS process polling, and
+completed-run listings are not live completion interfaces.
 
-- If the host deadline is unknown, disclose that uncertainty and try
-  `await_run` first. Use revision-based `wait_run` only if terminal awaiting is
-  unavailable, a verified deadline is too short, or an observed premature host
-  timeout prevents sustained awaiting. Pass the latest returned revision each
-  time. Omit its timeout for 50 seconds, or use a shorter positive timeout within
-  a verified host deadline.
-- If the selected MCP start tool or every usable MCP observation path is
-  unavailable before a new run, execute the CLI once and await its original
-  host process handle. Do not rerun an existing invocation to
-  change transports.
-- Only if neither MCP wait interface can be used for an existing invocation,
-  use `get_run` with 50 seconds of host waiting between nonterminal snapshots.
-  If timed host waiting is unavailable, report the limitation and stop automated
-  polling. Stop on `finished`; disconnects, unknown IDs, and operational errors
-  route to recovery rather than restarting the command.
+Read the safety owner before its action. Retention advice is nonblocking and
+does not authorize deletion. Reuse verified facts and approvals while their
+relevant inputs and scope remain unchanged. A materially different effect
+still needs its own authority.
 
-Waiting repeatedly on one pending host handle is not Gaori status polling.
-Neither final status-file existence, `list_runs`, nor OS process polling is a
-live completion interface. User-requested timing queries do not create a
-recurring polling loop. Report only Gaori-returned timing and availability;
-never invent an ETA.
+## Verification and delivery history
 
-### Boundaries
+`AWAIT-006` introduced the async-first entrypoint and the earlier guidance to
+wait on a host handle for up to five minutes. `SKMOD-001` replaces that host
+interval prescription with the host's own waiting and communication rules and
+moves conditional detail into reachable references. The historical AWAIT-006
+roadmap record remains intact; these source edits change no runtime schema,
+timeout, cancellation, artifact, or evidence semantics.
 
-`AWAIT-006` changed only agent guidance and its documentation contract test. It
-did not change:
-
-- Gaori MCP runtime code or tool schemas;
-- invocation, cancellation, shutdown, or restart-recovery behavior;
-- command-result authority, parser behavior, artifacts, or evidence semantics;
-- README, integration, architecture, or operator-interface descriptions of the
-  already implemented runtime unless implementation discovers an actual
-  contract mismatch; or
-- an installed user-global skill.
-
-### Implementation and verification
-
-The original `AWAIT-006` implementation changed only `skills/use-gaori/SKILL.md`
-and the focused contract-test surface. The async-first revision also aligns the
-skill's lifecycle and recovery references, this guidance document, and the
-README agent template's transport-availability rule. The test
-protects start-once identity, terminal await preference, host-native pending calls, five-minute same-handle waiting,
-no liveness polling, and no repeated start after observer timeout or
-cancellation. Regression assertions also protect terminal awaiting with an
-unverified host deadline and MCP availability without a CLI on PATH.
-
-The focused test keeps the `docs/user-interface.md` AWAIT-004 runtime-interface
-completion check separate from the `docs/implementation-tips/README.md` AWAIT-006
-guidance-completion check.
-
-Run and report:
+Run the existing focused checks, then the applicable repository gate:
 
 ```bash
-go test -count=1 ./e2e -run '^(TestAwaitRunDocumentationContract|TestMCPDocumentationAndSkillContract|TestUseGaoriCleanupAdvisoryContract)$'
+go test -count=1 ./e2e -run '^(TestAwaitRunDocumentationContract|TestMCPDocumentationAndSkillContract|TestUseGaoriCleanupAdvisoryContract|TestUseGaoriStatusSkillContract|TestParserSupportDocumentationContract)$'
 make guardrails
 git diff --check
 ```
 
-Read back all changed files. If the host provides a skill validator, run it and
-report the exact tool and command used; otherwise report skill validation as
-skipped because no host validator is available. This repository does not ship
-a skill validator. Report exact file scope, command exits, skipped checks, and any remaining
-host-specific limitation. Check the normal await, deferred handle, observer
-timeout, bounded wait, polling, CLI, and user-requested ETA scenarios. Documentation
-contract checks verify guidance text; they do not prove agent behavior. Do not
-commit, push, release, or install as part of `AWAIT-006` without separate authorization.
+Read back changed files and verify every relative link and complete distribution
+tree. Existing documentation checks establish documentary coverage only; they
+do not prove an agent's routing, waiting, or approval behavior. Do not add
+prose-matching tests or automated LLM evaluations. Report any available skill
+validator separately from the repository checks.
+
+Master's applicable manual checks cover execution versus status routing,
+ordinary async execution, MCP without a PATH CLI, pending handles and observer
+timeouts, duplicate-free fallback, unchanged versus changed authorization, and
+Gaori-calculated timing with terminal-result interpretation. Keep unperformed
+checks explicit; automated success does not establish functional completion.
+
+## SKMOD source handoff
+
+Aquarium's accepted `SKILL-04` maps to Gaori `SKMOD-001`. Aquarium `TASK-046`
+consumes the updated local source skills and every required reference after
+its own `TASK-043` through `TASK-045` and external `SKILL-04` through `SKILL-08`.
+The source intake needs the exact revision and relevant uncommitted content,
+implemented scope, preserved or intentionally changed contracts, checks,
+manual results, and remaining gaps. Release and installation are not
+prerequisites for this intake. Installed copies and released archives are
+comparison evidence only.
+
+This source handoff does not change the separate `AWAIT-007` stable-release
+adoption condition below. Sending a handoff, committing, publishing, releasing,
+installing, and activating remain distinct actions with their existing
+approval boundaries.
 
 ## AWAIT-007: Deferred Aquarium adoption
 
@@ -165,7 +134,7 @@ same start-once, same-invocation, terminal-await, same-handle,
 no-liveness-polling, and observer-retry behavior. Keep detailed Gaori lifecycle
 ownership in the upstream skill. Preserve these boundaries:
 
-- the five-minute duration applies to the host's deferred handle, not
+- host wait intervals follow the host's requirements and do not change
   `wait_run.timeout_ms`;
 - `await_run` remains terminal-only and has no Gaori-owned timeout;
 - the effective host deadline must cover command execution and evidence

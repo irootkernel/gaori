@@ -19,7 +19,7 @@ Reduce unnecessary instruction loading, repeated investigation, redundant verifi
 5. Update source-distribution resource lists and links to include the complete skill trees. Keep the status skill independently installable.
 6. Carry authorization forward for the same decision and unchanged scope; preserve distinct approvals for materially different effects.
 
-The current [RQDOC-005 specification](../specs/README.md), [long-running await guidance](../long-running-await-guidance.md), and `AWAIT-006` documentation test encode the earlier five-minute guidance. Reconcile affected current authorities and existing checks within this task so the rewritten skill does not contradict them. Preserve the historical `AWAIT-006` delivery record and the native terminal-await contract. Do not add prose-matching tests or automated LLM evaluations.
+The earlier [RQDOC-005 specification](../specs/README.md), [long-running await guidance](../long-running-await-guidance.md), and `AWAIT-006` documentation test encoded five-minute guidance. Keep current authorities and existing checks aligned with host-defined waiting while separating documentary checks from manual behavior verification. Preserve the historical `AWAIT-006` delivery record and the native terminal-await contract. Do not add prose-matching tests or automated LLM evaluations.
 
 ## Preserved contracts and limits
 

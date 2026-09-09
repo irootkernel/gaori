@@ -1,17 +1,17 @@
 # Gaori lifecycle and destructive actions
 
-Load for installation diagnostics, initialization, run start or fixed-path replacement, cancellation, cleanup, or any request involving a session, service, or reset. Covers install and version checks, the no-`init` boundary, run start and `--run-id` replacement, signal cancellation, completed run inventory, and standalone cleanup.
+Load before installation diagnostics, initialization, fixed-path replacement, cancellation, cleanup, or a session/service/reset request. Ordinary selected-command execution stays in [the entrypoint](../SKILL.md#default-start-once-await-completion). Reuse explicit authority for the same action and unchanged scope; each materially different effect still needs its own authority.
 
 ## Installation diagnostics
 
-Confirm MCP and CLI availability separately using [the entrypoint](../SKILL.md#establish-current-state). A connected Gaori MCP server does not require a CLI on PATH; compare its reported server version with any project pin after removing one optional leading `v` from both values. Apply the same normalization to CLI JSON `version`, which includes the prefix; MCP `serverInfo.version` does not. For CLI operations, check without installing or changing toolchain state:
+Confirm MCP and CLI availability separately using [the entrypoint](../SKILL.md#prepare-the-selected-command). A connected Gaori MCP server does not require a CLI on PATH; compare its reported server version with any project pin after removing one optional leading `v` from both values. Apply the same normalization to CLI JSON `version`, which includes the prefix; MCP `serverInfo.version` does not. For CLI operations, check without installing or changing toolchain state:
 
 ```bash
 command -v gaori
 gaori version --json
 ```
 
-If the project uses the bundled resolver, inspect its selected binary without changing metadata:
+Inspect an existing project pin or `.gaori/toolchain.yaml` only when relevant to the selected transport. If the project uses the bundled resolver, inspect its selected binary without changing metadata:
 
 ```bash
 scripts/gaori-toolchain --toolchain-status
@@ -26,17 +26,13 @@ Gaori has no `init` command. A configured workspace exists only when the selecte
 
 ## Run start and replacement
 
-Gaori has no durable task registry. When the selected MCP start tool and `await_run` are connected, start only the concrete command selected by the user or parent project with `start_configured_run` or `start_ad_hoc_run`, exactly once. Record its session-local invocation ID and revision, then use `await_run` for terminal completion. Missing unrelated tools does not prevent this path. `queued`, `executing`, `materializing`, and `finished` are live phases, not command results. `await_run` accepts only the invocation ID and relies on the host's tool-call deadline. Keep the same pending host handle when one is returned; required progress reports do not require status polling.
-
-An unknown host deadline alone does not prevent terminal awaiting; try `await_run` first. Use [the entrypoint's fallbacks](../SKILL.md#fallbacks) when the tool is unavailable or a verified deadline or observed premature host timeout prevents sustained awaiting: prefer bounded revision-based `wait_run`, and use paced `get_run` polling only when neither wait interface can be used. If the selected MCP start tool or every usable MCP observation path is missing before a new run, follow that section's CLI workflow. Never duplicate an already-started command to change transports. User-requested timing queries follow [the entrypoint's one-off query guidance](../SKILL.md#default-start-once-await-completion) and leave the pending await intact; detailed timing explanations belong to the separate `use-gaori-status` skill.
-
-Standalone runs allocate a new collision-free directory. A fixed `--run-id` plus command ID reuses fixed artifact paths and can replace prior artifacts, so require explicit user intent or a parent-provided unique identity before using it:
+Use [the entrypoint](../SKILL.md#default-start-once-await-completion) for start-once execution and terminal `await_run`. Gaori has no durable task registry. Standalone runs allocate a new collision-free directory; a fixed `--run-id` plus command ID reuses paths and can replace prior artifacts. Require explicit intent for replacement or a parent-provided unique identity before using it:
 
 ```bash
 gaori --json --run-id parent-run-001 run unit
 ```
 
-Tagged ad-hoc runs time out after 600 seconds unless one `--timeout-sec <1..86400>` is supplied before the child `--` boundary. A timeout is an authoritative `timed_out` result with exit `124`; inspect its partial evidence before deciding whether a retry is safe.
+Preserve the matching `.gaori/runs/scoped/<run-id>/artifacts/test/` boundary and never bypass symlink or path checks. Read [fallbacks](fallbacks.md) only for an unavailable execution or observation path, or an insufficient host deadline. A changed transport never authorizes a second start.
 
 The final `<command-id>.status.json` appears only after execution and extraction finish. Its absence is not a filesystem `running` state. MCP snapshots provide live state only while the same server session exists; CLI callers must still use the parent process handle.
 
@@ -48,16 +44,7 @@ The final `<command-id>.status.json` appears only after execution and extraction
 
 ## Completed run inventory
 
-`runs list` reports the same completed standalone runs that cleanup would consider, but reads instead of deletes. It never opens a raw log and never writes an artifact, so it is safe without user intent:
-
-```bash
-gaori --json runs list --limit 10
-gaori --json runs list --tag go --status failed
-```
-
-An attached MCP client has the same inventory through the read-only `list_runs` tool, which mirrors these selectors and field names and additionally reports `runs_truncated` when its 50-run cap or byte budget dropped a matching run. A listed run carries no invocation ID, so it cannot be waited on, cancelled, or read with `get_excerpt`; use the CLI `excerpt` for its failure evidence. A server started with `--output-dir` rejects `list_runs`, because standalone runs then live outside the directory the listing reads.
-
-It accepts only the global `--repo` and `--json` flags. `--status` takes one of `passed`, `failed`, `timed_out`, `killed`, or `internal_error`; `--tag` may repeat and requires every named tag on the run. Directories that are not Gaori timestamps, and runs with no status artifact yet, appear only in `skipped_runs`. Unsafe or malformed evidence fails with exit `3` rather than being silently omitted — report that instead of reading around it. Use this before proposing cleanup so the user can see exactly what a selector would remove.
+Read [retention](retention.md#completed-run-inventory) for `runs list`, MCP `list_runs`, selectors, and fail-closed inventory handling before planning cleanup.
 
 ## Cleanup, reset, and repair
 

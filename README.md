@@ -82,54 +82,58 @@ Before pasting the block below, replace `<expected-version>` and `<command-id>` 
 For task-level operating guidance, use the complete
 [`use-gaori` skill directory](skills/use-gaori/). For Codex, install user-scoped
 skills under `$HOME/.agents/skills`. Other agents may use different discovery
-paths, so consult their documentation before choosing a destination. Download
-only the skill directory into that agent-specific location:
+paths. From the root of a verified source checkout or extracted source archive,
+copy the whole directory, including every reference:
 
 ```bash
 (
   set -eu
   gaori_skill_parent="${HOME}/.agents/skills"
-  gaori_skill_ref=v0.1.16
+  gaori_skill_source="$PWD/skills/use-gaori"
+  test -f "$gaori_skill_source/SKILL.md"
   mkdir -p "$gaori_skill_parent"
   gaori_skill_target="$gaori_skill_parent/use-gaori"
-  test ! -e "$gaori_skill_target" && test ! -L "$gaori_skill_target"
+  test ! -e "$gaori_skill_target" && test ! -L "$gaori_skill_target" || exit 1
   gaori_skill_tmp="$(mktemp -d "$gaori_skill_parent/.use-gaori.XXXXXX")"
   trap 'rm -rf "$gaori_skill_tmp"' EXIT
-  mkdir -p "$gaori_skill_tmp/use-gaori/references"
-  gaori_skill_url="https://raw.githubusercontent.com/irootkernel/gaori/$gaori_skill_ref/skills/use-gaori"
-  curl -fsSLo "$gaori_skill_tmp/use-gaori/SKILL.md" "$gaori_skill_url/SKILL.md"
-  for reference in lifecycle authoring recovery; do
-    curl -fsSLo "$gaori_skill_tmp/use-gaori/references/$reference.md" \
-      "$gaori_skill_url/references/$reference.md"
-  done
+  cp -R "$gaori_skill_source" "$gaori_skill_tmp/use-gaori"
   mv "$gaori_skill_tmp/use-gaori" "$gaori_skill_target"
 )
 ```
 
-The skills are source-distributed in the v0.1.16 GitHub source archive. `go install`, `make install`, and `make install-toolchain` install only the Gaori binary and do not copy or activate the skills.
-
-The same source release also provides the separate, automatically discoverable
+The same source provides the independently installable
 [`use-gaori-status` skill](skills/use-gaori-status/SKILL.md) for read-only timing,
-outcome-history, trend, recurrence, and already-identified live-estimate
-questions. It performs no calculations or lifecycle operations. From a verified v0.1.16
-source checkout, install it with:
+outcome history, trends, recurring failures, and known live estimates. It uses
+Gaori's calculations and performs no lifecycle operations. Install its complete
+directory separately:
 
 ```bash
 (
   set -eu
   gaori_status_skill_parent="${HOME}/.agents/skills"
-  gaori_status_skill_source="$PWD/skills/use-gaori-status/SKILL.md"
-  gaori_status_skill_target="$gaori_status_skill_parent/use-gaori-status"
-  test -f "$gaori_status_skill_source"
+  gaori_status_skill_source="$PWD/skills/use-gaori-status"
+  test -f "$gaori_status_skill_source/SKILL.md"
   mkdir -p "$gaori_status_skill_parent"
-  test ! -e "$gaori_status_skill_target" && test ! -L "$gaori_status_skill_target"
+  gaori_status_skill_target="$gaori_status_skill_parent/use-gaori-status"
+  test ! -e "$gaori_status_skill_target" && test ! -L "$gaori_status_skill_target" || exit 1
   gaori_status_skill_tmp="$(mktemp -d "$gaori_status_skill_parent/.use-gaori-status.XXXXXX")"
   trap 'rm -rf "$gaori_status_skill_tmp"' EXIT
-  mkdir -p "$gaori_status_skill_tmp/use-gaori-status"
-  cp "$gaori_status_skill_source" "$gaori_status_skill_tmp/use-gaori-status/SKILL.md"
+  cp -R "$gaori_status_skill_source" "$gaori_status_skill_tmp/use-gaori-status"
   mv "$gaori_status_skill_tmp/use-gaori-status" "$gaori_status_skill_target"
 )
 ```
+
+Both examples use all resources from the selected source revision; do not mix
+an entrypoint from one revision with references from another. The current
+`use-gaori` tree contains `SKILL.md` and six references: `authoring.md`,
+`existing-logs.md`, `fallbacks.md`, `lifecycle.md`, `recovery.md`, and
+`retention.md`. `use-gaori-status` is self-contained in its own `SKILL.md`.
+
+The published v0.1.16 source archive includes both skills with that release's
+resource layout; this checkout may contain newer guidance. Record the selected
+commit or tag and any local changes when handing source guidance to another
+project. Binary installation through `go install`, `make install`, or
+`make install-toolchain` does not copy either skill.
 
 Neither skill is installed or activated by Gaori itself.
 

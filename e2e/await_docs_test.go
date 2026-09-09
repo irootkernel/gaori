@@ -51,26 +51,6 @@ func TestAwaitRunDocumentationContract(t *testing.T) {
 			t.Errorf("%s does not record the completed AWAIT gate", relative)
 		}
 	}
-
-	skill := readAwaitDocument(t, root, "skills/use-gaori/SKILL.md")
-	for _, required := range []string{
-		"exactly once and preserve the returned session-local invocation ID",
-		"Call `await_run` with only that same invocation ID",
-		"Prefer a host-native wait that keeps the pending tool call suspended until terminal completion",
-		"same handle for up to five minutes at a time",
-		"Do not resume model reasoning merely to report liveness",
-		"Do not repeatedly call `get_run`, `wait_run`, or `list_runs` only to confirm that the invocation is still active during terminal awaiting",
-		"If the await request ends because of host timeout or observer cancellation",
-		"While the same MCP session remains alive",
-		"call `await_run` again for the preserved invocation and never repeat start",
-		"current 50-second maximum for `wait_run.timeout_ms`",
-		"An unverified host deadline is not evidence that `await_run` is unavailable",
-		"A missing CLI on PATH does not make a connected Gaori MCP server unavailable",
-	} {
-		if !strings.Contains(skill, required) {
-			t.Errorf("use-gaori skill does not preserve the AWAIT-006 contract %q", required)
-		}
-	}
 }
 
 func readAwaitDocument(t *testing.T, root, relative string) string {

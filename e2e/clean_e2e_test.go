@@ -15,7 +15,7 @@ import (
 
 func TestUseGaoriCleanupAdvisoryContract(t *testing.T) {
 	t.Parallel()
-	skillPath := filepath.Join(projectRoot(t), "skills", "use-gaori", "SKILL.md")
+	skillPath := filepath.Join(projectRoot(t), "skills", "use-gaori", "references", "retention.md")
 	skill, err := os.ReadFile(skillPath)
 	if err != nil {
 		t.Fatal(err)

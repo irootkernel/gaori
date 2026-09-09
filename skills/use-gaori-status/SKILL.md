@@ -1,15 +1,14 @@
 ---
 name: use-gaori-status
-description: Explain Gaori-calculated command duration, outcome history, recent timing change, recurring failures, or an already-known live invocation estimate. Use for questions such as how long a configured command usually takes, how much longer an attached run may take, or whether retained successful runs are getting slower. This skill is read-only; execution, lifecycle, recovery, and detailed evidence inspection belong to use-gaori.
+description: Explain Gaori-calculated run timing, outcome history, recurring failures, or a known live estimate. Use for read-only status questions; execution and recovery belong to use-gaori.
 ---
 
 # Use Gaori Status
 
-This source-distributed skill is automatically discoverable when installed in an
-agent's skill directory; the Gaori binary never installs or activates it.
-
-Answer only from the versioned calculations Gaori returns. Do not inspect or
-calculate directly from artifacts.
+Answer only from Gaori's versioned calculations; do not inspect or calculate
+directly from artifacts. This skill is independently installable and automatically
+discoverable. Gaori never installs or activates it. Reuse verified transport and
+scope facts while their relevant state remains unchanged.
 
 ## Select the read-only query
 
@@ -36,8 +35,8 @@ run as a live identity, or attempt to recover an invocation after disconnect.
 
 ## Explain the returned fields
 
-Keep Gaori's scope visible: the values describe validated retained completed
-standalone evidence, not all project executions and not future certainty.
+Report the scope: validated retained completed standalone evidence. It does
+not cover every project execution or establish future certainty.
 
 - Preserve `availability` exactly. Do not replace `no_matching_samples`,
   `insufficient_samples`, or `beyond_observed_max` with a numeric estimate.
@@ -62,6 +61,6 @@ configuration or rules; open summaries, excerpts, or raw logs; install or
 activate Gaori or this skill; or claim workflow completion, review acceptance,
 waiver, release, installation, publication, or runtime activation.
 
-When the request requires execution, lifecycle control, recovery, or detailed
-evidence inspection, state that it belongs to `use-gaori` and stop this
-read-only status workflow without invoking those operations automatically.
+For execution, lifecycle, recovery, or detailed evidence inspection, identify
+`use-gaori` as the owner and stop this status workflow. Do not invoke those
+operations automatically.

@@ -496,16 +496,22 @@ func TestMCPDocumentationAndSkillContract(t *testing.T) {
 			t.Errorf("%s does not define cancel_run.accepted and final-result reconciliation", relative)
 		}
 	}
-	skill, err := os.ReadFile(filepath.Join(root, "skills/use-gaori/SKILL.md"))
-	if err != nil {
-		t.Fatal(err)
+	skillSources := map[string][]string{
+		"skills/use-gaori/SKILL.md": {
+			"start_configured_run", "start_ad_hoc_run", "get_run", "wait_run", "cancel_run", "get_excerpt", "list_runs",
+			"config check", "summary_markdown", "summary_json", "extractor_status", "Legacy `summary` and `extractor`",
+		},
+		"skills/use-gaori/references/fallbacks.md": {"--version", "--timeout-sec"},
 	}
-	for _, required := range []string{
-		"start_configured_run", "start_ad_hoc_run", "get_run", "wait_run", "cancel_run", "get_excerpt", "list_runs", "CLI workflow",
-		"--version", "config check", "--timeout-sec", "summary_markdown", "summary_json", "extractor_status", "Legacy `summary` and `extractor`",
-	} {
-		if !strings.Contains(string(skill), required) {
-			t.Errorf("use-gaori skill is missing %q", required)
+	for relative, required := range skillSources {
+		content, err := os.ReadFile(filepath.Join(root, relative))
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, fragment := range required {
+			if !strings.Contains(string(content), fragment) {
+				t.Errorf("%s is missing %q", relative, fragment)
+			}
 		}
 	}
 	authoring, err := os.ReadFile(filepath.Join(root, "skills/use-gaori/references/authoring.md"))
@@ -562,7 +568,7 @@ func TestUseGaoriStatusSkillContract(t *testing.T) {
 
 	documents := map[string][]string{
 		"CHANGELOG.md":                {"## v0.1.16 - 2026-09-06", "## v0.1.15 - 2026-08-29", "Read-only historical run statistics and caller-elapsed estimates", "use-gaori-status"},
-		"README.md":                   {"use-gaori-status", "verified v0.1.16\nsource checkout", "Neither skill is installed or activated by Gaori itself"},
+		"README.md":                   {"use-gaori-status", "Neither skill is installed or activated by Gaori itself"},
 		"docs/architecture/README.md": {"Status: Complete through `RSTAT`", "use-gaori-status", "without arithmetic"},
 		"docs/architecture-decision-records/README.md": {"ADR-0020", "Status: Accepted", "use-gaori-status"},
 		"docs/implementation-tips/README.md":           {"Status: Current source-tree guidance through `RSTAT`", "use-gaori-status", "calculation-free"},

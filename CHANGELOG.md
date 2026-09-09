@@ -6,6 +6,7 @@ This file records concise shipped outcomes and the planned next stable release. 
 
 ### Changed
 
+- Gaori skills load conditional references and follow host waiting rules; installation copies complete skill trees and refuses existing targets.
 - CLI version JSON now contains only `name` and the `v`-prefixed `version`; the `commit` field has been removed.
 
 ## v0.1.16 - 2026-09-06

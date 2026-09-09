@@ -1,6 +1,6 @@
 # Gaori configuration and rule authoring
 
-Load before selecting or changing configured commands, parsers, redaction, noise filters, extraction rules, or rule proposals — and before answering any request phrased as a Gaori policy, manifest, workflow, or procedure. Covers config schema v2, the parser labels, the rule propose/create/test/delete lifecycle, and authoring surfaces Gaori does not have.
+Load before choosing a parser, changing configured commands, redaction, noise filters, extraction rules or proposals, or answering a policy/manifest/workflow/procedure request. Running an existing selected command needs only the preparation in [the entrypoint](../SKILL.md#prepare-the-selected-command). Reuse verified configuration and explicit authority for unchanged inputs and scope.
 
 ## Built-in configuration
 
@@ -20,7 +20,7 @@ Do not create or change this file without explicit user intent. It may be portab
 
 Configured commands own their `timeout_sec`. An ad-hoc run defaults to 600 seconds and may select one `--timeout-sec` integer from 1 through 86400 before the child boundary; this option cannot override configured policy.
 
-After inspecting or changing config or stored rules, validate them without executing a command:
+Validate config and stored rules before relying on them; reuse the result while those inputs remain unchanged:
 
 ```bash
 gaori --json config check
@@ -32,7 +32,7 @@ Add `--sample <raw-log>` when changing `redaction.patterns` to verify the patter
 
 Implemented parser labels are `generic`, `vitest`, `pytest`, `go-test`, `playwright`, `ginkgo`, `godog`, `cargo-test`, `dart-test`, `flutter-test`, `bun-test`, `node-test`, `jest`, `rspec`, `dotnet-test`, `gradle-test`, and `patrol`. Unknown labels, schema version 1, and removed `lane` fields fail closed. `gaori --json parsers list` is the authoritative live list for the installed binary. In the current source support matrix, `dart-test`, `dotnet-test`, `gradle-test`, and `patrol` are Experimental: they remain selectable, but do not assume complete failure metadata across real runner variants. `gaori --json parsers catalog` is the code-owned machine-readable record of each label's support tier and stable output family. Treat an Experimental parser's summary as bounded evidence that may require manual confirmation, never as a different command result.
 
-When a run reports `extractor_status: no_match` or `degraded` and you suspect the wrong label, run `gaori --json parsers detect <raw-log>`. It reads only that log, loads no config, creates nothing, and shows no log content. It reports candidates and never names a recommended label, because several labels can report a candidate for one log. Read it, choose one label yourself and state why, then run `gaori --json summarize --parser <label> <raw-log>` explicitly. Never chain detect into a re-summarize automatically, and never present its ordering as a Gaori decision.
+For `no_match`, degraded extraction, or a suspected parser mismatch in an existing log, read [existing-log analysis](existing-logs.md#diagnose-a-parser-mismatch). Detection does not select a parser or authorize summarization.
 
 ## Project extraction rules
 
@@ -74,4 +74,4 @@ Rules only extract evidence. They cannot select commands, change pass or fail, w
 
 Gaori does not author or execute workflows, policies, manifests, procedures, goals, review plans, or acceptance rules. If a request uses those terms, identify the parent tool that owns the artifact. Do not invent a Gaori file format or encode external lifecycle policy in extraction rules.
 
-The MCP server intentionally exposes execution lifecycle, bounded excerpt, and read-only completed-run listing tools only. Use the existing CLI for configuration checks, summarize, rule CRUD/proposals, and cleanup; MCP invocation state is not configuration or policy.
+Use the existing CLI for configuration checks, summarize, rule CRUD/proposals, and cleanup. MCP invocation state is not configuration or policy.
