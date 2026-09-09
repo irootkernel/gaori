@@ -12,6 +12,7 @@ Add a `TODO-*.md` candidate only when the proposed work is epic-sized and has no
 
 ## Adopted active-epic dossiers
 
+- [`SKMOD`](TODO-SKMOD.md) — source-skill modernization scope, acceptance, and Aquarium integration handoff.
 - [`AQADP`](TODO-AQADP.md) — current cross-task guidance for the deferred qualification and downstream-adoption epic.
 
 Each dossier identifies its roadmap epic and owns its goal, scope, approach, task objectives, required and prohibited actions, and acceptance. On epic closeout, promote durable information to its canonical role owner, remove the dossier from this index, delete the dossier, and replace the roadmap `Detailed SOT` link with `Canonical Outcomes` links.

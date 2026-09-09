@@ -1,6 +1,6 @@
 # Gaori Roadmap
 
-Status: Completed through `RSTAT`; `AQDEV-001` in progress; `AQADP`, `AWAIT-005`, and `AWAIT-007` deferred
+Status: Completed through `RSTAT`; `AQDEV-001` in progress; `SKMOD-001` planned; `AQADP`, `AWAIT-005`, and `AWAIT-007` deferred
 Scope: Implementation tracking for the Gaori v0.1 standalone baseline, hardening, tag and parser selection, release readiness, identity migration, operator-directed standalone evidence cleanup, portable project config, CLI usability improvements, session-local MCP execution, token-efficient terminal waiting and host-wait guidance, the parser catalog plus Dart/Patrol extraction epic, run-status and timing insights, Aquarium development-channel integration, and deferred Aquarium qualification and downstream adoption tracking
 
 This roadmap is a delivery record, not an operator guide or a promise that out-of-scope capabilities will be added. See the [integration guide](../integration-guide.md) for the current supported/unsupported capability boundary and the [todo index](../todo/README.md) for future candidates and active epic dossiers.
@@ -13,7 +13,19 @@ Current implementation snapshot:
 - `Done`: `SETUP-001` to `SETUP-003`, `RUNNR-001` to `RUNNR-003`, `ARTIF-001` to `ARTIF-003`, `PARSE-001` to `PARSE-011`, `SAFEY-001` to `SAFEY-004`, `CLIUX-001` to `CLIUX-008`, `RULES-001` to `RULES-005`, `DOCUM-001` to `DOCUM-003`, `HARDE-001` to `HARDE-007`, `TAGS-001`, `ADHOC-001`, `ADHOC-002`, `RELRV-001` to `RELRV-009`, `BRAND-001`, `CLEAN-001`, `PORTA-001`, `MCP-001` to `MCP-006`, `AWAIT-001` to `AWAIT-004`, `AWAIT-006`, `RSTAT-001` to `RSTAT-004`
 - `In Progress`: `AQDEV-001`
 - `Deferred`: `AQADP` (`QUALI-001`, `QUALI-002`, `CONSUMER-SUDAL-001`), `AWAIT-005`, `AWAIT-007`
-- `Planned`: none
+- `Planned`: `SKMOD-001`
+
+## SKMOD: Gaori skill modernization for GPT-6 Astra
+
+Status: Planned
+
+Detailed SOT: [SKMOD dossier](../todo/TODO-SKMOD.md)
+
+Owner: Gaori team. Adopted on 2026-09-09 from Aquarium's accepted `SKILL-04` requirements handoff, revision 1. `SKILL-04` is the external proposal label; `SKMOD-001` is the canonical Gaori task. This epic has no predecessor dependency and contains one task because both skills and their distribution references require one consistent contract review. Master's manual verification is required before functional completion.
+
+| Task ID | Status | Goal | Verification | Reference |
+|---|---|---|---|---|
+| SKMOD-001 | Planned | Shorten both source skills, move conditional guidance to reachable references, preserve native execution and status contracts, and synchronize affected authorities and distribution inventories. | Inspect current source gaps; verify structure, links and complete distribution resources; run applicable repository checks; apply a final English Humanizer pass; prepare and obtain Master's manual verification of routing, async waiting, fallback, authorization and timing scenarios. Report unperformed checks separately. | [Scope, acceptance and handoff](../todo/TODO-SKMOD.md); `GAORI-REQ-RQDOC-005`, `GAORI-REQ-RQMCP-008`, `GAORI-REQ-RQINS-006` |
 
 ## AQDEV: Aquarium development channel
 
