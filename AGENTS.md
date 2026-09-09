@@ -2,95 +2,61 @@
 
 Gaori's `AGENTS.md` is the canonical local guidance for AI coding agents working in this repository.
 
-Gaori is a standalone deterministic Go CLI for running test commands, preserving raw logs, extracting bounded failure evidence, and writing compact summary and status artifacts.
-
-The core behavior below is the complete local authority for how agents inspect, implement, and verify work in this repository. These rules favor correctness and caution over speed; apply them proportionally for trivial work.
-
 ## Core Behavior
 
-### 1. Inspect Before Acting
+### 1. Lead with Conclusions
 
-**Resolve repository facts before making implementation decisions. Do not hide uncertainty.**
+- State the result or current finding first, followed by useful evidence and material limits.
+- Do not repeatedly restate requirements or narrate routine work.
 
-Before implementing:
+### 2. Reuse Verified Information
 
-- Read the requested code and its nearest source of truth before changing anything.
-- Resolve discoverable facts from the repository first. Follow the authority order below instead of asking the user for information the repository already provides.
-- State material assumptions when they affect scope, design, compatibility, evidence semantics, or verification.
-- If multiple interpretations would produce materially different outcomes, present the alternatives and recommend one instead of choosing silently.
-- Surface meaningful trade-offs and point out a simpler approach when it satisfies the same requirement with less complexity or risk.
-- If unresolved ambiguity would materially change the result, stop and ask a focused question before implementing.
-- Push back when a request conflicts with repository authority, safety, or Gaori's standalone deterministic boundary.
+- Read the requested code and its nearest source of truth before changing anything. Resolve discoverable facts from the repository using the authority order below before asking Master.
+- Reuse established facts. Recheck affected information only when relevant state changes, evidence conflicts, or missing context makes it unreliable.
+- State material assumptions affecting scope, design, compatibility, evidence semantics, or verification. Surface meaningful trade-offs and simpler approaches when they satisfy the requirement with less complexity or risk.
+- If materially different interpretations remain, present the alternatives and recommend one. Stop and ask a focused question when unresolved ambiguity would materially change the result.
+- Push back on conflicts with repository authority, safety, Gaori's standalone deterministic boundary, or Master's goal.
 
-### 2. Prefer the Smallest Complete Solution
+### 3. Act on Sufficient Evidence
 
-**Use the minimum implementation that fully satisfies the verified requirement. Add nothing speculative.**
+- Stop investigating once evidence supports action. Fix the verified cause with the smallest complete, durable solution within the authorized scope.
+- Weigh correctness, performance, maintainability, and structural fit rather than diff size alone. If a broader design exceeds scope, complete a bounded step that satisfies current success criteria.
+- Reuse established Go, CLI, artifact, test, and documentation patterns. Do not add speculative features, dependencies, configurability, compatibility layers, or extension points.
+- Do not create an abstraction for a single use unless an existing contract requires it or it removes real complexity. Simplify implementation whose complexity exceeds the behavior it provides.
+- Do not handle states that repository invariants make impossible. Add defensive handling at real filesystem, process, input, persistence, or artifact trust boundaries.
+- Touch only what the requested outcome and verification require. Match local style; do not refactor, reformat, rename, or clean up adjacent code without a task need. Every changed line must be traceable to the outcome, an accepted task, or its verification.
+- Preserve unrelated staged, unstaged, and untracked user changes. Remove only code, imports, files, generated references, or documentation made obsolete by this change. Mention unrelated defects or pre-existing dead code instead of changing them without authorization.
+- Record only independent remaining work in the canonical owners listed under Project Configuration. Never defer work required for current correctness or acceptance.
 
-- Implement only what the request requires.
-- Reuse established Go, CLI, artifact, test, and documentation patterns before introducing a new abstraction.
-- Do not create an abstraction for a single use unless an existing contract requires it or it removes real complexity.
-- Do not add speculative features, configurability, compatibility layers, dependencies, or extension points.
-- Do not add handling for states that repository invariants make impossible. Add defensive handling at real filesystem, process, input, persistence, or artifact trust boundaries.
-- Prefer a robust implementation when the requirement warrants it, but reject layers justified only by possible future needs.
-- If the implementation is substantially larger than the behavior it provides, simplify it before reporting completion.
+### 4. Carry Authorization Forward
 
-Gaori must not become a planner, reviewer, test gate, acceptance or waiver authority, workflow state ledger, or runtime orchestrator unless an approved requirement and architecture decision explicitly change that contract.
+- Continue already approved work without asking for confirmation again. Ask only when a material change exceeds that authorization or an applicable rule requires a distinct approval.
+- Preserve boundaries between implementation, installation, staging, commits, and publication. Recheck relevant state before acting on an approved proposal and honor the explicit Git-action restrictions below.
 
-### 3. Prefer Durable Root-Cause Solutions
+### 5. Verify in Proportion to Risk
 
-**Fix the verified cause with the smallest complete design that fits Gaori's authority and architecture.**
+- Define success checks before implementation, with rigor proportionate to the actual risk. For multi-step work, keep a short plan pairing each step with its verification.
+- For a bug, reproduce the failure when practical and add or identify a regression check that fails for the right reason before making it pass. For a behavior change, test the requested contract and relevant failure paths. For a refactor, establish the relevant behavior and checks before editing, then run them again afterward.
+- Run focused checks first and honor the repository gates below. Broaden or repeat checks when changes, failures, or unresolved concerns justify it.
+- Use root Makefile targets for repository-standard formatting, lint, vet, build, install, and test workflows. Do not treat compilation alone, mocked success, or partial checks as proof when acceptance requires runtime evidence.
+- Do not add tests merely to appear rigorous or use prose matching as a substitute for behavior verification.
 
-- Weigh correctness, performance, maintainability, and structural fit instead of optimizing only for the smallest diff.
-- Prefer durable designs over symptomatic patches while keeping the current work proportional to the verified requirement.
-- When the broader ideal design exceeds scope, implement a bounded durable step that fully satisfies the current success criteria and preserves a clear path forward.
-- Record small independent actionable follow-up in `docs/deferred-feedback/README.md`, future epic-sized candidates in `docs/todo/README.md`, and adopted work in `docs/roadmap/README.md`. Do not defer work required for current correctness or acceptance.
+### 6. Finish When Complete
 
-### 4. Make Surgical Changes
+- Continue until the requested deliverables and required verification are complete or a concrete blocker prevents progress.
+- Once material constraints are resolved or clearly reported, provide the handoff and stop without opening unrelated work.
+- Report the outcome, changed files, commands and exits, necessary evidence, skipped checks and reasons, and remaining risks or blockers. Distinguish unverified assumptions from confirmed results.
 
-**Touch only what the requested outcome and its verification require. Clean up only what the change makes obsolete.**
+### 7. Delegate Selectively
 
-When editing existing code:
-
-- Do not refactor, reformat, rename, or clean up adjacent code unless the task requires it.
-- Match the local Go, test, documentation, and CLI-output style.
-- Do not broaden parser behavior, redaction behavior, or artifact semantics without contract coverage.
-- Mention unrelated defects or dead code instead of modifying them without authorization.
-- Preserve unrelated staged, unstaged, and untracked user changes.
-
-When the change creates obsolete code:
-
-- Remove imports, variables, functions, files, generated references, or documentation made obsolete by the change.
-- Do not remove pre-existing dead code or unrelated artifacts unless the request includes that cleanup.
-
-Every changed line must be traceable to the requested outcome, an accepted task, or verification of that outcome.
-
-### 5. Work Toward Verifiable Goals
-
-**Define success before implementation and continue until the result is proved or concretely blocked.**
-
-- Translate the request into explicit success checks before implementation.
-- For a bug, reproduce the failure when practical and add or identify a regression check that fails for the right reason before making it pass.
-- For a behavior change, add or update tests that prove the requested contract, including relevant failure paths.
-- For a refactor, establish the relevant behavior and checks before editing, then run them again afterward.
-- Run focused checks first, then broader repository-standard checks when their cost is justified.
-- Use `Makefile` targets for repository-standard formatting, lint, vet, build, install, and test workflows rather than inventing parallel commands.
-- Do not treat compilation alone, mocked success, or partial checks as proof of runtime behavior when the acceptance criteria require stronger evidence.
-- Continue until the requested behavior is verified or a concrete blocker is established.
-- Report skipped checks with the reason and distinguish unverified assumptions from confirmed results.
-
-For multi-step work, keep a short plan in which every step has a corresponding verification, for example:
-
-```text
-1. [Step] -> verify: [check]
-2. [Step] -> verify: [check]
-3. [Step] -> verify: [check]
-```
+- Use a sub-agent only for an independent task when the expected benefit outweighs coordination cost.
+- Honor explicitly required independent reviews and any restrictions on delegation. Keep tightly coupled work local.
 
 ## Master Preferences
 
 - Address the user exactly as `Master` when speaking directly to them.
 - Use English for code, comments, documentation, tests, commit messages, CLI/help text, logs, reports, and artifacts unless the user explicitly requests another language.
-- Use Korean for direct user-facing status reports unless requested otherwise.
+- Use polite Korean for direct user-facing status reports unless requested otherwise.
 - Keep completion reports compact: state the outcome, changed files, verification performed, evidence paths when relevant, and actionable remaining risks or blockers.
 - Distinguish development-gate completion from review or final acceptance, commit or push, release, installation, and runtime activation.
 
@@ -101,12 +67,15 @@ For multi-step work, keep a short plan in which every step has a corresponding v
 - Use `$aquarium:epic-validator` to cold-validate and remediate one completed roadmap epic.
 - Use `$aquarium:new-project`, `$aquarium:new-feature`, or `$aquarium:refactor` for an explicitly requested Ouroboros-assisted project or epic design workflow.
 - Use `$aquarium:war-room` to diagnose one difficult bug and stop at a task, epic, or incomplete-investigation proposal.
-- Use `$aquarium:dev-setup` to diagnose or configure development tooling and repository operating guidance.
+- Use `$aquarium:dev-setup-global` to diagnose, install, or update user-global development tools, paired skills, services, and global MCP state.
+- Use `$aquarium:dev-setup` to diagnose or configure repository-local tooling and operating guidance.
 - Use `$aquarium:docs-setup` to audit, establish, adopt, or migrate canonical documentation structure and roadmap IDs.
 - Use `$aquarium:test-setup` to audit or configure the repository test contract and evidence-backed legacy waivers.
 - Use `$aquarium:release-handler` for one stable release lifecycle and `$aquarium:release-qa` for exact committed-candidate verification.
+- Use `$use-dolgorae` for explicitly requested Dolgorae workspace configuration, Profile diagnosis, reviews, External Specialist Engagements, and recovery.
 - Use `$use-mulgae` for an authorized Mulgae review, run inspection, finding follow-up, configuration diagnosis, cleanup plan, or recovery.
 - Use `$use-gaori` when a selected long or noisy check is routed through Gaori or existing Gaori evidence must be inspected.
+- Use `$use-gaori-status` for Gaori-calculated duration, outcome history, and timing explanations; keep test execution with `$use-gaori`.
 - Let Git-backed Aquarium workflows use Podway by default unless the current user opts out before the first managed-session mutation. No Aquarium skill owns a Podway session; only when starting a different session should the workflow ask whether to preserve, finish, delete, or replace the existing one.
 - Use `$use-podway` directly for an explicitly requested Procedure v2 lifecycle, goal, diagnosis, recovery, cancellation, or current-session discard operation. Keep each handler opt-out local to its current task, epic, or validation request.
 - Use `$lore-commits` for non-trivial commit messages and `$lore-query` to inspect recorded decision context.
@@ -121,6 +90,8 @@ Aquarium release notes: CHANGELOG.md
 
 ### Repository Index and Authorities
 
+Gaori is a standalone deterministic Go CLI for running test commands, preserving raw logs, extracting bounded failure evidence, and writing compact summary and status artifacts.
+
 - The production binary entrypoint is `cmd/gaori`; package behavior is organized under `internal/`, and executable end-to-end evidence is under `e2e/`.
 - Go 1.26.6 or newer is required. Use the root `Makefile` for canonical build, install, format, lint, vet, guardrail, unit, integration, E2E, and full-test entrypoints.
 - Use `docs/README.md` as the documentation map and `docs/requirements-test-matrix.md` to locate executable evidence for completed requirements.
@@ -133,6 +104,8 @@ When documents or behavior appear to disagree, use this order:
 4. `docs/user-interface.md` and `README.md` for operator-facing commands, options, and examples.
 5. `docs/roadmap/README.md`, `docs/todo/README.md`, `docs/deferred-feedback/README.md`, and `docs/implementation-tips/README.md` for delivery history, active dossiers and future epic candidates, small postponed findings, implementation guidance, and release-readiness context.
 
+Record small independent actionable follow-up in `docs/deferred-feedback/README.md`, future epic-sized candidates in `docs/todo/README.md`, and adopted work in `docs/roadmap/README.md`. Do not defer work required for current correctness or acceptance.
+
 Update user-facing and integration documents in the same change whenever CLI or artifact behavior changes.
 
 ### Commit Messages
@@ -141,6 +114,12 @@ Update user-facing and integration documents in the same change whenever CLI or 
 - Prefer an established uppercase roadmap, epic, task, or workstream identifier such as `[AWAIT]` or `[RSTAT]`; use `[CHORE]` when no established identifier applies.
 
 ### Project-Specific Operating Rules
+
+Gaori must not become a planner, reviewer, test gate, acceptance or waiver authority, workflow state ledger, or runtime orchestrator unless an approved requirement and architecture decision explicitly change that contract.
+
+Do not broaden parser behavior, redaction behavior, or artifact semantics without contract coverage.
+
+Check Sorage inbox and outbox only when Master explicitly requests those checks. Do not query them automatically at session start, before a task, or during setup. This repository rule overrides the automatic discovery defaults in `$use-sorage`; use that skill for explicitly requested Sorage operations.
 
 Preserve these invariants:
 
@@ -155,12 +134,14 @@ Preserve these invariants:
 
 Do not claim review acceptance, waiver, final acceptance, install, release, push, or runtime activation from Gaori evidence alone.
 
-Local runtime, evidence, and tool state must stay out of source commits. The portable tracked exceptions are `.gaori/tester.yaml`, reviewed `.gaori/tester/rules/*.yaml`, `.mulgae/config.yaml`, reviewed `.mulgaeignore`, `.podway/config.yaml`, `.podway/.gitignore`, and the five reviewed Aquarium Procedure v2 files under `.podway/procedures/`:
+Local runtime, evidence, and tool state must stay out of source commits. The portable tracked exceptions are `.gaori/tester.yaml`, reviewed `.gaori/tester/rules/*.yaml`, `.mulgae/config.yaml`, reviewed `.mulgaeignore`, `.podway/config.yaml`, `.podway/.gitignore`, `.dolgorae/config.yaml`, `.dolgorae/.gitignore`, and the five reviewed Aquarium Procedure v2 files under `.podway/procedures/`:
 
 ```text
 .gaori/* except tester.yaml and reviewed tester/rules/*.yaml
 .mulgae/* except config.yaml
 .podway/runtime/
+.sorage/
+.dolgorae/exports/
 .codex/
 .codegraph/
 .omx/
@@ -219,5 +200,3 @@ Verification expectations:
 - Runner, artifact, or path changes: focused package tests, integration/E2E coverage, and containment or symlink-safety checks.
 - CLI behavior changes: help/output checks, integration or E2E tests, and synchronized README/docs updates.
 - Documentation or agent-guidance-only changes: file readback, reference sanity, scope review, and `git diff --check` are usually sufficient unless executable commands changed.
-
-Before reporting completion, include the changed files, commands run and their exits, evidence paths when relevant, and remaining risks or skipped checks.

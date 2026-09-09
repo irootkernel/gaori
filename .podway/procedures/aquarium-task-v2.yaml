@@ -1,6 +1,6 @@
 schema: podway.procedure/v2
 id: aquarium-task-v2
-version: "7"
+version: "8"
 name: Aquarium Task
 purpose: Deliver one approved roadmap task through the complete Aquarium evidence workflow.
 description: A Podway record of task-handler planning, implementation, refinement, verification, documentation, review, approval, and closeout.
@@ -144,7 +144,7 @@ node_definitions:
     items:
       - id: review-round
         type: integer
-        prompt: Record the positive root-review ordinal for the current goal revision.
+        prompt: Record the positive review ordinal, counting each original root once for the current goal revision.
         required: true
         minimum: 1
       - id: review-mode
@@ -156,7 +156,7 @@ node_definitions:
           - confirmation-only
       - id: review-run-id
         type: text
-        prompt: Record the exact committed Mulgae root review run ID.
+        prompt: Record the exact committed Mulgae root or verified composite review run ID; verify the original root and role sources through review_composition for a composite.
         required: true
         min_length: 1
         max_length: 128
@@ -223,7 +223,7 @@ node_definitions:
     options:
       - id: approved
         label: Review approved
-        criteria: The root review is operationally complete, CI passed, no valid unresolved finding remains, and the review pass changed no files.
+        criteria: The root or verified composite review is operationally complete, CI passed, no valid unresolved finding remains, and the review pass changed no files.
         guards:
           - evidence:
               node: review
@@ -239,7 +239,7 @@ node_definitions:
             equals: 0
       - id: ci-failed
         label: CI failed
-        criteria: The root review is operationally complete, its CI decision failed, and every finding that needs confirmation has been resolved before implementation rework.
+        criteria: The root or verified composite review is operationally complete, its CI decision failed, and every finding that needs confirmation has been resolved before implementation rework.
         guards:
           - evidence:
               node: review

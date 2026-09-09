@@ -180,7 +180,7 @@ node_definitions:
     objective: Route the quality result to the phase that owns each correction before approval.
     prompt: Is the selected diagnostic draft ready for exact-diff approval?
     evidence_guidance:
-      - Read the selected draft, Ouroboros QA result, local adjudication, and the unresolved-investigation-findings and unresolved-proposal-findings counts.
+      - Read the selected draft, Ouroboros QA result, local adjudication, and unresolved-valid-findings count.
     options:
       - id: passed
         label: Quality passed

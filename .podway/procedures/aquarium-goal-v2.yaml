@@ -1,6 +1,6 @@
 schema: podway.procedure/v2
 id: aquarium-goal-v2
-version: "8"
+version: "9"
 name: Aquarium Goal
 purpose: Deliver one epic member, remediation, or closeout goal with current evidence.
 description: A flexible goal-centered Podway procedure for epic-handler work.
@@ -54,7 +54,7 @@ node_definitions:
           - authorized
       - id: review-round
         type: integer
-        prompt: Record the positive ordinal of this operationally complete Mulgae root review for the current goal revision.
+        prompt: Record the positive ordinal of this operationally complete Mulgae review, counting each original root once through its root or verified composite, for the current goal revision.
         required: false
         required_when:
           - item: review-mode
@@ -62,7 +62,7 @@ node_definitions:
         minimum: 1
       - id: review-run-id
         type: text
-        prompt: Record the exact committed Mulgae root review run ID.
+        prompt: Record the exact committed Mulgae root or verified composite review run ID; verify the original root and role sources through review_composition for a composite.
         required: false
         required_when:
           - item: review-mode
@@ -118,7 +118,7 @@ node_definitions:
           - recorded
       - id: hardening-deferral-run-id
         type: text
-        prompt: Record the exact committed second-round Mulgae root review run ID.
+        prompt: Record the exact committed second-round Mulgae root or verified composite review run ID; verify the original root and role sources through review_composition for a composite.
         required: false
         required_when:
           - item: hardening-deferral-state

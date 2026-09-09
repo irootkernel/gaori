@@ -1,6 +1,6 @@
 schema: podway.procedure/v2
 id: aquarium-validation-v2
-version: "8"
+version: "9"
 name: Aquarium Validation
 purpose: Audit one completed epic through bounded remediation, confirmation, and explicit finding disposition.
 description: A bounded Podway procedure for epic-wide audit, one automatic confirmation, user-directed follow-up, and validation closeout.
@@ -163,7 +163,7 @@ node_definitions:
     items:
       - id: review-round
         type: integer
-        prompt: Record the positive whole-epic root-review ordinal for the current validation goal revision.
+        prompt: Record the positive whole-epic review ordinal, counting each original root once for the current validation goal revision.
         required: true
         minimum: 1
       - id: review-mode
@@ -175,7 +175,7 @@ node_definitions:
           - confirmation-only
       - id: review-run-id
         type: text
-        prompt: Record the exact committed Mulgae root review run ID.
+        prompt: Record the exact committed Mulgae root or verified composite review run ID; verify the original root and role sources through review_composition for a composite.
         required: true
         min_length: 1
         max_length: 128
@@ -285,7 +285,7 @@ node_definitions:
     options:
       - id: validated
         label: Validation supported
-        criteria: The fresh audit is clean, the root review is operationally complete with passing CI, and no unresolved valid finding remains.
+        criteria: The fresh audit is clean, the root or verified composite review is operationally complete with passing CI, and no unresolved valid finding remains.
         guards:
           - evidence:
               node: final-review
