@@ -56,11 +56,11 @@ VERSION=0.1.16 make install-toolchain
 
 ## Optional: Aquarium development channel
 
-On Darwin arm64, maintainers can use `aquarium-dev gaori ...` after explicitly enrolling this source checkout through `$aquarium:aquarium-dev`. Each development executable identifies one exact local `main` commit and lives under `~/.aquarium-dev/`; the source checkout stays in place. The producer takes its planned stable version from the committed `CHANGELOG.md` Unreleased heading.
+On Darwin arm64, maintainers can use `aquarium-dev gaori ...` after explicitly enrolling this source checkout with `aquarium-dev enroll`. Each development executable identifies one exact local `main` commit and lives under `~/.aquarium-dev/`; the source checkout stays in place. The producer takes its planned stable version from the committed `CHANGELOG.md` Unreleased heading.
 
 The source exposes `make aquarium-dev-describe` and `make aquarium-dev-build AQUARIUM_DEV_OUTPUT=<absolute-empty-directory>`. See the [development producer contract and setup workflow](docs/integration-guide.md#aquarium-development-channel) for JSON fields, admission rules, approvals, and verification. Enrollment does not update a Codex MCP registration or install a stable release.
 
-`gaori version` and `gaori --version` print `gaori v<version>`. `gaori version --json` reports exactly `name` and a `v`-prefixed `version`, for example `{"name":"gaori","version":"v0.1.16"}`.
+`gaori version` and `gaori --version` print `gaori v<version>`. Current source builds report exactly `name` and a `v`-prefixed `version` through `gaori version --json`, for example `{"name":"gaori","version":"v0.1.17-dev.<sha12>"}`. The published v0.1.16 release also includes a `commit` field; see the [v0.1.17 change](CHANGELOG.md#v0117---unreleased).
 
 ## Optional: configure an AI coding agent
 
