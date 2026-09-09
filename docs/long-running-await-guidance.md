@@ -1,6 +1,6 @@
 # Long-Running Await Guidance
 
-Status: Current source guidance; `AWAIT-006` delivered the original guidance, `SKMOD-001` owns its modernization, and `AWAIT-007` adoption remains deferred
+Status: Current source guidance; `AWAIT-006` delivered the original guidance, `SKMOD-001` completed its modernization, and `AWAIT-007` adoption remains deferred
 
 ## Authority
 
