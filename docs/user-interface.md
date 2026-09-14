@@ -123,7 +123,7 @@ gaori --version
 gaori version --json
 ```
 
-Both human commands print `gaori v<version>`; the JSON object contains exactly `name` and `version`, for example `{"name":"gaori","version":"v0.1.16"}`. The `version` string always includes the `v` prefix, including development versions such as `v0.1.16-dev.<sha12>`. Version JSON omits commit and build-date metadata.
+Both human commands print `gaori v<version>`; the JSON object contains exactly `name` and `version`, for example `{"name":"gaori","version":"v0.1.17"}`. The `version` string always includes the `v` prefix, including development versions such as `v0.1.17-dev.<sha12>`. Version JSON omits commit and build-date metadata.
 
 For deterministic automation, the bundled `scripts/gaori-toolchain` resolver uses this precedence:
 
@@ -144,7 +144,7 @@ Versioned selection uses local metadata such as:
 ```yaml
 schema_version: "gaori.toolchain.v1"
 gaori:
-  cli_version: "0.1.16"
+  cli_version: "0.1.17"
 ```
 
 An absolute override may be recorded with an optional version assertion:
@@ -152,7 +152,7 @@ An absolute override may be recorded with an optional version assertion:
 ```yaml
 schema_version: "gaori.toolchain.v1"
 gaori:
-  cli_version: "0.1.16"
+  cli_version: "0.1.17"
   binary_path: "/absolute/path/to/gaori"
 ```
 

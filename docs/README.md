@@ -67,7 +67,7 @@ For Gaori maintainers:
 
 ## Current delivery state
 
-The standalone v0.1 baseline and session-local STDIO MCP interface are implemented. The current published release is [v0.1.16](releases/v0.1.16.md); the source tree can be ahead of that release, and release notes record what each published version contains.
+The standalone v0.1 baseline and session-local STDIO MCP interface are implemented. The current published release is [v0.1.17](releases/v0.1.17.md); the source tree can be ahead of that release, and release notes record what each published version contains.
 
 `GEPIC` delivered the code-owned JSON parser catalog and Experimental `dart-test` and `patrol` parsers. `RSTAT` delivers artifact-derived CLI and MCP insights plus the calculation-free `use-gaori-status` skill. `SKMOD` keeps both source skills concise, moves conditional guidance into complete reference trees linked from their entrypoints, and retains terminal `await_run` under host waiting requirements without changing Gaori's runtime surface. `AQADP`, `AWAIT-005`, and `AWAIT-007` remain deferred under their roadmap-owned activation conditions.
 
