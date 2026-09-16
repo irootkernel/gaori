@@ -11,6 +11,7 @@ bin/
 !.gaori/tester/rules/*.yaml
 /.mulgae/*
 !/.mulgae/config.yaml
+/.sorage/
 /.codex/
 .codegraph/
 .omx/
