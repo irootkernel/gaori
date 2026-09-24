@@ -4,6 +4,10 @@ This file records concise shipped outcomes and the planned next stable release. 
 
 ## v0.1.18 - Unreleased
 
+### Changed
+
+- Building Gaori from source now requires Go 1.27.1 or newer.
+
 ## v0.1.17 - 2026-09-14
 
 ### Changed

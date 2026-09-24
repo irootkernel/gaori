@@ -93,7 +93,7 @@ Aquarium release notes: CHANGELOG.md
 Gaori is a standalone deterministic Go CLI for running test commands, preserving raw logs, extracting bounded failure evidence, and writing compact summary and status artifacts.
 
 - The production binary entrypoint is `cmd/gaori`; package behavior is organized under `internal/`, and executable end-to-end evidence is under `e2e/`.
-- Go 1.26.6 or newer is required. Use the root `Makefile` for canonical build, install, format, lint, vet, guardrail, unit, integration, E2E, and full-test entrypoints.
+- Go 1.27.1 or newer is required. Use the root `Makefile` for canonical build, install, format, lint, vet, guardrail, unit, integration, E2E, and full-test entrypoints.
 - Use `docs/README.md` as the documentation map and `docs/requirements-test-matrix.md` to locate executable evidence for completed requirements.
 
 When documents or behavior appear to disagree, use this order:

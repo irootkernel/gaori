@@ -40,7 +40,7 @@ go install github.com/irootkernel/gaori@v0.1.17
 gaori --version
 ```
 
-Building the current source checkout requires Go 1.26.6 or newer.
+Building the current source checkout requires Go 1.27.1 or newer.
 
 From a source checkout, use:
 
