@@ -362,7 +362,7 @@ Tags are rule selectors, not command selectors or automatic rule generators. The
 
 ## Historical statistics and estimates
 
-- `runs stats` and `runs estimate` require a command ID present in the selected schema-v2 config. They accept only the `--repo`, `--config`, and `--json` global options; `--run-id` and `--output-dir` fail with config exit code `2`.
+- `runs stats` and `runs estimate` require a command ID present in the selected schema-v2 config. They accept only the `--repo`, `--config`, and `--json` global options; `--run-id` and `--output-dir` fail with config exit code `2`. The config validates command eligibility but does not partition history: completed runs under the same repository and command ID can contribute even when they used a different config.
 - Both commands inspect only validated completed default standalone status and adjacent summary artifacts. They exclude scoped, caller-selected-output, ad-hoc, summarize, incomplete, and unrecognized evidence; never open raw logs; execute no child; resolve no executable; create no artifacts; and perform no cleanup or network request.
 - The default limit is 20 and the accepted range is 1 through 50. Selection is applied before the newest matching runs are limited. `--git-revision` requires a full lowercase 40- or 64-character object ID and selects only stored `git_dirty: false` samples by default. `--include-dirty` is valid only with that revision and then includes both clean and dirty samples for the same object ID. Missing provenance is eligible only for an unscoped query, and no revision match returns `no_matching_samples` without fallback.
 - `runs stats` reports schema `gaori-command-stats.v1`: selector and limit, sample and skipped counts, sample span, terminal-status counts, percentages and optional distributions, recent successful change, classified, unclassified and degraded failed-run counts, and up to three recurring already-redacted failure signatures.
@@ -375,9 +375,15 @@ Tags are rule selectors, not command selectors or automatic rule generators. The
 automatically discoverable agent skill for questions about historical duration,
 outcomes, recent change, recurring failures, or an already-known invocation in
 the same attached MCP session. It forwards to `get_command_stats`, `estimate_run`,
-or CLI `gaori --json runs stats` and explains only the versioned calculations
-returned by Gaori. It may place two independently revision-scoped results side
-by side but performs no pairwise or other arithmetic.
+or CLI `gaori --json --repo <target-root> runs stats` and caller-elapsed
+`gaori --json --repo <target-root> runs estimate`
+for the selected repository, carrying any selected `--config` override into
+the CLI query. An MCP query requires connection-bound proof of the same
+repository and selected config. The skill explains only the versioned
+calculations returned by Gaori, including the repository-and-command-ID history
+scope described above. A CLI estimate requires a caller-provided elapsed value; it
+does not observe a live invocation. The skill may place two independently
+revision-scoped results side by side but performs no pairwise or other arithmetic.
 
 The skill never starts, awaits, polls, retries, cancels, cleans, summarizes, or
 recovers a run; changes config or rules; opens evidence or raw logs; or claims

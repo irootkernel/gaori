@@ -8,6 +8,10 @@ This file records concise shipped outcomes and the planned next stable release. 
 
 - Building Gaori from source now requires Go 1.27.1 or newer.
 
+### Fixed
+
+- Gaori skills now verify MCP launch bindings before a run, fall back to the explicitly selected CLI target when uncertain, and carry config overrides through status queries.
+
 ## v0.1.17 - 2026-09-14
 
 ### Changed

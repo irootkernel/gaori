@@ -155,6 +155,16 @@ args = ["--repo", "/absolute/path/to/project", "mcp"]
 tool_timeout_sec = 3600
 ```
 
+Before using an attached server for another check, confirm from the host's
+running-connection details that its launch repository, required inherited
+environment, selected config, and intended output directory match that check.
+The current shell and a changed configuration file do not establish how an
+existing server was launched. Use the CLI with an explicit `--repo`, selected
+overrides, and required environment when the binding is uncertain. An ad-hoc
+run needs no config or `config check`; its returned `command` is a generated
+ID, so use the redacted summary `command_argv` to check its selected argv where
+possible. Status queries must retain the selected config override.
+
 For long-running `await_run` calls, configure the MCP host's Gaori tool-call
 timeout to at least 3600 seconds and longer than the longest expected command,
 including evidence finalization. This is a host setting rather than a Gaori run

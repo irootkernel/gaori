@@ -51,7 +51,7 @@ Read [retention](retention.md#completed-run-inventory) for `runs list`, MCP `lis
 Gaori has no reset or general repair command. Cleanup deletes only eligible completed standalone evidence and is destructive. Always preview the exact selector first:
 
 ```bash
-gaori --json clean --older-than 30d --dry-run
+gaori --json --repo <target-root> clean --older-than 30d --dry-run
 ```
 
 `clean` accepts only the global `--repo` and `--json` flags; `--config`, `--output-dir`, or `--run-id` fail with exit `2`. `--older-than` takes only a positive whole number of days (`30d`), and exactly one of `--older-than` or `--all` is required. Run the same command without `--dry-run` only after explicit user intent. Use `--all` only when the user explicitly intends all eligible completed standalone history to be disposable. Cleanup never covers scoped runs, incomplete runs, config, rules, proposals, toolchain metadata, or caller-selected output directories; do not delete those manually as an invented reset or repair operation.

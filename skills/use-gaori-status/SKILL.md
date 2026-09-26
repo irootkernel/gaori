@@ -10,13 +10,30 @@ directly from artifacts. This skill is independently installable and automatical
 discoverable. Gaori never installs or activates it. Reuse verified transport and
 scope facts while their relevant state remains unchanged.
 
+Resolve the requested repository to its canonical directory path and identify
+the selected config, including any override that defines the command ID.
+Resolve a relative config override against that repository. Use
+an attached MCP server only when host evidence tied to that running connection
+proves its launch repository and config match the selection. A server name,
+version, mutable host config, or current shell directory does not prove that
+binding. A server launched with `--output-dir` cannot serve historical or live
+insights; use the CLI for default standalone history if that is the requested
+scope, and report a live estimate as unavailable.
+Otherwise use CLI queries with `--repo <target-root>` and pass the selected
+`--config <selected-config>` override to each query. The selected config
+validates that the command ID exists; historical samples are selected by
+repository and command ID, so runs made under another config with the same ID
+can be included. State that scope when it matters. Do not present another
+repository's history or another MCP invocation as the requested result.
+
 ## Select the read-only query
 
 - For historical questions about a known configured command, call attached MCP
   `get_command_stats` when it is available. Otherwise run
-  `gaori --json runs stats <command-id>`. Pass an exact full lowercase
-  `git_revision`, dependent `include_dirty`, or a limit only when the user asks
-  for that scope. The default is the newest 20 matching observations.
+  `gaori --json --repo <target-root> runs stats <command-id>`, adding the selected
+  `--config <selected-config>` override when present. Pass an exact full lowercase
+  `git_revision`, dependent `include_dirty`, or a limit only
+  when the user asks for that scope. The default is the newest 20 matches.
 - For a live question, call `estimate_run` exactly once only when the invocation
   ID is already known and belongs to the same attached MCP server. Pass the
   optional Git selector only when requested. Report `phase` and any
@@ -24,14 +41,22 @@ scope facts while their relevant state remains unchanged.
   and materializing phases have no ETA; finished returns the authoritative
   result and actual duration; `configured_runs_only` means the invocation was
   ad-hoc.
+- When the caller supplies observed elapsed milliseconds for a configured
+  command, use
+  `gaori --json --repo <target-root> runs estimate <command-id> --elapsed-ms <1..86400000>`
+  for a read-only historical projection, adding the selected config override
+  when present. Pass only the caller's elapsed value
+  and describe the result as caller-elapsed rather than a live observation.
+  This CLI command does not identify, locate, or monitor an invocation.
 - To compare two exact revisions, issue two independently revision-scoped
   historical queries and present the returned fields side by side. Do not
   calculate a delta, ratio, percentage, trend, or winner between them.
 
 If no same-session invocation ID is already available, say that a live estimate
-is unavailable. You may still report historical statistics for a known
-configured command. Do not invent elapsed time, discover a process, use a CLI
-run as a live identity, or attempt to recover an invocation after disconnect.
+is unavailable. You may still report historical statistics or a projection from
+caller-supplied elapsed time for a known configured command. Do not invent
+elapsed time, discover a process, use a CLI run as a live identity, or attempt
+to recover an invocation after disconnect.
 
 ## Explain the returned fields
 

@@ -22,13 +22,13 @@ func TestUseGaoriCleanupAdvisoryContract(t *testing.T) {
 	}
 	for _, required := range []string{
 		"Once per root task",
-		"gaori --json runs list --limit 50",
-		"gaori --json clean --all --dry-run",
+		"gaori --json --repo <target-root> runs list --limit 50",
+		"gaori --json --repo <target-root> clean --all --dry-run",
 		"show its bounded candidate inventory before showing deletion commands",
 		"`selected_runs` is at least `10`",
 		"`selected_bytes`",
-		"gaori clean --all",
-		"gaori clean --older-than 30d",
+		"gaori --repo <target-root> clean --all",
+		"gaori --repo <target-root> clean --older-than 30d",
 		"continue the requested work without asking a blocking cleanup question",
 		"Do not report anything when fewer than 10 runs are eligible",
 		"If the inventory or dry-run observation fails, report that briefly",

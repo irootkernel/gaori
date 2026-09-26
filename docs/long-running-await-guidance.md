@@ -1,22 +1,37 @@
 # Long-Running Await Guidance
 
-Status: Current source guidance; `AWAIT-006` delivered the original guidance, `SKMOD-001` completed its modernization, and `AWAIT-007` adoption remains deferred
+Status: Current source guidance; `AWAIT-006` delivered the original guidance, `SKMOD-001` completed its modernization, `SKMOD-002` completed target-binding guidance, and `AWAIT-007` adoption remains deferred
 
 ## Authority
 
 This implementation guidance describes the source-distributed `use-gaori`
 skill. Runtime contracts belong to `GAORI-REQ-RQMCP-008`, ADR-0018, and their
-executable tests; `GAORI-REQ-RQDOC-005` owns the agent guidance. The
+executable tests; `GAORI-REQ-RQDOC-005` owns the completed await guidance and
+`GAORI-REQ-RQDOC-006` owns the completed target-binding guidance. The
 [roadmap](roadmap/README.md) owns completion and downstream adoption. This
 document grants no installation, release, or cross-repository authority.
 
 ## Current execution guidance
 
-When the selected MCP start tool and `await_run` are connected:
+Before starting a selected check, confirm from host evidence tied to the
+attached server that its launch repository resolves to the target repository,
+its inherited environment contains every required value, and its config and
+output-directory overrides match the selection. An explicitly selected
+absolute output directory may be outside the repository; verify the intended
+raw-log destination before starting. The server
+version, current host configuration, and agent shell environment do not prove
+that binding. If proof is unavailable, select the CLI with an explicit
+canonical `--repo`, selected overrides, and the exact required environment
+before a new start. Skip `config check` for a config-free ad-hoc run. Its
+finished `command` is a generated ID; compare the redacted summary
+`command_argv` to retained start arguments where possible.
+
+When that binding is verified and the selected MCP start tool and `await_run`
+are connected:
 
 1. Start the selected command exactly once and preserve its session-local
    invocation ID and revision. Missing unrelated tools or a PATH CLI does not
-   disable this MCP path.
+   disable a correctly bound MCP path.
 2. Await terminal completion with that invocation ID. Keep a pending host call
    suspended, or wait on the same returned handle or cell under the host's wait
    limits and communication requirements. Progress reports do not require
@@ -46,7 +61,7 @@ boundaries. Load these references only for their stated conditions:
 
 | Condition | Owner |
 | --- | --- |
-| A required start/wait tool is unavailable, or a verified deadline or observed host timeout prevents terminal awaiting | [Fallbacks](../skills/use-gaori/references/fallbacks.md) |
+| The attached server's target, environment, config, or output destination cannot be verified, a required start/wait tool is unavailable, or a verified deadline or observed host timeout prevents terminal awaiting | [Fallbacks](../skills/use-gaori/references/fallbacks.md) |
 | Analyze an existing log or diagnose a parser mismatch without rerunning its command | [Existing logs](../skills/use-gaori/references/existing-logs.md) |
 | First standalone run/summarize in the root task, retained-run inventory, or cleanup advice | [Retention](../skills/use-gaori/references/retention.md) |
 | Installation diagnostics, initialization, fixed-path replacement, cancellation, cleanup, or unsupported session/service/reset requests | [Lifecycle](../skills/use-gaori/references/lifecycle.md) |
@@ -54,9 +69,9 @@ boundaries. Load these references only for their stated conditions:
 | Disconnect, unknown mutation outcome, stale evidence, or operational failure | [Recovery](../skills/use-gaori/references/recovery.md) |
 
 Fallbacks retain the existing order: revision-based `wait_run` when terminal
-awaiting cannot work, CLI before a new run when its selected MCP start or all
-observation paths are unavailable, and paced `get_run` only for an existing
-invocation with neither wait interface usable. Switching transports never
+awaiting cannot work, CLI before a new run when MCP binding cannot be proved or
+its selected start or all observation paths are unavailable, and paced `get_run`
+only for an existing invocation with neither wait interface usable. Switching transports never
 justifies duplicate execution. Status-file existence, OS process polling, and
 completed-run listings are not live completion interfaces.
 
@@ -91,8 +106,15 @@ validator separately from the repository checks.
 Master's applicable manual checks cover execution versus status routing,
 ordinary async execution, MCP without a PATH CLI, pending handles and observer
 timeouts, duplicate-free fallback, unchanged versus changed authorization, and
-Gaori-calculated timing with terminal-result interpretation. Keep unperformed
-checks explicit; automated success does not establish functional completion.
+Gaori-calculated timing with terminal-result interpretation. For `SKMOD-002`,
+include two repositories with the same command ID but opposite results,
+required environment and output-directory mismatches, a correctly bound MCP
+server, a config-free ad-hoc run, selected config overrides for execution and
+status, and a CLI fallback that preserves the selected target and one run
+identity. Isolated host-agent exercises covered these `SKMOD-002` cases and
+same-invocation waiting; the existing attached host connection was not used
+because its running-process binding could not be verified. Installation,
+activation, and downstream Aquarium acceptance remain separate.
 
 ## SKMOD source handoff
 

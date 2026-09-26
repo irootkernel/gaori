@@ -10,7 +10,7 @@ Task status values: `Planned`, `In Progress`, `Blocked`, `Done`, `Deferred`.
 Existing `Done` entries record completion of the original v0.1 implementation slices. They do not supersede or satisfy the later `HARDE` tasks, which close correctness, safety, verification, and documentation gaps found during repository review.
 
 Current implementation snapshot:
-- `Done`: `SETUP-001` to `SETUP-003`, `RUNNR-001` to `RUNNR-003`, `ARTIF-001` to `ARTIF-003`, `PARSE-001` to `PARSE-011`, `SAFEY-001` to `SAFEY-004`, `CLIUX-001` to `CLIUX-008`, `RULES-001` to `RULES-005`, `DOCUM-001` to `DOCUM-003`, `HARDE-001` to `HARDE-007`, `TAGS-001`, `ADHOC-001`, `ADHOC-002`, `RELRV-001` to `RELRV-009`, `BRAND-001`, `CLEAN-001`, `PORTA-001`, `MCP-001` to `MCP-006`, `AWAIT-001` to `AWAIT-004`, `AWAIT-006`, `RSTAT-001` to `RSTAT-004`, `AQDEV-001`, `SKMOD-001`
+- `Done`: `SETUP-001` to `SETUP-003`, `RUNNR-001` to `RUNNR-003`, `ARTIF-001` to `ARTIF-003`, `PARSE-001` to `PARSE-011`, `SAFEY-001` to `SAFEY-004`, `CLIUX-001` to `CLIUX-008`, `RULES-001` to `RULES-005`, `DOCUM-001` to `DOCUM-003`, `HARDE-001` to `HARDE-007`, `TAGS-001`, `ADHOC-001`, `ADHOC-002`, `RELRV-001` to `RELRV-009`, `BRAND-001`, `CLEAN-001`, `PORTA-001`, `MCP-001` to `MCP-006`, `AWAIT-001` to `AWAIT-004`, `AWAIT-006`, `RSTAT-001` to `RSTAT-004`, `AQDEV-001`, `SKMOD-001`, `SKMOD-002`
 - `Deferred`: `AQADP` (`QUALI-001`, `QUALI-002`, `CONSUMER-SUDAL-001`), `AWAIT-005`, `AWAIT-007`
 
 ## SKMOD: Gaori skill modernization for GPT-6 Astra
@@ -19,11 +19,12 @@ Status: Done
 
 Canonical Outcomes: [RQDOC specifications](../specs/README.md#rqdoc-documentation-and-operator-guidance), [RQINS specifications](../specs/README.md#rqins-run-status-and-timing-insights), [source guidance](../long-running-await-guidance.md#current-execution-guidance), [`use-gaori`](../../skills/use-gaori/SKILL.md), [`use-gaori-status`](../../skills/use-gaori-status/SKILL.md)
 
-Owner: Gaori team. Adopted on 2026-09-09 from Aquarium's accepted `SKILL-04` requirements handoff, revision 1. `SKILL-04` is the external proposal label; `SKMOD-001` is the canonical Gaori task. This epic has no predecessor dependency and contains one task because both skills and their distribution references require one consistent contract review. Master approved the required manual verification and epic validation completed on 2026-09-09; later Aquarium acceptance remains separately owned.
+Owner: Gaori team. Adopted on 2026-09-09 from Aquarium's accepted `SKILL-04` requirements handoff, revision 1. `SKILL-04` is the external proposal label; `SKMOD-001` is the canonical Gaori task for that modernization. It had no predecessor dependency. Master approved its manual verification and epic validation completed on 2026-09-09. `SKMOD-002` followed Aquarium's 2026-09-25 target-binding review and completed after isolated host-agent verification on 2026-09-26. Later Aquarium acceptance remains separately owned.
 
 | Task ID | Status | Goal | Verification | Reference |
 |---|---|---|---|---|
 | SKMOD-001 | Done | Shorten both source skills, move conditional guidance to reachable references, preserve native execution and status contracts, and synchronize affected authorities and distribution inventories. | Inspect current source gaps; verify structure, links and complete distribution resources; run applicable repository checks; apply a final English Humanizer pass; prepare and obtain Master's manual verification of routing, async waiting, fallback, authorization and timing scenarios. Report unperformed checks separately. | [Source handoff](../long-running-await-guidance.md#skmod-source-handoff); `GAORI-REQ-RQDOC-005`, `GAORI-REQ-RQMCP-008`, `GAORI-REQ-RQINS-006` |
+| SKMOD-002 | Done | Require attached MCP repository, environment, config, and output-directory proof before executing a selected command; use a target-explicit CLI fallback, preserve one run identity, and align ad-hoc, raw-log, and caller-elapsed estimate guidance with native behavior. | Verify two repositories sharing a command ID, required environment and output-directory mismatches, correctly bound MCP, config-free ad-hoc execution, selected config overrides, CLI fallback, timeout and recovery identity; run focused skill/documentation checks and record Master's remaining manual scenarios separately. | `GAORI-REQ-RQDOC-006`, `GAORI-REQ-RQINS-006`; Aquarium 2026-09-25 review H-5 and R8-11/12 |
 
 ## AQDEV: Aquarium development channel
 

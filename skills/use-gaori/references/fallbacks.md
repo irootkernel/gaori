@@ -1,8 +1,8 @@
 # Gaori transport fallbacks
 
-Load when the selected MCP start or observation path is unavailable, or when a verified host deadline or an observed premature timeout prevents terminal awaiting.
+Load when the attached MCP server's repository, required environment, selected config, or output-directory binding cannot be verified, the selected MCP start or observation path is unavailable, or a verified host deadline or observed premature timeout prevents terminal awaiting.
 
-Use these only when the default async completion path is unavailable. State the concrete tool or host limitation once. Keep any already-started invocation; never rerun a command merely to switch transports. Do not use OS process polling, repeated `list_runs`, or final status-file existence checks to establish liveness.
+Use these when the selected MCP path cannot safely run the requested check or terminal awaiting cannot work. State the concrete binding, tool, or host limitation once. Keep any already-started invocation; never rerun a command merely to switch transports. Do not use OS process polling, repeated `list_runs`, or final status-file existence checks to establish liveness.
 
 ## Bounded revision waiting
 
@@ -18,12 +18,12 @@ Omit `timeout_ms` for the 50-second default. If a verified host deadline is shor
 
 ## CLI workflow
 
-If the selected MCP start tool or every usable MCP observation path is unavailable before a new run, use the CLI once and retain the host's process handle:
+If the attached server's target, required environment, selected config, or selected output directory does not match or cannot be verified, or its selected start tool or every usable observation path is unavailable before a new run, use the CLI once and retain the host's process handle. Pass the canonical target repository and any selected config or output-directory override explicitly. Give the new process the exact required environment values, including values such as `PODWAY_BIN` when the selected check needs them. Do not infer an already running MCP server's environment from the current shell:
 
 ```bash
-gaori --json run unit
+gaori --json --repo <target-root> run unit
 # Or an explicitly selected tagged ad-hoc command:
-gaori --json run --parser go-test --tag go --tag unit -- go test ./internal/...
+gaori --json --repo <target-root> run --parser go-test --tag go --tag unit -- go test ./internal/...
 ```
 
 These are alternatives, not consecutive runs. Await completion through the host's process-wait facility. If it yields a handle, keep waiting on that same handle subject to host limits. A CLI run has no MCP invocation ID; do not start another run to obtain one. Read the final CLI exit and evidence using [the result guidance](../SKILL.md#read-and-report-the-result).

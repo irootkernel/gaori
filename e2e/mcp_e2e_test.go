@@ -551,7 +551,7 @@ func TestUseGaoriStatusSkillContract(t *testing.T) {
 	}
 	text := string(data)
 	for _, required := range []string{
-		"name: use-gaori-status", "automatically", "get_command_stats", "gaori --json runs stats <command-id>",
+		"name: use-gaori-status", "automatically", "get_command_stats", "gaori --json --repo <target-root> runs stats <command-id>",
 		"estimate_run", "exactly once", "already known", "same attached MCP server", "phase", "elapsed_ms",
 		"two independently revision-scoped", "side by side", "calculate a delta", "configured_runs_only",
 		"no_matching_samples", "insufficient_samples", "beyond_observed_max", "use-gaori",
