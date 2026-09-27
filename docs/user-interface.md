@@ -448,7 +448,7 @@ skill is installed or activated by the binary or a Make target.
 | Missing, conflicting, or invalid cleanup selector | `2`, with no cleanup side effect |
 | Unsafe cleanup target or cleanup filesystem failure | `3` |
 
-A raw-log open, streaming, close, or validation failure uses artifact exit code `3`. A streaming or close failure may leave a partial raw log, but that invocation does not write new excerpts, summary/status artifacts, or their hashes. Because fixed `--run-id` paths can retain artifacts from an earlier invocation, callers must use the process exit and their own run/command uniqueness policy rather than artifact presence alone.
+An owned raw-artifact open, write, close, or validation failure uses artifact exit code `3`. A summarize source open, read, or close failure uses config exit code `2`, unless an artifact failure takes precedence. A mid-copy source-read failure or destination write/close failure may leave a partial raw log, but that invocation does not write new excerpts, summary/status artifacts, or their hashes. Because fixed `--run-id` paths can retain artifacts from an earlier invocation, callers must use the process exit and their own run/command uniqueness policy rather than artifact presence alone.
 
 ## Markdown summary shape
 

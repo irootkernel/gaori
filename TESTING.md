@@ -74,8 +74,9 @@ The Unix Aquarium producer tests invoke the public Make targets in temporary pri
 `make test-memory` runs `TestBinaryMemoryCampaign` in `e2e/memory`, using the
 same standard-library E2E framework and a production binary built by `make build`.
 It is deliberately outside the four ordinary stages and does not change their
-waiver or completion markers. Python 3.9 or newer and macOS process instrumentation
-are required; an unsupported host or unavailable metric fails rather than skips.
+waiver or completion markers. A Git worktree with a committed `HEAD`, Python 3.9
+or newer, and macOS process instrumentation are required; an unsupported host or
+unavailable metric fails rather than skips.
 Linux resource measurements are not established by this harness.
 
 The fixed campaign runs E1 and S1-S7 at exactly 8, 64 and 512 MiB, with three fresh
