@@ -1,6 +1,6 @@
 # Gaori Implementation Note
 
-Status: Current source-tree guidance through `RSTAT` and the implemented LOMEM pipeline; final epic validation pending
+Status: Current source-tree guidance through `RSTAT` and `LOMEM`
 Scope: Maintainer guidance for standalone execution, evidence artifacts, parser/rule behavior, operator-directed cleanup, session-local STDIO MCP execution, long-running host waits, run-status insights, and adopted bounded-memory work
 
 This document explains implementation constraints and verification expectations for contributors. It is not the parent-project adoption contract; integrators should start with the [integration guide](../integration-guide.md).
@@ -64,8 +64,8 @@ owns capture, import, inference and materialization boundaries;
 [RQMEM](../specs/README.md#rqmem-bounded-memory-log-processing) and
 [ADR-0021](../architecture-decision-records/README.md#adr-0021-bound-log-memory-without-changing-evidence-semantics)
 own behavior and design. The [roadmap](../roadmap/README.md#lomem-bounded-memory-log-processing)
-tracks final epic validation; the temporary [dossier](../todo/TODO-LOMEM.md) remains
-until validated closeout. No transitional full-log adapter remains.
+records completed delivery and links its canonical outcomes. No transitional
+full-log adapter remains.
 
 Keep the 256 KiB complete-line tail, absolute raw origins, command-exit authority,
 redaction-before-noise ordering and derived output limits. Summarize evaluates

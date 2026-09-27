@@ -1,8 +1,8 @@
 # Gaori Architecture
 
-Status: Complete through `RSTAT`
-LOMEM: Captured execution, summarize import/inference and materialization use bounded state. The resource campaign passed on macOS arm64; Linux is unmeasured, and final epic validation remains pending.
-Scope: Standalone Gaori v0.1 architecture, including session-local STDIO MCP execution, terminal awaiting, artifact-derived run insights, and the adopted LOMEM design
+Status: Complete through `RSTAT` and `LOMEM`
+LOMEM: Captured execution, summarize import/inference and materialization use bounded state. The resource campaign passed on macOS arm64; Linux is unmeasured.
+Scope: Standalone Gaori v0.1 architecture, including session-local STDIO MCP execution, terminal awaiting, artifact-derived run insights, and the bounded-memory log pipeline
 
 This document defines Gaori's technical and artifact contracts. See the [integration guide](../integration-guide.md) for parent-project ownership, supported capability status, and rollout guidance.
 

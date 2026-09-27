@@ -1,6 +1,6 @@
 # Gaori Architecture Decision Records
 
-Status: Accepted decisions through `ADR-0021`; `ADR-0021` implementation is tracked by `LOMEM`
+Status: Accepted decisions through `ADR-0021`; `ADR-0021` is implemented through `LOMEM`
 Scope: Accepted Gaori decisions, including run-status insights and bounded-memory log processing
 
 ## ADR status legend
@@ -543,7 +543,7 @@ lifecycle, cancellation, recovery, and detailed evidence inspection remain with
 
 Status: Accepted
 Date: 2026-09-26
-Implementation: The bounded pipeline and macOS arm64 resource campaign are verified; final epic validation and documentation lifecycle remain tracked by [LOMEM](../roadmap/README.md#lomem-bounded-memory-log-processing).
+Implementation: Completed through [LOMEM](../roadmap/README.md#lomem-bounded-memory-log-processing). The bounded pipeline and macOS arm64 resource campaign are verified; Linux scaling remains unmeasured.
 
 ### Context
 

@@ -5,9 +5,9 @@ Scope: Primary executable or documentary evidence for each completed requirement
 
 This matrix records the primary evidence for every requirement marked complete. The audit regression suite fails when a completed requirement is missing, duplicated, has no evidence, cites a `Test*` identifier that does not resolve to a repository Go test, or references an unknown or incomplete requirement. Every row must cite at least one resolvable test unless its requirement ID is an explicit non-test evidence exception in the audit regression test.
 
-RQMEM-001 through RQMEM-009 have executable evidence below. Resource scaling is
+RQMEM-001 through RQMEM-010 have executable evidence below. Resource scaling is
 separately exercised by `TestBinaryMemoryCampaign`; it is not part of ordinary
-`make test`. RQMEM-010 remains unchecked until the validated dossier closeout.
+`make test`. The roadmap links the completed epic's canonical outcomes.
 
 | Requirement | Primary evidence |
 |---|---|
@@ -20,6 +20,7 @@ separately exercised by `TestBinaryMemoryCampaign`; it is not part of ordinary
 | `GAORI-REQ-RQMEM-007` | `TestExecutionRawCloseFailurePrecedesRunError`; `TestRawStageFailurePreservesPriorDerivedArtifacts`; `TestLaterArtifactFailurePreservesPartialMaterialization`; `TestBinaryPreservesInterruptedEvidence`; `TestBinaryConcurrentBoundedMCPStarts` |
 | `GAORI-REQ-RQMEM-008` | `TestBinaryBoundedPipelineLayoutsAndConsumers`; `TestBinaryConcurrentBoundedMCPStarts`; `TestMaterializeCapturedWindowIntegrity` |
 | `GAORI-REQ-RQMEM-009` | `TestCaptureBoundedRetentionAndSnapshotOwnership`; `TestBoundedInferenceGrowth`; `TestBinaryMemoryCampaign` |
+| `GAORI-REQ-RQMEM-010` | `TestRequirementTraceabilityMatrixCoversCompletedRequirements`; `TestRequirementTraceabilityAuditRejectsInvalidEvidence`; canonical outcomes and dossier disposition in the roadmap, with documentation readback and link checks |
 | `GAORI-REQ-RQDEV-001` | `TestBinaryAquariumProducerMakeContext`; `TestBinaryAquariumProducerAdmission`; `TestBinaryAquariumProducerRejectsInvalidCommittedInput`; `TestBinaryAquariumProducerCommittedArtifact` |
 | `GAORI-REQ-RQDEV-002` | `TestBinaryAquariumProducerAdmission`; `TestBinaryAquariumProducerOutputContainment`; `TestBinaryAquariumProducerRejectsInvalidCommittedInput`; `TestBinaryAquariumProducerRevalidatesSource`; `TestBinaryAquariumProducerCommittedArtifact` |
 | `GAORI-REQ-RQDEV-003` | `TestVersionPrefixesAndJSONFields`; `TestVersionJSONOutput`; `TestBinaryAquariumProducerCommittedArtifact`; `TestDocumentedCLIWorkflowAgainstFreshFixture` |
