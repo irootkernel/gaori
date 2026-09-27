@@ -60,7 +60,7 @@ func TestMaterializeCapturedWindowIntegrity(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			run := model.RunOutput{Status: model.RunStatusFailed, RawLogBytes: raw,
+			run := model.RunOutput{Status: model.RunStatusFailed, Evidence: capturedTestEvidence(t, raw),
 				Metadata: model.RunMetadata{CommandID: parser, Parser: parser, ExitCode: 7}}
 			result, err := materializeArtifacts(model.RunRequest{RepoRoot: repo}, model.Config{}, paths,
 				rawSHA, artifacts.Rel(repo, paths.RawLogPath), run, nil, materializationExecutedCommand)
@@ -128,7 +128,7 @@ func TestCapturedWindowExcerptRedactionBeforeNoise(t *testing.T) {
 		// This matches only after redaction, pinning the transformation order.
 		NoiseFilters: []string{"noise token=<redacted>"},
 	}
-	run := model.RunOutput{Status: model.RunStatusFailed, RawLogBytes: raw,
+	run := model.RunOutput{Status: model.RunStatusFailed, Evidence: capturedTestEvidence(t, raw),
 		Metadata: model.RunMetadata{CommandID: "redaction", Parser: "generic", ExitCode: 7}}
 	result, err := materializeArtifacts(model.RunRequest{RepoRoot: repo}, cfg, paths,
 		rawSHA, artifacts.Rel(repo, paths.RawLogPath), run, nil, materializationExecutedCommand)

@@ -1,6 +1,10 @@
 package model
 
-import "time"
+import (
+	"time"
+
+	"github.com/irootkernel/gaori/internal/rawevidence"
+)
 
 type CommandConfig struct {
 	Command    []string `yaml:"command" json:"command_argv"`
@@ -216,6 +220,7 @@ type RunOutput struct {
 	Metadata        RunMetadata
 	Status          RunStatus
 	ExtractorStatus ExtractorStatus
+	Evidence        rawevidence.Snapshot
 	RawLogBytes     []byte
 	Failures        []Failure
 	Warnings        []Warning

@@ -1,7 +1,7 @@
 # Gaori Architecture
 
 Status: Complete through `RSTAT`
-Planned work: LOMEM capture and inference helpers and bounded materialization exist; producer migration remains planned.
+Planned work: LOMEM captured execution and materialization use bounded snapshots; summarize migration and resource acceptance remain planned.
 Scope: Standalone Gaori v0.1 architecture, including session-local STDIO MCP execution, terminal awaiting, artifact-derived run insights, and the adopted LOMEM design
 
 This document defines Gaori's technical and artifact contracts. See the [integration guide](../integration-guide.md) for parent-project ownership, supported capability status, and rollout guidance.
@@ -82,7 +82,7 @@ CLI
 4. Command registry resolves `unit` to command argv / canonical tags / parser / timeout.
 5. Artifact writer opens the contained raw log before command execution.
 6. Runner executes the command in the selected working directory and streams stdout/stderr into the raw log.
-7. CLI closes and validates the contained raw log, then the extraction engine processes the captured raw bytes with the selected parser plus project rules.
+7. CLI closes and validates the contained raw log, then the extraction engine processes the bounded captured window with the selected parser plus project rules, using the streaming full-log digest.
 8. Redactor and noise filters shape surfaced artifacts; the artifact layer retains bounded deterministic failure/warning prefixes that fit both summary formats.
 9. Artifact writer writes excerpts only for retained failures, then summary JSON, summary Markdown, and status JSON.
 10. CLI exits with the underlying test command status or a documented Gaori internal error code.
@@ -134,11 +134,26 @@ snapshot and rejects spans outside it. It then applies the existing redaction,
 noise filtering, byte limit and integrity rules after summary prefix selection.
 No excerpt requires loading the raw artifact.
 
-The runner and summarize importer still supply whole buffers. A temporary
-adapter in `materializeArtifactsWithExtractor` captures their bounded window;
-LOMEM-003 and LOMEM-004 replace those producers, and LOMEM-005 removes remaining
-full-buffer adapters. The legacy `extract.Process` adapter remains during this
-transition. This stage does not establish whole-pipeline bounded memory.
+The runner now returns `RunOutput.Evidence`, containing only the immutable
+window, origins, full byte count and accepted-prefix SHA-256. Configured/ad-hoc
+CLI runs and both MCP start tools share this path. CLI uses that digest only
+after raw close and containment validation; there is no post-exit whole-log
+hash or excerpt rescan. Capture state becomes unreachable after finalization;
+finished MCP invocations retain the existing compact result and references.
+
+The summarize importer still reads a whole buffer. Its temporary adapter is
+now confined to `executeSummarize`, pending LOMEM-004. LOMEM-005 removes the
+remaining `RawLogBytes` field and legacy `extract.Process` test adapter.
+Whole-pipeline resource acceptance remains with LOMEM-006.
+
+`TestExecuteReturnsBoundedEvidenceAndFullDigest` checks retained runner state
+and full raw integrity. `TestExecutedWindowArtifactsAcrossRunModes` covers
+pass/fail and early-only/tail signals in both execution modes.
+`TestConcurrentMCPStartsIsolateCapturedEvidence` holds both real children at a
+shared barrier and verifies distinct terminal artifacts and repeat awaits.
+`TestExecutionRawCloseFailurePrecedesRunError` pins close-error precedence and
+absence of new derived artifacts; existing write-fault, timeout, signal,
+cancellation, waiter and shutdown regressions remain in force.
 
 `TestProcessWindowOrigins` pins every parser's metadata and absolute spans over
 original, CRLF, ANSI/multibyte and unterminated fixtures; it passed before and
@@ -152,12 +167,12 @@ remain in force.
 ## Planned bounded-memory log pipeline
 
 Implementation state is owned by [LOMEM](../roadmap/README.md#lomem-bounded-memory-log-processing).
-This section describes the adopted pipeline design and its available helpers,
-not the current production pipeline above.
+This section describes the full adopted pipeline design. Captured execution
+is connected; existing-log import and resource acceptance remain pending.
 [ADR-0021](../architecture-decision-records/README.md#adr-0021-bound-log-memory-without-changing-evidence-semantics)
 and [RQMEM](../specs/README.md#rqmem-bounded-memory-log-processing) own its decision
-and required behavior. The current runner still retains all raw bytes, and
-summarize still reads the whole file before materialization.
+and required behavior. Summarize still reads the whole file before
+materialization.
 
 ### Shared evidence boundary
 
@@ -184,8 +199,8 @@ must not remain in a finished MCP registry entry after artifact finalization.
 Internal `RunOutput` consumers must stop assuming that
 `RawLogBytes` holds the complete input. No corresponding artifact field is added.
 
-`internal/rawevidence.Capture` implements the shared accumulator but is not yet
-wired into the producers. It serializes raw writes and accounts only for the
+`internal/rawevidence.Capture` implements the shared accumulator and is wired
+into the runner. It serializes raw writes and accounts only for the
 accepted prefix. Its fixed ring holds 256 KiB plus one preceding boundary byte;
 snapshots own immutable strings of at most 256 KiB and retain no caller buffer.
 Snapshot construction uses at most two additional window-sized copies plus one

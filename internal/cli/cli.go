@@ -479,7 +479,7 @@ func executeRunContext(ctx context.Context, req model.RunRequest, execute comman
 	if observe.phase != nil {
 		observe.phase(executionPhaseMaterializing)
 	}
-	rawSHA := artifacts.SHA256(runOutput.RawLogBytes)
+	rawSHA := "sha256:" + runOutput.Evidence.SHA256
 	relRaw := artifacts.Rel(req.RepoRoot, paths.RawLogPath)
 
 	result, err := materializeArtifacts(req, cfg, paths, rawSHA, relRaw, runOutput, applicableRules, materializationExecutedCommand)
@@ -532,6 +532,11 @@ func executeSummarize(req model.RunRequest, rawLogArg string) (runResult, int, e
 	}
 	relRaw := artifacts.Rel(req.RepoRoot, paths.RawLogPath)
 	status, exitCode := inferSummarizeStatus(raw, parser)
+	// Temporary summarize-only adapter: LOMEM-004 streams this producer;
+	// LOMEM-005 removes the remaining full-buffer transition.
+	capture := rawevidence.New(io.Discard)
+	_, _ = capture.Write(raw)
+	snapshot, _ := capture.Snapshot()
 	runOutput := model.RunOutput{
 		Metadata: model.RunMetadata{
 			CommandID:   commandID,
@@ -541,6 +546,7 @@ func executeSummarize(req model.RunRequest, rawLogArg string) (runResult, int, e
 			ExitCode:    exitCode,
 		},
 		Status:      status,
+		Evidence:    snapshot,
 		RawLogBytes: raw,
 	}
 	result, err := materializeArtifacts(req, cfg, paths, rawSHA, relRaw, runOutput, applicableRules, materializationSummarizedRaw)
@@ -558,12 +564,7 @@ func materializeArtifacts(req model.RunRequest, cfg model.Config, paths model.Ar
 }
 
 func materializeArtifactsWithExtractor(req model.RunRequest, cfg model.Config, paths model.ArtifactPaths, rawSHA, relRaw string, runOutput model.RunOutput, applicableRules []model.Rule, source materializationSource, extractor extractionProcessor) (runResult, error) {
-	// Temporary producer adapter: LOMEM-003/004 supply captured evidence;
-	// LOMEM-005 removes the full-buffer transition. Both consumers below share
-	// this owned snapshot rather than slicing the original whole-log allocation.
-	capture := rawevidence.New(io.Discard)
-	_, _ = capture.Write(runOutput.RawLogBytes)
-	snapshot, _ := capture.Snapshot()
+	snapshot := runOutput.Evidence
 	runOutput, extractionErr := extractor(snapshot, runOutput, applicableRules)
 	if extractionErr != nil {
 		runOutput.Failures = nil

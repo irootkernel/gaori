@@ -56,8 +56,8 @@ func TestMaterializeArtifactsExtractionErrorContract(t *testing.T) {
 					Parser:    "generic",
 					ExitCode:  tt.exitCode,
 				},
-				Status:      tt.status,
-				RawLogBytes: raw,
+				Status:   tt.status,
+				Evidence: capturedTestEvidence(t, raw),
 			}
 			result, err := materializeArtifactsWithExtractor(
 				req,

@@ -56,14 +56,16 @@ Global options are position-independent within the Gaori-owned argument prefix. 
 
 ## Large-log resource boundary
 
-Current extraction inspects at most the final 256 KiB of complete lines and
-bounds surfaced evidence, but the current runner still retains the complete raw
-stream in memory and summarize still reads the full input. These evidence limits
-are not a whole-pipeline resident-memory guarantee.
+Captured CLI/MCP execution streams raw bytes to disk while computing the full-log
+digest and retaining at most the final 256 KiB of complete lines for extraction
+and materialization. Summarize still reads the full input. Whole-pipeline resource
+acceptance remains pending; these evidence limits are not a resident-memory
+guarantee.
 
 [LOMEM](roadmap/README.md#lomem-bounded-memory-log-processing) adopts a bounded-memory
-replacement for capture, import, inference, and materialization. It is planned,
-not current binary support. Its [RQMEM contract](specs/README.md#rqmem-bounded-memory-log-processing)
+replacement for capture, import, inference, and materialization. Captured execution
+and materialization are connected; import/inference migration and resource
+verification remain planned. Its [RQMEM contract](specs/README.md#rqmem-bounded-memory-log-processing)
 preserves commands, config, MCP, artifact schemas, watcher hashes, original raw
 bytes, and the existing tail-selection semantics. No integration migration or
 consumer change is part of that work. Raw disk use remains proportional to log

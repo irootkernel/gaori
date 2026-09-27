@@ -543,7 +543,7 @@ lifecycle, cancellation, recovery, and detailed evidence inspection remain with
 
 Status: Accepted
 Date: 2026-09-26
-Implementation: In progress; capture and inference helpers and bounded materialization are available, while producer migration remains pending. See [LOMEM](../roadmap/README.md#lomem-bounded-memory-log-processing).
+Implementation: In progress; captured CLI/MCP execution and materialization use bounded snapshots, while summarize migration and resource acceptance remain pending. See [LOMEM](../roadmap/README.md#lomem-bounded-memory-log-processing).
 
 ### Context
 

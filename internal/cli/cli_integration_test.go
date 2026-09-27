@@ -485,7 +485,7 @@ func TestExecuteRunContextReportsLifecycleAndPassesCallerContext(t *testing.T) {
 		now := time.Now().UTC()
 		return model.RunOutput{
 			Metadata: model.RunMetadata{CommandID: commandID, Tags: tags, Parser: parser, CommandArgv: argv, StartedAt: now, EndedAt: now},
-			Status:   model.RunStatusPassed, RawLogBytes: payload,
+			Status:   model.RunStatusPassed, Evidence: capturedTestEvidence(t, payload),
 		}, nil
 	}
 	req := model.RunRequest{RepoRoot: repo, RunID: "context-run", Mode: model.RunModeConfigured, CommandID: "unit"}

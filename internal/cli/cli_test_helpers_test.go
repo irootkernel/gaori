@@ -2,12 +2,14 @@ package cli
 
 import (
 	"encoding/json"
+	"io"
 	"os"
 	"path/filepath"
 	"testing"
 
 	"github.com/irootkernel/gaori/internal/artifacts"
 	"github.com/irootkernel/gaori/internal/model"
+	"github.com/irootkernel/gaori/internal/rawevidence"
 )
 
 func assertDegradedArtifacts(t *testing.T, baseDir, commandID string, wantStatus model.RunStatus, wantExitCode int) []byte {
@@ -65,4 +67,17 @@ func readJSONArtifact(t *testing.T, path string, target any) {
 	if err := json.Unmarshal(data, target); err != nil {
 		t.Fatal(err)
 	}
+}
+
+func capturedTestEvidence(t *testing.T, raw []byte) rawevidence.Snapshot {
+	t.Helper()
+	capture := rawevidence.New(io.Discard)
+	if _, err := capture.Write(raw); err != nil {
+		t.Fatal(err)
+	}
+	snapshot, err := capture.Snapshot()
+	if err != nil {
+		t.Fatal(err)
+	}
+	return snapshot
 }

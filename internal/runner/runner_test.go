@@ -130,7 +130,7 @@ func requireRawLogWriteError(t *testing.T, output model.RunOutput, err error, ra
 	if !errors.Is(err, errInjectedRawLogWrite) {
 		t.Fatalf("expected injected writer error, got %v", err)
 	}
-	if output.Status != "" || len(output.RawLogBytes) != 0 {
+	if output.Status != "" || output.Evidence.TotalBytes != 0 {
 		t.Fatalf("expected no publishable run output, got %+v", output)
 	}
 	if raw.persisted.Len() == 0 || raw.persisted.Len() >= len(complete) {
@@ -224,8 +224,8 @@ func TestExecutePreCanceledContextDoesNotStartCommand(t *testing.T) {
 	if output.Status != model.RunStatusKilled || output.Metadata.ExitCode != 137 {
 		t.Fatalf("expected killed/137, got status=%s exit=%d", output.Status, output.Metadata.ExitCode)
 	}
-	if raw.Len() != 0 || len(output.RawLogBytes) != 0 {
-		t.Fatalf("pre-canceled command produced raw output: writer=%q output=%q", raw.String(), output.RawLogBytes)
+	if raw.Len() != 0 || output.Evidence.TotalBytes != 0 {
+		t.Fatalf("pre-canceled command produced raw output: writer=%q output=%q", raw.String(), output.Evidence.Text)
 	}
 	if _, err := os.Stat(marker); !os.IsNotExist(err) {
 		t.Fatalf("pre-canceled command started: marker err=%v", err)

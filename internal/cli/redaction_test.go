@@ -141,7 +141,7 @@ func TestMaterializeArtifactsBoundsFilteredAndExpandedWarnings(t *testing.T) {
 				Metadata:        model.RunMetadata{CommandID: "unit", Tags: []string{"unit"}, Parser: "generic"},
 				Status:          model.RunStatusPassed,
 				ExtractorStatus: model.ExtractorStatusNoMatch,
-				RawLogBytes:     raw,
+				Evidence:        capturedTestEvidence(t, raw),
 				Warnings:        tt.warnings,
 			}
 			result, err := materializeArtifactsWithExtractor(

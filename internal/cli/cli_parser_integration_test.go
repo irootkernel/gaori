@@ -312,6 +312,7 @@ func TestAdHocTimeoutSelection(t *testing.T) {
 				return model.RunOutput{
 					Metadata: model.RunMetadata{CommandID: commandID, Tags: tags, Parser: parser, CommandArgv: argv},
 					Status:   model.RunStatusPassed,
+					Evidence: capturedTestEvidence(t, nil),
 				}, nil
 			}
 			var stdout, stderr bytes.Buffer

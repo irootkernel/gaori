@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/irootkernel/gaori/internal/model"
+	"github.com/irootkernel/gaori/internal/rawevidence"
 )
 
 const interruptGracePeriod = 2 * time.Second
@@ -34,13 +35,6 @@ type presenceWriter struct {
 func (w *presenceWriter) Write(p []byte) (int, error) {
 	w.present = w.present || len(p) > 0
 	return len(p), nil
-}
-
-type streamCapture struct {
-	mu  sync.Mutex
-	raw io.Writer
-	b   bytes.Buffer
-	err error
 }
 
 type startGateContextKey struct{}
@@ -83,28 +77,6 @@ func (g *StartGate) start(ctx context.Context, start func() error) error {
 	return start()
 }
 
-func (c *streamCapture) Write(p []byte) (int, error) {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	n, err := c.raw.Write(p)
-	if err == nil && n != len(p) {
-		err = io.ErrShortWrite
-	}
-	if n > 0 {
-		_, _ = c.b.Write(p[:n])
-	}
-	if err != nil && c.err == nil {
-		c.err = err
-	}
-	return n, err
-}
-
-func (c *streamCapture) result() ([]byte, error) {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	return c.b.Bytes(), c.err
-}
-
 func Execute(ctx context.Context, workDir, commandID string, tags []string, parser string, argv []string, timeoutSec int, raw io.Writer) (model.RunOutput, error) {
 	interrupts := make(chan os.Signal, 2)
 	signal.Notify(interrupts, handledSignals()...)
@@ -125,7 +97,7 @@ func executeWithSignals(ctx context.Context, workDir, commandID string, tags []s
 	started := time.Now().UTC()
 	runCtx, cancel := context.WithTimeout(ctx, time.Duration(timeoutSec)*time.Second)
 	defer cancel()
-	capture := &streamCapture{raw: raw}
+	capture := rawevidence.New(raw)
 	if err := runCtx.Err(); err != nil {
 		return contextDoneOutput(started, commandID, tags, parser, argv, provenance, capture, err)
 	}
@@ -194,7 +166,7 @@ func executeWithSignals(ctx context.Context, workDir, commandID string, tags []s
 	return output, nil
 }
 
-func contextDoneOutput(started time.Time, commandID string, tags []string, parser string, argv []string, provenance gitProvenance, capture *streamCapture, cause error) (model.RunOutput, error) {
+func contextDoneOutput(started time.Time, commandID string, tags []string, parser string, argv []string, provenance gitProvenance, capture *rawevidence.Capture, cause error) (model.RunOutput, error) {
 	output, err := completedOutput(started, commandID, tags, parser, argv, provenance, capture)
 	if err != nil {
 		return model.RunOutput{}, err
@@ -231,8 +203,8 @@ func finishInterrupted(cmd *exec.Cmd, waited <-chan error, interrupts <-chan os.
 	}
 }
 
-func completedOutput(started time.Time, commandID string, tags []string, parser string, argv []string, provenance gitProvenance, capture *streamCapture) (model.RunOutput, error) {
-	raw, err := capture.result()
+func completedOutput(started time.Time, commandID string, tags []string, parser string, argv []string, provenance gitProvenance, capture *rawevidence.Capture) (model.RunOutput, error) {
+	evidence, err := capture.Snapshot()
 	if err != nil {
 		return model.RunOutput{}, model.NewGaoriError(model.ExitCodeArtifactError, "write raw log", err)
 	}
@@ -249,7 +221,7 @@ func completedOutput(started time.Time, commandID string, tags []string, parser 
 			EndedAt:     ended,
 			DurationMS:  ended.Sub(started).Milliseconds(),
 		},
-		RawLogBytes: raw,
+		Evidence: evidence,
 	}, nil
 }
 
