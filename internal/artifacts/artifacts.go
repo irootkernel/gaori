@@ -92,13 +92,6 @@ func ensureParents(paths model.ArtifactPaths) error {
 	return nil
 }
 
-func WriteRawLog(paths model.ArtifactPaths, raw []byte) (string, error) {
-	if err := writeArtifact(paths, paths.RawLogPath, raw, "write raw log"); err != nil {
-		return "", err
-	}
-	return SHA256(raw), nil
-}
-
 func OpenRawLog(paths model.ArtifactPaths) (*os.File, error) {
 	file, err := safety.OpenFileWithin(paths.BoundaryDir, paths.RawLogPath, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0o644)
 	if err != nil {

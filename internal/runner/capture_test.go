@@ -49,9 +49,6 @@ func TestExecuteReturnsBoundedEvidenceAndFullDigest(t *testing.T) {
 				if snapshot.SHA256 != fmt.Sprintf("%x", sha256.Sum256([]byte(raw))) || persisted.String() != raw {
 					t.Fatal("full raw integrity changed")
 				}
-				if len(got.RawLogBytes) != 0 {
-					t.Fatal("runner retained the full raw log")
-				}
 			})
 		}
 	}

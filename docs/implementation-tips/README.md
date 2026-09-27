@@ -62,7 +62,7 @@ Preserve command-result and extractor-status separation throughout.
 The adopted [LOMEM roadmap](../roadmap/README.md#lomem-bounded-memory-log-processing)
 and [dossier](../todo/TODO-LOMEM.md) describe the active implementation work.
 Captured CLI/MCP execution, summarize import/inference and materialization use
-bounded state; final cleanup and resource acceptance remain pending. Follow the
+bounded state; resource acceptance remains pending. Follow the
 six tasks in order; [RQMEM](../specs/README.md#rqmem-bounded-memory-log-processing)
 and [ADR-0021](../architecture-decision-records/README.md#adr-0021-bound-log-memory-without-changing-evidence-semantics)
 are the behavior and decision authorities. The [planned architecture](../architecture/README.md#planned-bounded-memory-log-pipeline)
@@ -364,3 +364,24 @@ Before the next release tag, verify all of the following:
 - Do not allow rules to alter pass/fail status.
 - Do not dump full raw logs to console by default.
 - Do not mark documentation or roadmap tasks done without executable evidence once implementation begins.
+
+### Bounded-pipeline compatibility audit
+
+The LOMEM-005 call-site audit removes `RunOutput.RawLogBytes` and the production
+whole-buffer extraction/raw-writer adapters. The runner and summarize importer
+are the only raw producers; materialization consumes their bounded snapshots.
+`Process` and legacy summarize inference exist only in capped test fixtures.
+
+Remaining whole-value operations do not load execution/import logs: parser
+detection reads at most the 256 KiB tail, rule fixtures/proposal inputs and
+redaction samples use the existing limited readers, and excerpt lookup reads a
+summary artifact. Preserve those consumer contracts instead of widening this
+change into unrelated parser or input-policy work.
+
+The built-binary layout/consumer and concurrent MCP tests in
+`e2e/bounded_pipeline_e2e_test.go` use small oversized fixtures, not memory
+measurements. Fixed-path raw-stage failures preserve previous derived artifacts;
+later Markdown/status failures may leave partial new derived output. These
+behaviors are exercised in `internal/cli/stale_artifacts_test.go` and must not be
+recast as transactional rollback. Cleanup deliberately retains runs stamped in
+its current UTC second; a compatibility test must allow that boundary to pass.

@@ -1,7 +1,7 @@
 # Gaori Architecture
 
 Status: Complete through `RSTAT`
-Planned work: LOMEM captured execution, summarize import/inference and materialization use bounded state; final compatibility cleanup and resource acceptance remain planned.
+Planned work: LOMEM captured execution, summarize import/inference and materialization use bounded state; resource acceptance remains planned.
 Scope: Standalone Gaori v0.1 architecture, including session-local STDIO MCP execution, terminal awaiting, artifact-derived run insights, and the adopted LOMEM design
 
 This document defines Gaori's technical and artifact contracts. See the [integration guide](../integration-guide.md) for parent-project ownership, supported capability status, and rollout guidance.
@@ -166,11 +166,27 @@ and `TestSummarizeInferenceUsesOwnedImport` pin containment, failure closure,
 descriptor cleanup and the single source-open contract.
 `TestSummarizeIntegratedInferenceMatchesLegacy` compares all registry labels
 through the importer against capped legacy fixtures, including early/late
-signals, long whitespace, ANSI and split reads. LOMEM-005 removes the unused
-`RawLogBytes` field, legacy `extract.Process` test adapter and now test-only
-`artifacts.WriteRawLog` whole-buffer writer; the old CLI
-inference function now exists only as a capped test oracle. Whole-pipeline
-resource acceptance remains with LOMEM-006.
+signals, long whitespace, ANSI and split reads. The whole-log `RawLogBytes`
+field and production `extract.Process` and `artifacts.WriteRawLog` adapters
+have been removed. Extraction fixtures adapt to snapshots only in test code;
+the old CLI inference function remains a capped test oracle. Parser detection
+still uses its existing bounded-tail helper. Whole-pipeline resource acceptance
+remains with LOMEM-006.
+
+`TestBinaryBoundedPipelineLayoutsAndConsumers` exercises configured/ad-hoc
+execution and summarize with oversized input through standalone, scoped and
+relative/external output layouts. It verifies original bytes, hashes, absolute
+spans, redacted excerpts, rule-proposal provenance, listing, historical stats
+and cleanup. `TestBinaryConcurrentBoundedMCPStarts` checks both start paths
+behind a shared child barrier, distinct outcomes and identities, bounded full
+MCP replies, redacted excerpts and finished-await stability.
+
+`TestRawStageFailurePreservesPriorDerivedArtifacts` pins stale fixed-path
+behavior: an unsuccessful new raw stage leaves older derived bytes unchanged,
+so artifact presence cannot prove completion of that attempt.
+`TestLaterArtifactFailurePreservesPartialMaterialization` verifies that later
+Markdown/status failures retain preceding writes and artifact error precedence;
+materialization is not a rollback transaction.
 
 `TestExecuteReturnsBoundedEvidenceAndFullDigest` checks retained runner state
 and full raw integrity. `TestExecutedWindowArtifactsAcrossRunModes` covers
@@ -194,8 +210,8 @@ remain in force.
 
 Implementation state is owned by [LOMEM](../roadmap/README.md#lomem-bounded-memory-log-processing).
 This section describes the full adopted pipeline design. Captured execution
-and existing-log import/inference are connected; final cleanup and resource
-acceptance remain pending.
+and existing-log import/inference are connected; resource acceptance remains
+pending.
 [ADR-0021](../architecture-decision-records/README.md#adr-0021-bound-log-memory-without-changing-evidence-semantics)
 and [RQMEM](../specs/README.md#rqmem-bounded-memory-log-processing) own its decision
 and required behavior.
@@ -222,8 +238,8 @@ Internal copy buffers must have a fixed size; a large caller write must not
 cause retained capacity to grow. Final snapshots may copy the bounded window,
 but must not alias a whole-log backing buffer. Log state is invocation-local and
 must not remain in a finished MCP registry entry after artifact finalization.
-Internal `RunOutput` consumers use `Evidence`; the unused `RawLogBytes` field
-remains only until LOMEM-005 cleanup. No corresponding artifact field is added.
+Internal `RunOutput` consumers use `Evidence`; no whole-log byte field remains.
+No corresponding artifact field is added.
 
 `internal/rawevidence.Capture` implements the shared accumulator and is wired
 into the runner and summarize importer. It serializes raw writes and accounts only for the

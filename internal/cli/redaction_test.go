@@ -133,7 +133,7 @@ func TestMaterializeArtifactsBoundsFilteredAndExpandedWarnings(t *testing.T) {
 				t.Fatal(err)
 			}
 			raw := []byte("raw warning evidence\n")
-			rawSHA, err := artifacts.WriteRawLog(paths, raw)
+			rawSHA, err := writeTestRawLog(paths, raw)
 			if err != nil {
 				t.Fatal(err)
 			}

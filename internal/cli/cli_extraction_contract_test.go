@@ -4,6 +4,7 @@ package cli
 
 import (
 	"bytes"
+	"crypto/sha256"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -45,7 +46,7 @@ func TestMaterializeArtifactsExtractionErrorContract(t *testing.T) {
 				t.Fatal(err)
 			}
 			raw := []byte("raw evidence\n")
-			rawSHA, err := artifacts.WriteRawLog(paths, raw)
+			rawSHA, err := writeTestRawLog(paths, raw)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -340,4 +341,20 @@ func TestOversizedSummarizeUsesBoundedExtraction(t *testing.T) {
 			}
 		})
 	}
+}
+
+func writeTestRawLog(paths model.ArtifactPaths, raw []byte) (string, error) {
+	file, err := artifacts.OpenRawLog(paths)
+	if err != nil {
+		return "", err
+	}
+	_, writeErr := file.Write(raw)
+	closeErr := file.Close()
+	if writeErr != nil {
+		return "", writeErr
+	}
+	if closeErr != nil {
+		return "", closeErr
+	}
+	return fmt.Sprintf("sha256:%x", sha256.Sum256(raw)), nil
 }

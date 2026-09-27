@@ -65,8 +65,7 @@ not a measured resident-memory guarantee.
 
 [LOMEM](roadmap/README.md#lomem-bounded-memory-log-processing) adopts a bounded-memory
 replacement for capture, import, inference, and materialization. Captured execution
-and summarize import/inference are connected; final compatibility cleanup and
-resource verification remain planned. Its [RQMEM contract](specs/README.md#rqmem-bounded-memory-log-processing)
+and summarize import/inference are connected; resource verification remains planned. Its [RQMEM contract](specs/README.md#rqmem-bounded-memory-log-processing)
 preserves commands, config, MCP, artifact schemas, watcher hashes, original raw
 bytes, and the existing tail-selection semantics. No integration migration or
 consumer change is part of that work. Raw disk use remains proportional to log

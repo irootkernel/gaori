@@ -56,7 +56,7 @@ func TestMaterializeCapturedWindowIntegrity(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			rawSHA, err := artifacts.WriteRawLog(paths, raw)
+			rawSHA, err := writeTestRawLog(paths, raw)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -117,7 +117,7 @@ func TestCapturedWindowExcerptRedactionBeforeNoise(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	rawSHA, err := artifacts.WriteRawLog(paths, raw)
+	rawSHA, err := writeTestRawLog(paths, raw)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -221,7 +221,6 @@ type RunOutput struct {
 	Status          RunStatus
 	ExtractorStatus ExtractorStatus
 	Evidence        rawevidence.Snapshot
-	RawLogBytes     []byte
 	Failures        []Failure
 	Warnings        []Warning
 }

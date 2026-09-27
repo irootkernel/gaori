@@ -1,6 +1,7 @@
 package artifacts
 
 import (
+	"crypto/sha256"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -522,7 +523,7 @@ func TestArtifactWritesAllowInternalSymlink(t *testing.T) {
 	if err != nil {
 		t.Fatalf("expected internal .gaori symlink to be allowed: %v", err)
 	}
-	if _, err := WriteRawLog(paths, []byte("ok\n")); err != nil {
+	if _, err := writeTestRawLog(paths, []byte("ok\n")); err != nil {
 		t.Fatalf("expected raw log write through internal symlink: %v", err)
 	}
 	data, err := os.ReadFile(paths.RawLogPath)
@@ -545,7 +546,7 @@ func TestRunIDArtifactLayout(t *testing.T) {
 	if paths.BoundaryDir != repo || paths.BaseDir != expectedBase {
 		t.Fatalf("unexpected run-scoped paths %+v", paths)
 	}
-	if _, err := WriteRawLog(paths, []byte("raw\n")); err != nil {
+	if _, err := writeTestRawLog(paths, []byte("raw\n")); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := os.Stat(filepath.Join(expectedBase, "unit.raw.log")); err != nil {
@@ -594,7 +595,7 @@ func TestArtifactOutputDirectories(t *testing.T) {
 			if paths.BoundaryDir != expectedBoundary {
 				t.Fatalf("expected boundary %q, got %q", expectedBoundary, paths.BoundaryDir)
 			}
-			if _, err := WriteRawLog(paths, []byte("raw\n")); err != nil {
+			if _, err := writeTestRawLog(paths, []byte("raw\n")); err != nil {
 				t.Fatal(err)
 			}
 			if _, err := os.Stat(paths.RawLogPath); err != nil {
@@ -618,7 +619,7 @@ func TestArtifactWriteRejectsFinalFileSymlinkEscape(t *testing.T) {
 	if err := os.Symlink(externalPath, paths.RawLogPath); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := WriteRawLog(paths, []byte("escaped\n")); model.ExitCodeFor(err) != int(model.ExitCodeArtifactError) {
+	if _, err := writeTestRawLog(paths, []byte("escaped\n")); model.ExitCodeFor(err) != int(model.ExitCodeArtifactError) {
 		t.Fatalf("expected artifact error for final file symlink, got %v", err)
 	}
 	if _, err := OpenRawLog(paths); model.ExitCodeFor(err) != int(model.ExitCodeArtifactError) {
@@ -634,4 +635,20 @@ func TestArtifactWriteRejectsFinalFileSymlinkEscape(t *testing.T) {
 	if string(data) != "unchanged\n" {
 		t.Fatalf("external file was modified: %q", data)
 	}
+}
+
+func writeTestRawLog(paths model.ArtifactPaths, raw []byte) (string, error) {
+	file, err := OpenRawLog(paths)
+	if err != nil {
+		return "", err
+	}
+	_, writeErr := file.Write(raw)
+	closeErr := file.Close()
+	if writeErr != nil {
+		return "", writeErr
+	}
+	if closeErr != nil {
+		return "", closeErr
+	}
+	return fmt.Sprintf("sha256:%x", sha256.Sum256(raw)), nil
 }

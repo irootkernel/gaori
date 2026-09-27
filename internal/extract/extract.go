@@ -2,7 +2,6 @@ package extract
 
 import (
 	"fmt"
-	"io"
 	"regexp"
 	"strconv"
 	"strings"
@@ -23,15 +22,6 @@ type lineIndex struct {
 	start int
 	end   int
 	line  int
-}
-
-func Process(raw []byte, run model.RunOutput, rules []model.Rule) (model.RunOutput, error) {
-	// Transitional full-buffer caller adapter; LOMEM-005 removes this after
-	// both producers migrate. Snapshot text must own only the retained window.
-	capture := rawevidence.New(io.Discard)
-	_, _ = capture.Write(raw)
-	snapshot, _ := capture.Snapshot()
-	return ProcessSnapshot(snapshot, run, rules)
 }
 
 // ProcessSnapshot extracts from one captured window. Parser and rule indexes

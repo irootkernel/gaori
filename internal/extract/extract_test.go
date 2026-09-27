@@ -3,12 +3,14 @@ package extract
 import (
 	"bytes"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 
 	"github.com/irootkernel/gaori/internal/model"
+	"github.com/irootkernel/gaori/internal/rawevidence"
 	"github.com/irootkernel/gaori/internal/safety"
 )
 
@@ -579,4 +581,17 @@ func readFixture(t *testing.T, name string) []byte {
 		t.Fatal(err)
 	}
 	return data
+}
+
+// Process adapts size-capped test fixtures to the production snapshot boundary.
+func Process(raw []byte, run model.RunOutput, rules []model.Rule) (model.RunOutput, error) {
+	capture := rawevidence.New(io.Discard)
+	if _, err := capture.Write(raw); err != nil {
+		return run, err
+	}
+	snapshot, err := capture.Snapshot()
+	if err != nil {
+		return run, err
+	}
+	return ProcessSnapshot(snapshot, run, rules)
 }
