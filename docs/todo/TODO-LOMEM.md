@@ -81,6 +81,14 @@ must have a named removal owner below and must not become the final runtime path
 
 ### LOMEM-001: Baseline characterization and shared capture
 
+The selected helper boundary is `internal/rawevidence.Capture` plus
+`extract.SummarizeIndicatesFailure`. The [architecture's selected inference
+strategy](../architecture/README.md#selected-inference-strategy) owns the buffer
+bounds, byte-level ANSI replay semantics and executable feasibility checks.
+LOMEM-002 consumes the bounded snapshot; LOMEM-003 connects capture to executed
+commands; LOMEM-004 connects the inference helper to validated imported
+artifacts. Existing producers still retain whole logs until those transitions.
+
 Required work:
 
 - [ ] Read the RQMEM contract, current producer/materializer callers, and existing runner/parser/CLI tests before changing behavior.

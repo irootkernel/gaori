@@ -1,6 +1,6 @@
 # Gaori Roadmap
 
-Status: `LOMEM` planned next; completed through `RSTAT`, `AQDEV-001`, and `SKMOD`; `AQADP`, `AWAIT-005`, and `AWAIT-007` deferred
+Status: `LOMEM` in progress; completed through `RSTAT`, `AQDEV-001`, and `SKMOD`; `AQADP`, `AWAIT-005`, and `AWAIT-007` deferred
 Scope: Implementation tracking for the Gaori v0.1 standalone baseline, hardening, tag and parser selection, release readiness, identity migration, operator-directed standalone evidence cleanup, portable project config, CLI usability improvements, session-local MCP execution, token-efficient terminal waiting and host-wait guidance, the parser catalog plus Dart/Patrol extraction epic, run-status and timing insights, Aquarium development-channel integration, deferred Aquarium qualification and downstream adoption tracking, and adopted bounded-memory log processing
 
 This roadmap is a delivery record, not an operator guide or a promise that out-of-scope capabilities will be added. See the [integration guide](../integration-guide.md) for the current supported/unsupported capability boundary and the [todo index](../todo/README.md) for future candidates and active epic dossiers.
@@ -10,18 +10,19 @@ Task status values: `Planned`, `In Progress`, `Blocked`, `Done`, `Deferred`.
 Existing `Done` entries record completion of the original v0.1 implementation slices. They do not supersede or satisfy the later `HARDE` tasks, which close correctness, safety, verification, and documentation gaps found during repository review.
 
 Current implementation snapshot:
-- `Planned`: `LOMEM` (`LOMEM-001` to `LOMEM-006`)
-- `Done`: `SETUP-001` to `SETUP-003`, `RUNNR-001` to `RUNNR-003`, `ARTIF-001` to `ARTIF-003`, `PARSE-001` to `PARSE-011`, `SAFEY-001` to `SAFEY-004`, `CLIUX-001` to `CLIUX-008`, `RULES-001` to `RULES-005`, `DOCUM-001` to `DOCUM-003`, `HARDE-001` to `HARDE-007`, `TAGS-001`, `ADHOC-001`, `ADHOC-002`, `RELRV-001` to `RELRV-009`, `BRAND-001`, `CLEAN-001`, `PORTA-001`, `MCP-001` to `MCP-006`, `AWAIT-001` to `AWAIT-004`, `AWAIT-006`, `RSTAT-001` to `RSTAT-004`, `AQDEV-001`, `SKMOD-001`, `SKMOD-002`
+- `In Progress`: `LOMEM`
+- `Planned`: `LOMEM-002` to `LOMEM-006`
+- `Done`: `LOMEM-001`, `SETUP-001` to `SETUP-003`, `RUNNR-001` to `RUNNR-003`, `ARTIF-001` to `ARTIF-003`, `PARSE-001` to `PARSE-011`, `SAFEY-001` to `SAFEY-004`, `CLIUX-001` to `CLIUX-008`, `RULES-001` to `RULES-005`, `DOCUM-001` to `DOCUM-003`, `HARDE-001` to `HARDE-007`, `TAGS-001`, `ADHOC-001`, `ADHOC-002`, `RELRV-001` to `RELRV-009`, `BRAND-001`, `CLEAN-001`, `PORTA-001`, `MCP-001` to `MCP-006`, `AWAIT-001` to `AWAIT-004`, `AWAIT-006`, `RSTAT-001` to `RSTAT-004`, `AQDEV-001`, `SKMOD-001`, `SKMOD-002`
 - `Deferred`: `AQADP` (`QUALI-001`, `QUALI-002`, `CONSUMER-SUDAL-001`), `AWAIT-005`, `AWAIT-007`
 
 ## LOMEM: Bounded-memory log processing
 
-Status: Planned
+Status: In Progress
 
 Detailed SOT: [LOMEM dossier](../todo/TODO-LOMEM.md)
 
 Owner: Gaori team. Adopted on 2026-09-26 after Master's approval to prioritize
-large-log memory safety. This is the next implementation epic. Preserve the
+large-log memory safety. This is the active implementation epic. Preserve the
 existing 256 KiB complete-line tail and every command/evidence contract; earlier
 failure-span discovery and a full-log extraction mode are separate future work,
 not prerequisites or implicit commitments. Requirements are [RQMEM](../specs/README.md#rqmem-bounded-memory-log-processing),
@@ -47,7 +48,7 @@ implementation sequence.
 
 | Task ID | Status | Goal | Verification | Reference |
 |---|---|---|---|---|
-| LOMEM-001 | Planned | Characterize current outputs, prove a bounded ANSI/predicate inference strategy with a small executable gate, and introduce the shared capture/digest/window value with explicit byte and line origins. | Small differential predicate oracles, no-signal/late-signal specialized cases, long complete/incomplete/malformed ANSI and EOF/line/read boundaries, fixed retained-state checks, capture chunk invariance, accepted-prefix hashing, and short-write errors. Record the selected inference strategy before completion. | `GAORI-REQ-RQMEM-001` to `GAORI-REQ-RQMEM-003`, `GAORI-REQ-RQMEM-005`; dossier task 001 |
+| LOMEM-001 | Done | Characterize current outputs, prove a bounded ANSI/predicate inference strategy with a small executable gate, and introduce the shared capture/digest/window value with explicit byte and line origins. | Small differential predicate oracles, no-signal/late-signal specialized cases, long complete/incomplete/malformed ANSI and EOF/line/read boundaries, fixed retained-state checks, capture chunk invariance, accepted-prefix hashing, and short-write errors. Record the selected inference strategy before completion. | `GAORI-REQ-RQMEM-001` to `GAORI-REQ-RQMEM-003`, `GAORI-REQ-RQMEM-005`; dossier task 001 |
 | LOMEM-002 | Planned | Refactor extraction and excerpt materialization to consume bounded evidence and preserve absolute raw spans and artifact semantics. | Every registered parser, exact-parser rules, CRLF/ANSI/multibyte boundaries, empty/unterminated tails, retained-prefix/redaction ordering, excerpts, and checksum/hash parity. | `GAORI-REQ-RQMEM-003`, `GAORI-REQ-RQMEM-004`, `GAORI-REQ-RQMEM-008`; dossier task 002 |
 | LOMEM-003 | Planned | Replace full-log retention in the runner and both CLI/MCP execution paths with the shared streaming evidence path. | Configured/ad-hoc pass, fail, timeout and kill, raw-write/close errors, concurrent invocations, terminal-await behavior, and no post-exit whole-log scan. | `GAORI-REQ-RQMEM-001`, `GAORI-REQ-RQMEM-002`, `GAORI-REQ-RQMEM-007`, `GAORI-REQ-RQMEM-008`; dossier task 003 |
 | LOMEM-004 | Planned | Stream existing-log imports using the LOMEM-001-verified bounded inference strategy, preserving full-input verdicts and safe same-file imports without whole-log buffers. | Reuse the feasibility checks through the integrated importer for all predicates, no/early/late signals, long whitespace and complete/incomplete/malformed ANSI; verify full copy/hash after early inference, aliases, staging, read/copy/close errors, and unchanged successful summarize exit. Revalidate any replacement strategy before integration. | `GAORI-REQ-RQMEM-001`, `GAORI-REQ-RQMEM-002`, `GAORI-REQ-RQMEM-005`, `GAORI-REQ-RQMEM-006`, `GAORI-REQ-RQMEM-008`; dossier task 004 |

@@ -1,7 +1,7 @@
 # Gaori Architecture
 
 Status: Complete through `RSTAT`
-Planned work: The separately labeled LOMEM bounded-memory section is adopted but not implemented.
+Planned work: LOMEM capture and inference helpers exist; migration of the production log pipeline remains planned.
 Scope: Standalone Gaori v0.1 architecture, including session-local STDIO MCP execution, terminal awaiting, artifact-derived run insights, and the adopted LOMEM design
 
 This document defines Gaori's technical and artifact contracts. See the [integration guide](../integration-guide.md) for parent-project ownership, supported capability status, and rollout guidance.
@@ -123,7 +123,8 @@ When `--parser` is omitted, step 2 selects `generic`. A specialized parser does 
 ## Planned bounded-memory log pipeline
 
 Implementation state is owned by [LOMEM](../roadmap/README.md#lomem-bounded-memory-log-processing).
-This section describes the adopted design, not the current pipeline above.
+This section describes the adopted pipeline design and its available helpers,
+not the current production pipeline above.
 [ADR-0021](../architecture-decision-records/README.md#adr-0021-bound-log-memory-without-changing-evidence-semantics)
 and [RQMEM](../specs/README.md#rqmem-bounded-memory-log-processing) own its decision
 and required behavior. The current runner still retains all raw bytes, and
@@ -153,6 +154,15 @@ but must not alias a whole-log backing buffer. Log state is invocation-local and
 must not remain in a finished MCP registry entry after artifact finalization.
 Internal `RunOutput` consumers must stop assuming that
 `RawLogBytes` holds the complete input. No corresponding artifact field is added.
+
+`internal/rawevidence.Capture` implements the shared accumulator but is not yet
+wired into the producers. It serializes raw writes and accounts only for the
+accepted prefix. Its fixed ring holds 256 KiB plus one preceding boundary byte;
+snapshots own immutable strings of at most 256 KiB and retain no caller buffer.
+Snapshot construction uses at most two additional window-sized copies plus one
+boundary byte. Byte and newline counters and SHA-256 state remain fixed-size.
+The first write error remains attached to subsequent snapshots. The producer
+still owns closing and validating its raw artifact before publication.
 
 ### Execution path
 
@@ -191,6 +201,50 @@ on detected evidence changes. Retain the applicable read/copy/close error
 classes. No new derived completion is published after failed raw import. The
 same bounded materializer then writes the existing artifacts, and successful
 summarize still exits `0` regardless of its inferred artifact verdict.
+
+#### Selected inference strategy
+
+`extract.SummarizeIndicatesFailure` is the reusable bounded replay helper for
+LOMEM-004. Its production importer wiring remains pending. The parser registry
+owns one compiled failure predicate per specialized label, shared by the
+existing string evaluator and the reader evaluator. Literal alternatives are
+quoted, and each regex alternative keeps its own inline flags. Generic parser
+detection still has no registry heuristic; summarize's generic predicate
+searches the original raw markers without ANSI removal.
+
+The specialized reader removes exactly `\x1b\[[0-?]*[ -/]*[@-~]` at the byte
+level, then decodes UTF-8 and calls Go's `regexp.MatchReader`. Lookahead stores
+offsets rather than pending ANSI bytes. A complete sequence is skipped; a
+malformed or EOF-incomplete candidate emits its original ESC and replays from
+the following byte. A fixed byte cache reuses retained bytes during replay;
+only replay outside that cache seeks and refills, so dense short malformed
+candidates do not repeatedly discard prefetched input. Later escape starts are
+still recognized. Because valid
+parameter and intermediate bytes cannot contain ESC, a failed candidate body
+is replayed once. This trades bounded additional reads for constant retained
+state, including arbitrarily long incomplete candidates.
+
+The helper uses two 32 KiB buffers, scalar cursor/error state, and regex state
+bounded by the compiled predicate. The generic reader needs one 32 KiB buffer.
+Non-EOF read and seek errors remain sticky even when buffered bytes produce an
+early match. LOMEM-004 must finish raw copying, hashing, tail capture and raw
+validation before replay, and apply the existing containment and error classes
+to the owned artifact. No captured execution needs this full-input replay.
+
+`TestSummarizePredicateCharacterization` pins the original predicate branches.
+`TestBoundedInferenceDifferential`, `TestANSIReaderMatchesVisibleText`, and
+`TestBoundedInferenceMatchesSummarizeStatus` compare capped fixtures with current
+string and CLI oracles across read partitions and byte boundaries.
+`TestBoundedInferenceGrowth` checks generated 64 KiB, 256 KiB and 1 MiB inputs
+with fixed reader construction bounds, including no-signal, late-signal,
+whitespace and complete/incomplete/malformed ANSI cases.
+`TestANSIReplayReadVolume` bounds underlying reads on dense malformed and nested
+escape sequences; the ANSI oracle also covers every byte class. Buffer-size
+assertions alone do not measure whole-process retained memory.
+`TestCaptureMatchesBoundedTail` and
+the capture tests cover accepted-prefix integrity, origins, retention and
+snapshot ownership. These are component feasibility checks; whole-pipeline
+resource acceptance remains the separate LOMEM-006 campaign.
 
 ### Resource and failure boundaries
 

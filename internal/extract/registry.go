@@ -2,6 +2,7 @@ package extract
 
 import (
 	"maps"
+	"regexp"
 	"slices"
 	"strings"
 
@@ -25,7 +26,7 @@ const (
 // outputFamily is a stable lowercase identifier, not display copy.
 type parserDescriptor struct {
 	failures     func(lines []lineIndex, text string) []model.Failure
-	indicates    func(visible string) bool
+	indicates    *regexp.Regexp
 	tier         string
 	outputFamily string
 }
@@ -36,22 +37,22 @@ type parserDescriptor struct {
 // labels through this table.
 var parserRegistry = map[string]parserDescriptor{
 	"generic":      {failures: genericParserFailures, tier: ParserTierSupported, outputFamily: "generic-text"},
-	"vitest":       {failures: vitestFailures, indicates: vitestIndicatesFailure, tier: ParserTierSupported, outputFamily: "vitest"},
-	"jest":         {failures: jestFailures, indicates: jestIndicatesFailure, tier: ParserTierSupported, outputFamily: "jest"},
-	"pytest":       {failures: pytestFailures, indicates: pytestIndicatesFailure, tier: ParserTierSupported, outputFamily: "pytest"},
-	"go-test":      {failures: goTestFailures, indicates: goTestIndicatesFailure, tier: ParserTierSupported, outputFamily: "go-test"},
-	"playwright":   {failures: playwrightFailures, indicates: playwrightIndicatesFailure, tier: ParserTierSupported, outputFamily: "playwright"},
-	"ginkgo":       {failures: ginkgoFailures, indicates: ginkgoIndicatesFailure, tier: ParserTierSupported, outputFamily: "ginkgo-v2"},
-	"godog":        {failures: godogFailures, indicates: godogIndicatesFailure, tier: ParserTierSupported, outputFamily: "godog"},
-	"cargo-test":   {failures: cargoTestFailures, indicates: cargoTestIndicatesFailure, tier: ParserTierSupported, outputFamily: "cargo-test"},
-	"dart-test":    {failures: dartTestFailures, indicates: dartTestIndicatesFailure, tier: ParserTierExperimental, outputFamily: "dart-test"},
-	"flutter-test": {failures: flutterTestFailures, indicates: flutterTestIndicatesFailure, tier: ParserTierSupported, outputFamily: "flutter-test"},
-	"bun-test":     {failures: bunTestFailures, indicates: bunTestIndicatesFailure, tier: ParserTierSupported, outputFamily: "bun-test"},
-	"node-test":    {failures: nodeTestFailures, indicates: nodeTestIndicatesFailure, tier: ParserTierSupported, outputFamily: "node-test"},
-	"rspec":        {failures: rspecFailures, indicates: rspecIndicatesFailure, tier: ParserTierSupported, outputFamily: "rspec"},
-	"dotnet-test":  {failures: dotnetTestFailures, indicates: dotnetTestIndicatesFailure, tier: ParserTierExperimental, outputFamily: "dotnet-test"},
-	"gradle-test":  {failures: gradleTestFailures, indicates: gradleTestIndicatesFailure, tier: ParserTierExperimental, outputFamily: "gradle-test"},
-	"patrol":       {failures: patrolTestFailures, indicates: patrolIndicatesFailure, tier: ParserTierExperimental, outputFamily: "patrol"},
+	"vitest":       {failures: vitestFailures, indicates: vitestFailureSummaryRE, tier: ParserTierSupported, outputFamily: "vitest"},
+	"jest":         {failures: jestFailures, indicates: jestFailureSummaryRE, tier: ParserTierSupported, outputFamily: "jest"},
+	"pytest":       {failures: pytestFailures, indicates: pytestFailureSummaryRE, tier: ParserTierSupported, outputFamily: "pytest"},
+	"go-test":      {failures: goTestFailures, indicates: failurePattern([]*regexp.Regexp{goTestFailureSummaryRE, goTestBuildSummaryRE}, "panic:", "WARNING: DATA RACE"), tier: ParserTierSupported, outputFamily: "go-test"},
+	"playwright":   {failures: playwrightFailures, indicates: playwrightFailureSummaryRE, tier: ParserTierSupported, outputFamily: "playwright"},
+	"ginkgo":       {failures: ginkgoFailures, indicates: failurePattern(nil, "FAIL! --", "Test Suite Failed", "[FAILED]", "[PANICKED"), tier: ParserTierSupported, outputFamily: "ginkgo-v2"},
+	"godog":        {failures: godogFailures, indicates: failurePattern([]*regexp.Regexp{godogFailureSummaryRE}, "Failed steps:", "--- FAIL:"), tier: ParserTierSupported, outputFamily: "godog"},
+	"cargo-test":   {failures: cargoTestFailures, indicates: failurePattern(nil, "test result: FAILED", "error: test failed", "could not compile"), tier: ParserTierSupported, outputFamily: "cargo-test"},
+	"dart-test":    {failures: dartTestFailures, indicates: failurePattern(nil, "Some tests failed.", "[E]"), tier: ParserTierExperimental, outputFamily: "dart-test"},
+	"flutter-test": {failures: flutterTestFailures, indicates: failurePattern(nil, "Some tests failed.", "[E]", "Failed to load"), tier: ParserTierSupported, outputFamily: "flutter-test"},
+	"bun-test":     {failures: bunTestFailures, indicates: failurePattern([]*regexp.Regexp{bunFailureSummaryRE}, "(fail)"), tier: ParserTierSupported, outputFamily: "bun-test"},
+	"node-test":    {failures: nodeTestFailures, indicates: nodeFailureSummaryRE, tier: ParserTierSupported, outputFamily: "node-test"},
+	"rspec":        {failures: rspecFailures, indicates: rspecFailureSummaryRE, tier: ParserTierSupported, outputFamily: "rspec"},
+	"dotnet-test":  {failures: dotnetTestFailures, indicates: dotnetFailureSummaryRE, tier: ParserTierExperimental, outputFamily: "dotnet-test"},
+	"gradle-test":  {failures: gradleTestFailures, indicates: gradleFailureSummaryRE, tier: ParserTierExperimental, outputFamily: "gradle-test"},
+	"patrol":       {failures: patrolTestFailures, indicates: failurePattern([]*regexp.Regexp{patrolFailureRE}, "✗ Failed to "), tier: ParserTierExperimental, outputFamily: "patrol"},
 }
 
 // IsKnown reports whether label names a supported parser.
@@ -99,66 +100,15 @@ func genericParserFailures(lines []lineIndex, _ string) []model.Failure {
 	return genericFailures(lines)
 }
 
-func vitestIndicatesFailure(visible string) bool {
-	return vitestFailureSummaryRE.MatchString(visible)
-}
-
-func jestIndicatesFailure(visible string) bool {
-	return jestFailureSummaryRE.MatchString(visible)
-}
-
-func rspecIndicatesFailure(visible string) bool {
-	return rspecFailureSummaryRE.MatchString(visible)
-}
-
-func dotnetTestIndicatesFailure(visible string) bool {
-	return dotnetFailureSummaryRE.MatchString(visible)
-}
-
-func gradleTestIndicatesFailure(visible string) bool {
-	return gradleFailureSummaryRE.MatchString(visible)
-}
-
-func pytestIndicatesFailure(visible string) bool {
-	return pytestFailureSummaryRE.MatchString(visible)
-}
-
-func goTestIndicatesFailure(visible string) bool {
-	return goTestFailureSummaryRE.MatchString(visible) || goTestBuildSummaryRE.MatchString(visible) || strings.Contains(visible, "panic:") || strings.Contains(visible, "WARNING: DATA RACE")
-}
-
-func playwrightIndicatesFailure(visible string) bool {
-	return playwrightFailureSummaryRE.MatchString(visible)
-}
-
-func ginkgoIndicatesFailure(visible string) bool {
-	return containsAny(visible, []string{"FAIL! --", "Test Suite Failed", "[FAILED]", "[PANICKED"})
-}
-
-func godogIndicatesFailure(visible string) bool {
-	return strings.Contains(visible, "Failed steps:") || strings.Contains(visible, "--- FAIL:") || godogFailureSummaryRE.MatchString(visible)
-}
-
-func cargoTestIndicatesFailure(visible string) bool {
-	return containsAny(visible, []string{"test result: FAILED", "error: test failed", "could not compile"})
-}
-
-func dartTestIndicatesFailure(visible string) bool {
-	return containsAny(visible, []string{"Some tests failed.", "[E]"})
-}
-
-func patrolIndicatesFailure(visible string) bool {
-	return strings.Contains(visible, "✗ Failed to ") || patrolFailureRE.MatchString(visible)
-}
-
-func flutterTestIndicatesFailure(visible string) bool {
-	return containsAny(visible, []string{"Some tests failed.", "[E]", "Failed to load"})
-}
-
-func bunTestIndicatesFailure(visible string) bool {
-	return strings.Contains(visible, "(fail)") || bunFailureSummaryRE.MatchString(visible)
-}
-
-func nodeTestIndicatesFailure(visible string) bool {
-	return nodeFailureSummaryRE.MatchString(visible)
+// failurePattern preserves each predicate branch, including its own inline
+// flags. MatchString and MatchReader share this one registry-owned predicate.
+func failurePattern(patterns []*regexp.Regexp, literals ...string) *regexp.Regexp {
+	branches := make([]string, 0, len(patterns)+len(literals))
+	for _, pattern := range patterns {
+		branches = append(branches, "(?:"+pattern.String()+")")
+	}
+	for _, literal := range literals {
+		branches = append(branches, regexp.QuoteMeta(literal))
+	}
+	return regexp.MustCompile(strings.Join(branches, "|"))
 }

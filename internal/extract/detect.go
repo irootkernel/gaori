@@ -55,7 +55,7 @@ func DetectParsers(raw []byte) ParserDetection {
 			candidate.Failures = len(descriptor.failures(visibleLines, text))
 		}
 		if descriptor.indicates != nil {
-			candidate.Indicates = descriptor.indicates(visibleAll)
+			candidate.Indicates = descriptor.indicates.MatchString(visibleAll)
 		}
 		candidates = append(candidates, candidate)
 	}

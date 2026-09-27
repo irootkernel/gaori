@@ -543,7 +543,7 @@ lifecycle, cancellation, recovery, and detailed evidence inspection remain with
 
 Status: Accepted
 Date: 2026-09-26
-Implementation: Adopted design, not yet implemented; see [LOMEM](../roadmap/README.md#lomem-bounded-memory-log-processing).
+Implementation: In progress; capture and inference helpers are available, while production migration remains pending. See [LOMEM](../roadmap/README.md#lomem-bounded-memory-log-processing).
 
 ### Context
 

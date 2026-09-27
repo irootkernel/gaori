@@ -11,6 +11,8 @@ import (
 )
 
 var (
+	// Keep ansiReader.consumeANSI and its byte-class differential oracle in
+	// sync with this exact language; changing it changes evidence semantics.
 	ansiRE = regexp.MustCompile(`\x1b\[[0-?]*[ -/]*[@-~]`)
 
 	ginkgoPrimaryRE = regexp.MustCompile(`^\s*[•✘]\s+\[(FAILED|FAIL|PANICKED!?|TIMEDOUT|INTERRUPTED)\]`)
@@ -646,5 +648,5 @@ func ParserIndicatesFailure(parser, text string) bool {
 	if !ok || descriptor.indicates == nil {
 		return false
 	}
-	return descriptor.indicates(visibleText(text))
+	return descriptor.indicates.MatchString(visibleText(text))
 }

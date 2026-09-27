@@ -64,7 +64,7 @@ For Gaori maintainers:
 6. For implemented `RSTAT`, read the RQINS [specifications](specs/README.md#rqins-run-status-and-timing-insights), [ADR-0020](architecture-decision-records/README.md#adr-0020-artifact-derived-executable-calculations-power-run-status-insights), and the source-distributed [status skill](../skills/use-gaori-status/SKILL.md).
 7. For implemented `AWAIT-006` or deferred `AWAIT-007`, read the [long-running await guidance](long-running-await-guidance.md).
 8. Track current unreleased changes in the root [changelog](../CHANGELOG.md) and use the matching document under [release notes](releases/) when publishing a release.
-9. For the next adopted `LOMEM` epic, read the [RQMEM requirements](specs/README.md#rqmem-bounded-memory-log-processing), [ADR-0021](architecture-decision-records/README.md#adr-0021-bound-log-memory-without-changing-evidence-semantics), [planned architecture](architecture/README.md#planned-bounded-memory-log-pipeline), and [implementation dossier](todo/TODO-LOMEM.md).
+9. For the active `LOMEM` epic, read the [RQMEM requirements](specs/README.md#rqmem-bounded-memory-log-processing), [ADR-0021](architecture-decision-records/README.md#adr-0021-bound-log-memory-without-changing-evidence-semantics), [planned architecture](architecture/README.md#planned-bounded-memory-log-pipeline), and [implementation dossier](todo/TODO-LOMEM.md).
 
 ## Current delivery state
 
@@ -72,7 +72,7 @@ The standalone v0.1 baseline and session-local STDIO MCP interface are implement
 
 `GEPIC` delivered the code-owned JSON parser catalog and Experimental `dart-test` and `patrol` parsers. `RSTAT` delivers artifact-derived CLI and MCP insights plus the calculation-free `use-gaori-status` skill. `SKMOD` keeps both source skills concise, moves conditional guidance into complete reference trees linked from their entrypoints, and retains terminal `await_run` under host waiting requirements without changing Gaori's runtime surface. `AQADP`, `AWAIT-005`, and `AWAIT-007` remain deferred under their roadmap-owned activation conditions.
 
-The next adopted implementation epic is [LOMEM](roadmap/README.md#lomem-bounded-memory-log-processing): bounded-memory capture, import, inference, and materialization without changing the existing extraction window or public contracts. Its six sequential tasks and RQMEM requirements are not implemented. Current extraction/output bounds must not be read as a whole-pipeline memory guarantee. The [dossier](todo/TODO-LOMEM.md) defines the finite implementation and resource-verification work.
+The active implementation epic is [LOMEM](roadmap/README.md#lomem-bounded-memory-log-processing): bounded-memory capture, import, inference, and materialization without changing the existing extraction window or public contracts. Capture and inference helpers are available; production migration and whole-pipeline RQMEM acceptance remain pending. Current extraction/output bounds must not be read as a whole-pipeline memory guarantee. The [dossier](todo/TODO-LOMEM.md) defines the finite implementation and resource-verification work.
 
 ## Roadmap identity and dossier lifecycle
 
