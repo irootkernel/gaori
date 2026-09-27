@@ -5,9 +5,11 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/irootkernel/gaori/internal/artifacts"
+	"github.com/irootkernel/gaori/internal/extract"
 	"github.com/irootkernel/gaori/internal/model"
 	"github.com/irootkernel/gaori/internal/rawevidence"
 )
@@ -80,4 +82,25 @@ func capturedTestEvidence(t *testing.T, raw []byte) rawevidence.Snapshot {
 		t.Fatal(err)
 	}
 	return snapshot
+}
+
+// Legacy whole-input oracle, restricted to capped test fixtures.
+func inferSummarizeStatus(raw []byte, parsers ...string) (model.RunStatus, int) {
+	text := string(raw)
+	parser := "generic"
+	if len(parsers) > 0 {
+		parser = parsers[0]
+	}
+	if extract.ParserIndicatesFailure(parser, text) {
+		return model.RunStatusFailed, 1
+	}
+	if parser != "generic" {
+		return model.RunStatusPassed, 0
+	}
+	for _, marker := range []string{"Error:", "TypeError:", "ReferenceError:", "AssertionError:", "panic:", "Traceback", "FAIL", "FAILED", "✗"} {
+		if strings.Contains(text, marker) {
+			return model.RunStatusFailed, 1
+		}
+	}
+	return model.RunStatusPassed, 0
 }

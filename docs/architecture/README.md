@@ -1,7 +1,7 @@
 # Gaori Architecture
 
 Status: Complete through `RSTAT`
-Planned work: LOMEM captured execution and materialization use bounded snapshots; summarize migration and resource acceptance remain planned.
+Planned work: LOMEM captured execution, summarize import/inference and materialization use bounded state; final compatibility cleanup and resource acceptance remain planned.
 Scope: Standalone Gaori v0.1 architecture, including session-local STDIO MCP execution, terminal awaiting, artifact-derived run insights, and the adopted LOMEM design
 
 This document defines Gaori's technical and artifact contracts. See the [integration guide](../integration-guide.md) for parent-project ownership, supported capability status, and rollout guidance.
@@ -141,10 +141,36 @@ after raw close and containment validation; there is no post-exit whole-log
 hash or excerpt rescan. Capture state becomes unreachable after finalization;
 finished MCP invocations retain the existing compact result and references.
 
-The summarize importer still reads a whole buffer. Its temporary adapter is
-now confined to `executeSummarize`, pending LOMEM-004. LOMEM-005 removes the
-remaining `RawLogBytes` field and legacy `extract.Process` test adapter.
-Whole-pipeline resource acceptance remains with LOMEM-006.
+The summarize importer opens its source once and copies with a 32 KiB buffer
+through the same capture. Readable pipes and devices retain the previous import
+behavior; only the owned raw destination must be a regular file for replay.
+It opens the destination without truncation and
+compares descriptor identities first. Same-file, hard-link and contained-symlink
+aliases consume the source into an exclusive private scratch file before the
+original destination inode is truncated. Scratch stays under the selected
+artifact boundary with mode `0600`; cleanup removes only its owned entry.
+
+After copying, source/raw/scratch closes and scratch cleanup must succeed before
+bounded full-input inference reopens the owned artifact. Descriptor and rooted
+path identity, size and modification time are checked before and after replay.
+The replay descriptor closes before materialization. Source open/read/close
+errors use config exit `2`; destination, staging, replay and cleanup failures
+use artifact exit `3`, which takes precedence over a simultaneous source error.
+Cleanup failure reports the scratch name and uncertainty about removal. No new
+derived artifacts are published after these failures. Existing fixed-path
+artifacts may remain from an older attempt.
+
+`TestSummarizePreservesSourceAliases` passed before and after the transition.
+`TestSummarizeImportOutputBoundaries`, `TestSummarizeImportFailuresDoNotPublish`
+and `TestSummarizeInferenceUsesOwnedImport` pin containment, failure closure,
+descriptor cleanup and the single source-open contract.
+`TestSummarizeIntegratedInferenceMatchesLegacy` compares all registry labels
+through the importer against capped legacy fixtures, including early/late
+signals, long whitespace, ANSI and split reads. LOMEM-005 removes the unused
+`RawLogBytes` field, legacy `extract.Process` test adapter and now test-only
+`artifacts.WriteRawLog` whole-buffer writer; the old CLI
+inference function now exists only as a capped test oracle. Whole-pipeline
+resource acceptance remains with LOMEM-006.
 
 `TestExecuteReturnsBoundedEvidenceAndFullDigest` checks retained runner state
 and full raw integrity. `TestExecutedWindowArtifactsAcrossRunModes` covers
@@ -168,11 +194,11 @@ remain in force.
 
 Implementation state is owned by [LOMEM](../roadmap/README.md#lomem-bounded-memory-log-processing).
 This section describes the full adopted pipeline design. Captured execution
-is connected; existing-log import and resource acceptance remain pending.
+and existing-log import/inference are connected; final cleanup and resource
+acceptance remain pending.
 [ADR-0021](../architecture-decision-records/README.md#adr-0021-bound-log-memory-without-changing-evidence-semantics)
 and [RQMEM](../specs/README.md#rqmem-bounded-memory-log-processing) own its decision
-and required behavior. Summarize still reads the whole file before
-materialization.
+and required behavior.
 
 ### Shared evidence boundary
 
@@ -196,11 +222,11 @@ Internal copy buffers must have a fixed size; a large caller write must not
 cause retained capacity to grow. Final snapshots may copy the bounded window,
 but must not alias a whole-log backing buffer. Log state is invocation-local and
 must not remain in a finished MCP registry entry after artifact finalization.
-Internal `RunOutput` consumers must stop assuming that
-`RawLogBytes` holds the complete input. No corresponding artifact field is added.
+Internal `RunOutput` consumers use `Evidence`; the unused `RawLogBytes` field
+remains only until LOMEM-005 cleanup. No corresponding artifact field is added.
 
 `internal/rawevidence.Capture` implements the shared accumulator and is wired
-into the runner. It serializes raw writes and accounts only for the
+into the runner and summarize importer. It serializes raw writes and accounts only for the
 accepted prefix. Its fixed ring holds 256 KiB plus one preceding boundary byte;
 snapshots own immutable strings of at most 256 KiB and retain no caller buffer.
 Snapshot construction uses at most two additional window-sized copies plus one
@@ -248,8 +274,8 @@ summarize still exits `0` regardless of its inferred artifact verdict.
 
 #### Selected inference strategy
 
-`extract.SummarizeIndicatesFailure` is the reusable bounded replay helper for
-LOMEM-004. Its production importer wiring remains pending. The parser registry
+`extract.SummarizeIndicatesFailure` is the bounded replay helper used by the
+production summarize importer. The parser registry
 owns one compiled failure predicate per specialized label, shared by the
 existing string evaluator and the reader evaluator. Literal alternatives are
 quoted, and each regex alternative keeps its own inline flags. Generic parser
@@ -271,9 +297,9 @@ state, including arbitrarily long incomplete candidates.
 The helper uses two 32 KiB buffers, scalar cursor/error state, and regex state
 bounded by the compiled predicate. The generic reader needs one 32 KiB buffer.
 Non-EOF read and seek errors remain sticky even when buffered bytes produce an
-early match. LOMEM-004 must finish raw copying, hashing, tail capture and raw
-validation before replay, and apply the existing containment and error classes
-to the owned artifact. No captured execution needs this full-input replay.
+early match. The importer finishes raw copying, hashing, tail capture and raw
+validation before replay, and applies containment and error checks to the owned
+artifact. No captured execution needs this full-input replay.
 
 `TestSummarizePredicateCharacterization` pins the original predicate branches.
 `TestBoundedInferenceDifferential`, `TestANSIReaderMatchesVisibleText`, and

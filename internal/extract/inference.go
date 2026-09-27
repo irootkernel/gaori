@@ -15,8 +15,8 @@ var rawFailurePattern = failurePattern(nil, genericFailureMarkers...)
 // It does not extract spans or determine an executed command's result.
 //
 // Input and ANSI replay use fixed buffers; regexp.MatchReader retains state
-// bounded by the compiled predicate, not the input length. This helper is not
-// connected to production summarize until the LOMEM-004 importer transition.
+// bounded by the compiled predicate, not the input length. Production summarize
+// calls this only after the imported raw artifact is copied, closed and validated.
 func SummarizeIndicatesFailure(parser string, raw io.ReaderAt, size int64) (bool, error) {
 	return matchInference(parser, io.NewSectionReader(raw, 0, size))
 }

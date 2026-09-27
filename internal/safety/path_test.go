@@ -22,6 +22,39 @@ func TestValidateArtifactIdentifier(t *testing.T) {
 	}
 }
 
+func TestRemoveFileWithinDoesNotFollowFinalSymlink(t *testing.T) {
+	t.Parallel()
+	root, outside := t.TempDir(), t.TempDir()
+	original := filepath.Join(outside, "original")
+	if err := os.WriteFile(original, []byte("keep"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	link := filepath.Join(root, "scratch")
+	if err := os.Symlink(original, link); err != nil {
+		t.Fatal(err)
+	}
+	if err := RemoveFileWithin(root, link); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Lstat(link); !os.IsNotExist(err) {
+		t.Fatalf("link remains: %v", err)
+	}
+	if err := RemoveFileWithin(root, original); err == nil {
+		t.Fatal("removed outside evidence")
+	}
+	parent := filepath.Join(root, "escape")
+	if err := os.Symlink(outside, parent); err != nil {
+		t.Fatal(err)
+	}
+	if err := RemoveFileWithin(root, filepath.Join(parent, "original")); err == nil {
+		t.Fatal("removed evidence through an escaping parent")
+	}
+	got, err := os.ReadFile(original)
+	if err != nil || string(got) != "keep" {
+		t.Fatalf("outside original changed: %q, %v", got, err)
+	}
+}
+
 func TestPathOperationsWithinRoot(t *testing.T) {
 	t.Parallel()
 	root := t.TempDir()

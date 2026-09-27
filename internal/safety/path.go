@@ -102,6 +102,16 @@ func ReadDirWithin(rootPath, targetPath string) (entries []os.DirEntry, err erro
 	return dir.ReadDir(-1)
 }
 
+// RemoveFileWithin removes the named entry, never a final symlink's target.
+func RemoveFileWithin(rootPath, targetPath string) (err error) {
+	root, parent, err := openResolvedRoot(rootPath, filepath.Dir(targetPath), false)
+	if err != nil {
+		return err
+	}
+	defer closeWithError(&err, root)
+	return root.Remove(filepath.Join(parent, filepath.Base(targetPath)))
+}
+
 func WalkDirWithin(rootPath, targetPath string, fn fs.WalkDirFunc) (err error) {
 	root, relative, err := openResolvedRoot(rootPath, targetPath, false)
 	if err != nil {

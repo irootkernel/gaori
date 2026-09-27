@@ -490,6 +490,10 @@ func executeRunContext(ctx context.Context, req model.RunRequest, execute comman
 }
 
 func executeSummarize(req model.RunRequest, rawLogArg string) (runResult, int, error) {
+	return executeSummarizeWithIO(req, rawLogArg, fileImportIO())
+}
+
+func executeSummarizeWithIO(req model.RunRequest, rawLogArg string, files importIO) (result runResult, code int, resultErr error) {
 	cfg, _, err := config.Load(req.RepoRoot, req.ConfigPath, true)
 	if err != nil {
 		return runResult{}, 0, err
@@ -498,10 +502,15 @@ func executeSummarize(req model.RunRequest, rawLogArg string) (runResult, int, e
 	if !filepath.IsAbs(resolved) {
 		resolved = filepath.Join(req.RepoRoot, rawLogArg)
 	}
-	raw, err := os.ReadFile(resolved)
+	source, err := files.openSource(resolved)
 	if err != nil {
 		return runResult{}, 0, model.NewGaoriError(model.ExitCodeConfigError, "read raw log", err)
 	}
+	defer func() {
+		if source != nil {
+			resultErr = importError(resultErr, model.ExitCodeConfigError, "close source raw log", source.Close())
+		}
+	}()
 	commandID := summarizeCommandID(resolved)
 	tags := req.Tags
 	if len(tags) == 0 {
@@ -526,17 +535,17 @@ func executeSummarize(req model.RunRequest, rawLogArg string) (runResult, int, e
 	if err != nil {
 		return runResult{}, 0, err
 	}
-	rawSHA, err := artifacts.WriteRawLog(paths, raw)
+	snapshot, failed, err := importRawLog(paths, source, parser, files)
+	source = nil // importRawLog owns and closes the source on every path.
 	if err != nil {
 		return runResult{}, 0, err
 	}
+	rawSHA := "sha256:" + snapshot.SHA256
 	relRaw := artifacts.Rel(req.RepoRoot, paths.RawLogPath)
-	status, exitCode := inferSummarizeStatus(raw, parser)
-	// Temporary summarize-only adapter: LOMEM-004 streams this producer;
-	// LOMEM-005 removes the remaining full-buffer transition.
-	capture := rawevidence.New(io.Discard)
-	_, _ = capture.Write(raw)
-	snapshot, _ := capture.Snapshot()
+	status, exitCode := model.RunStatusPassed, 0
+	if failed {
+		status, exitCode = model.RunStatusFailed, 1
+	}
 	runOutput := model.RunOutput{
 		Metadata: model.RunMetadata{
 			CommandID:   commandID,
@@ -545,11 +554,10 @@ func executeSummarize(req model.RunRequest, rawLogArg string) (runResult, int, e
 			CommandArgv: []string{},
 			ExitCode:    exitCode,
 		},
-		Status:      status,
-		Evidence:    snapshot,
-		RawLogBytes: raw,
+		Status:   status,
+		Evidence: snapshot,
 	}
-	result, err := materializeArtifacts(req, cfg, paths, rawSHA, relRaw, runOutput, applicableRules, materializationSummarizedRaw)
+	result, err = materializeArtifacts(req, cfg, paths, rawSHA, relRaw, runOutput, applicableRules, materializationSummarizedRaw)
 	if err != nil {
 		return runResult{}, 0, err
 	}
@@ -656,26 +664,6 @@ func materializeArtifactsWithExtractor(req model.RunRequest, cfg model.Config, p
 		result.diagnostic = safety.BoundBytes(redactor.Apply(extractionErr.Error()), safety.MaxExcerptBytes)
 	}
 	return result, nil
-}
-
-func inferSummarizeStatus(raw []byte, parsers ...string) (model.RunStatus, int) {
-	text := string(raw)
-	parser := "generic"
-	if len(parsers) > 0 {
-		parser = parsers[0]
-	}
-	if extract.ParserIndicatesFailure(parser, text) {
-		return model.RunStatusFailed, 1
-	}
-	if parser != "generic" {
-		return model.RunStatusPassed, 0
-	}
-	for _, marker := range []string{"Error:", "TypeError:", "ReferenceError:", "AssertionError:", "panic:", "Traceback", "FAIL", "FAILED", "✗"} {
-		if strings.Contains(text, marker) {
-			return model.RunStatusFailed, 1
-		}
-	}
-	return model.RunStatusPassed, 0
 }
 
 func assignExcerptReferences(summary *model.Summary) {

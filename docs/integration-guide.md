@@ -58,14 +58,15 @@ Global options are position-independent within the Gaori-owned argument prefix. 
 
 Captured CLI/MCP execution streams raw bytes to disk while computing the full-log
 digest and retaining at most the final 256 KiB of complete lines for extraction
-and materialization. Summarize still reads the full input. Whole-pipeline resource
-acceptance remains pending; these evidence limits are not a resident-memory
-guarantee.
+and materialization. Summarize copies with a fixed buffer and evaluates its
+full-input heuristic over the owned raw artifact with bounded reader state.
+Whole-pipeline resource acceptance remains pending; these evidence limits are
+not a measured resident-memory guarantee.
 
 [LOMEM](roadmap/README.md#lomem-bounded-memory-log-processing) adopts a bounded-memory
 replacement for capture, import, inference, and materialization. Captured execution
-and materialization are connected; import/inference migration and resource
-verification remain planned. Its [RQMEM contract](specs/README.md#rqmem-bounded-memory-log-processing)
+and summarize import/inference are connected; final compatibility cleanup and
+resource verification remain planned. Its [RQMEM contract](specs/README.md#rqmem-bounded-memory-log-processing)
 preserves commands, config, MCP, artifact schemas, watcher hashes, original raw
 bytes, and the existing tail-selection semantics. No integration migration or
 consumer change is part of that work. Raw disk use remains proportional to log
