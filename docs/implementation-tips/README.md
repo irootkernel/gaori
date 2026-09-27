@@ -61,8 +61,8 @@ Preserve command-result and extractor-status separation throughout.
 
 The adopted [LOMEM roadmap](../roadmap/README.md#lomem-bounded-memory-log-processing)
 and [dossier](../todo/TODO-LOMEM.md) describe the active implementation work.
-Capture and inference helpers are available; production migration remains
-pending. Follow the
+Capture and inference helpers and bounded materialization are available;
+producer migration remains pending. Follow the
 six tasks in order; [RQMEM](../specs/README.md#rqmem-bounded-memory-log-processing)
 and [ADR-0021](../architecture-decision-records/README.md#adr-0021-bound-log-memory-without-changing-evidence-semantics)
 are the behavior and decision authorities. The [planned architecture](../architecture/README.md#planned-bounded-memory-log-pipeline)

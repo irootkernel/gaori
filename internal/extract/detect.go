@@ -50,8 +50,8 @@ func DetectParsers(raw []byte) ParserDetection {
 		descriptor := parserRegistry[label]
 		candidate := ParserCandidate{Parser: label}
 		if descriptor.failures != nil {
-			// Pass the complete text, not the scan window: spans carry absolute
-			// byte offsets into the full log, exactly as process does.
+			// Lines and text must share a coordinate base. Detection uses full
+			// text and absolute offsets; process uses window-local values.
 			candidate.Failures = len(descriptor.failures(visibleLines, text))
 		}
 		if descriptor.indicates != nil {

@@ -10,6 +10,7 @@ import (
 
 	"github.com/irootkernel/gaori/internal/artifacts"
 	"github.com/irootkernel/gaori/internal/model"
+	"github.com/irootkernel/gaori/internal/rawevidence"
 	"github.com/irootkernel/gaori/internal/safety"
 )
 
@@ -152,7 +153,9 @@ func TestMaterializeArtifactsBoundsFilteredAndExpandedWarnings(t *testing.T) {
 				runOutput,
 				nil,
 				materializationExecutedCommand,
-				func(_ []byte, output model.RunOutput, _ []model.Rule) (model.RunOutput, error) { return output, nil },
+				func(_ rawevidence.Snapshot, output model.RunOutput, _ []model.Rule) (model.RunOutput, error) {
+					return output, nil
+				},
 			)
 			if err != nil {
 				t.Fatal(err)

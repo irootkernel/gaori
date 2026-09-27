@@ -14,6 +14,7 @@ import (
 
 	"github.com/irootkernel/gaori/internal/artifacts"
 	"github.com/irootkernel/gaori/internal/model"
+	"github.com/irootkernel/gaori/internal/rawevidence"
 	"github.com/irootkernel/gaori/internal/safety"
 )
 
@@ -67,7 +68,7 @@ func TestMaterializeArtifactsExtractionErrorContract(t *testing.T) {
 				runOutput,
 				nil,
 				tt.source,
-				func(_ []byte, output model.RunOutput, _ []model.Rule) (model.RunOutput, error) {
+				func(_ rawevidence.Snapshot, output model.RunOutput, _ []model.Rule) (model.RunOutput, error) {
 					return output, errors.New("forced extraction failure")
 				},
 			)

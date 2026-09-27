@@ -2,11 +2,13 @@ package extract
 
 import (
 	"fmt"
+	"io"
 	"regexp"
 	"strconv"
 	"strings"
 
 	"github.com/irootkernel/gaori/internal/model"
+	"github.com/irootkernel/gaori/internal/rawevidence"
 	"github.com/irootkernel/gaori/internal/safety"
 )
 
@@ -24,7 +26,18 @@ type lineIndex struct {
 }
 
 func Process(raw []byte, run model.RunOutput, rules []model.Rule) (model.RunOutput, error) {
-	return process(string(raw), run, rules, true)
+	// Transitional full-buffer caller adapter; LOMEM-005 removes this after
+	// both producers migrate. Snapshot text must own only the retained window.
+	capture := rawevidence.New(io.Discard)
+	_, _ = capture.Write(raw)
+	snapshot, _ := capture.Snapshot()
+	return ProcessSnapshot(snapshot, run, rules)
+}
+
+// ProcessSnapshot extracts from one captured window. Parser and rule indexes
+// remain local until the final conversion to original raw-log coordinates.
+func ProcessSnapshot(snapshot rawevidence.Snapshot, run model.RunOutput, rules []model.Rule) (model.RunOutput, error) {
+	return process(snapshot, run, rules, true)
 }
 
 // ProcessRules extracts evidence only from the supplied rules.
@@ -33,12 +46,23 @@ func ProcessRules(raw []byte, run model.RunOutput, rules []model.Rule) (model.Ru
 	if err := safety.EnsureInputWithinLimit(text); err != nil {
 		return run, err
 	}
-	return process(text, run, rules, false)
+	return process(rawevidence.Snapshot{Text: text, TotalBytes: int64(len(text))}, run, rules, false)
 }
 
-func process(text string, run model.RunOutput, rules []model.Rule, parserFallback bool) (model.RunOutput, error) {
-	scan, startByte, lineOffset, truncated := boundedTail(text)
-	lines := buildLineIndex(scan, startByte, lineOffset)
+func process(snapshot rawevidence.Snapshot, run model.RunOutput, rules []model.Rule, parserFallback bool) (model.RunOutput, error) {
+	text := snapshot.Text
+	if err := safety.EnsureInputWithinLimit(text); err != nil {
+		return run, err
+	}
+	maxInt := int(^uint(0) >> 1)
+	if snapshot.ByteOrigin < 0 || snapshot.ByteOrigin > int64(maxInt-len(text)) ||
+		snapshot.LineOffset < 0 || snapshot.LineOffset > int64(maxInt-strings.Count(text, "\n")-1) {
+		return run, model.NewGaoriError(model.ExitCodeParserError, "extract snapshot", fmt.Errorf("raw coordinates exceed supported span range"))
+	}
+	var lines []lineIndex
+	if text != "" || snapshot.ByteOrigin == 0 {
+		lines = buildLineIndex(text, 0, 0)
+	}
 	failures, err := applyRules(lines, text, rules)
 	if err != nil {
 		return run, err
@@ -50,14 +74,24 @@ func process(text string, run model.RunOutput, rules []model.Rule, parserFallbac
 	for i := range failures {
 		failures[i].ID = fmt.Sprintf("F%03d", i+1)
 		failures[i].Kind = "test_failure"
+		failures[i].RawSpan = absoluteSpan(failures[i].RawSpan, snapshot)
 	}
 	for i := range warnings {
 		warnings[i].ID = fmt.Sprintf("W%03d", i+1)
+		warnings[i].RawSpan = absoluteSpan(warnings[i].RawSpan, snapshot)
 	}
 	run.Failures = failures
 	run.Warnings = warnings
-	run.ExtractorStatus = extractorStatus(run.Status, failures, truncated)
+	run.ExtractorStatus = extractorStatus(run.Status, failures, snapshot.Oversized)
 	return run, nil
+}
+
+func absoluteSpan(span model.RawSpan, snapshot rawevidence.Snapshot) model.RawSpan {
+	span.StartByte += int(snapshot.ByteOrigin)
+	span.EndByte += int(snapshot.ByteOrigin)
+	span.StartLine += int(snapshot.LineOffset)
+	span.EndLine += int(snapshot.LineOffset)
+	return span
 }
 
 func boundedTail(text string) (string, int, int, bool) {

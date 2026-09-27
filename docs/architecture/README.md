@@ -1,7 +1,7 @@
 # Gaori Architecture
 
 Status: Complete through `RSTAT`
-Planned work: LOMEM capture and inference helpers exist; migration of the production log pipeline remains planned.
+Planned work: LOMEM capture and inference helpers and bounded materialization exist; producer migration remains planned.
 Scope: Standalone Gaori v0.1 architecture, including session-local STDIO MCP execution, terminal awaiting, artifact-derived run insights, and the adopted LOMEM design
 
 This document defines Gaori's technical and artifact contracts. See the [integration guide](../integration-guide.md) for parent-project ownership, supported capability status, and rollout guidance.
@@ -119,6 +119,35 @@ When `--parser` is omitted, step 2 selects `generic`. A specialized parser does 
 8. Artifact writer writes excerpts only for retained failures, then summary JSON, summary Markdown, and status JSON in the same artifact layout.
 9. CLI exits `0` when summarization succeeds because no test command was executed in this mode.
 ```
+
+## Current materialization boundary
+
+Extraction and excerpt creation share one immutable `rawevidence.Snapshot`.
+`extract.ProcessSnapshot` bounds its input and checks that the raw origins fit
+the existing span representation. Every parser and rule slices window-local
+text; `absoluteSpan` converts only published raw byte/line spans. Source-file
+line numbers and test metadata are unchanged. An empty discarded tail remains
+empty evidence, and oversized input remains degraded even when its tail matches.
+
+Excerpt materialization translates those absolute byte spans against the same
+snapshot and rejects spans outside it. It then applies the existing redaction,
+noise filtering, byte limit and integrity rules after summary prefix selection.
+No excerpt requires loading the raw artifact.
+
+The runner and summarize importer still supply whole buffers. A temporary
+adapter in `materializeArtifactsWithExtractor` captures their bounded window;
+LOMEM-003 and LOMEM-004 replace those producers, and LOMEM-005 removes remaining
+full-buffer adapters. The legacy `extract.Process` adapter remains during this
+transition. This stage does not establish whole-pipeline bounded memory.
+
+`TestProcessWindowOrigins` pins every parser's metadata and absolute spans over
+original, CRLF, ANSI/multibyte and unterminated fixtures; it passed before and
+after the boundary refactor. `TestProcessSnapshotWithoutWholeLog` exercises a
+rule and warning using only bounded text and nonzero origins.
+`TestMaterializeCapturedWindowIntegrity` independently checks original raw bytes,
+raw and summary digests, and retained excerpt bytes/digests for every parser.
+Existing rule-only input limits, redaction/prefix tests and artifact contracts
+remain in force.
 
 ## Planned bounded-memory log pipeline
 

@@ -18,6 +18,7 @@ import (
 	"github.com/irootkernel/gaori/internal/config"
 	"github.com/irootkernel/gaori/internal/extract"
 	"github.com/irootkernel/gaori/internal/model"
+	"github.com/irootkernel/gaori/internal/rawevidence"
 	"github.com/irootkernel/gaori/internal/rules"
 	"github.com/irootkernel/gaori/internal/runner"
 	"github.com/irootkernel/gaori/internal/safety"
@@ -56,7 +57,7 @@ type excerptManifestEntry struct {
 
 type materializationSource uint8
 
-type extractionProcessor func([]byte, model.RunOutput, []model.Rule) (model.RunOutput, error)
+type extractionProcessor func(rawevidence.Snapshot, model.RunOutput, []model.Rule) (model.RunOutput, error)
 type commandExecutor func(context.Context, string, string, []string, string, []string, int, io.Writer) (model.RunOutput, error)
 type executionPhase string
 type executionObserver struct {
@@ -553,11 +554,17 @@ func executeSummarize(req model.RunRequest, rawLogArg string) (runResult, int, e
 }
 
 func materializeArtifacts(req model.RunRequest, cfg model.Config, paths model.ArtifactPaths, rawSHA, relRaw string, runOutput model.RunOutput, applicableRules []model.Rule, source materializationSource) (runResult, error) {
-	return materializeArtifactsWithExtractor(req, cfg, paths, rawSHA, relRaw, runOutput, applicableRules, source, extract.Process)
+	return materializeArtifactsWithExtractor(req, cfg, paths, rawSHA, relRaw, runOutput, applicableRules, source, extract.ProcessSnapshot)
 }
 
 func materializeArtifactsWithExtractor(req model.RunRequest, cfg model.Config, paths model.ArtifactPaths, rawSHA, relRaw string, runOutput model.RunOutput, applicableRules []model.Rule, source materializationSource, extractor extractionProcessor) (runResult, error) {
-	runOutput, extractionErr := extractor(runOutput.RawLogBytes, runOutput, applicableRules)
+	// Temporary producer adapter: LOMEM-003/004 supply captured evidence;
+	// LOMEM-005 removes the full-buffer transition. Both consumers below share
+	// this owned snapshot rather than slicing the original whole-log allocation.
+	capture := rawevidence.New(io.Discard)
+	_, _ = capture.Write(runOutput.RawLogBytes)
+	snapshot, _ := capture.Snapshot()
+	runOutput, extractionErr := extractor(snapshot, runOutput, applicableRules)
 	if extractionErr != nil {
 		runOutput.Failures = nil
 		runOutput.Warnings = nil
@@ -599,7 +606,7 @@ func materializeArtifactsWithExtractor(req model.RunRequest, cfg model.Config, p
 	if err != nil {
 		return runResult{}, err
 	}
-	excerpts, err := writeExcerpts(redactor, cfg.NoiseFilters, paths, runOutput.RawLogBytes, summary.Failures)
+	excerpts, err := writeExcerpts(redactor, cfg.NoiseFilters, paths, snapshot, summary.Failures)
 	if err != nil {
 		return runResult{}, err
 	}
@@ -676,11 +683,13 @@ func assignExcerptReferences(summary *model.Summary) {
 	}
 }
 
-func writeExcerpts(redactor safety.Redactor, noiseFilters []string, paths model.ArtifactPaths, raw []byte, failures []model.Failure) (map[string]excerptManifestEntry, error) {
-	text := string(raw)
+func writeExcerpts(redactor safety.Redactor, noiseFilters []string, paths model.ArtifactPaths, snapshot rawevidence.Snapshot, failures []model.Failure) (map[string]excerptManifestEntry, error) {
 	manifest := make(map[string]excerptManifestEntry, len(failures))
 	for _, failure := range failures {
-		content := excerptContent(text, failure.RawSpan)
+		content, err := excerptContent(snapshot, failure.RawSpan)
+		if err != nil {
+			return nil, err
+		}
 		redacted := safety.FilterNoise(redactor.Apply(content), noiseFilters)
 		redacted = safety.BoundBytes(redacted, safety.MaxExcerptBytes)
 		if err := safety.ValidateArtifactIdentifier("failure id", failure.ID); err != nil {
@@ -742,11 +751,16 @@ func cloneFailures(failures []model.Failure) []model.Failure {
 	return cloned
 }
 
-func excerptContent(text string, span model.RawSpan) string {
-	if span.StartByte < 0 || span.EndByte > len(text) || span.StartByte >= span.EndByte {
-		return ""
+func excerptContent(snapshot rawevidence.Snapshot, span model.RawSpan) (string, error) {
+	if snapshot.ByteOrigin < 0 || int64(span.StartByte) < snapshot.ByteOrigin || span.EndByte < span.StartByte {
+		return "", model.NewGaoriError(model.ExitCodeArtifactError, "write excerpt", fmt.Errorf("raw span is outside captured window"))
 	}
-	return text[span.StartByte:span.EndByte]
+	start := int64(span.StartByte) - snapshot.ByteOrigin
+	end := int64(span.EndByte) - snapshot.ByteOrigin
+	if end > int64(len(snapshot.Text)) {
+		return "", model.NewGaoriError(model.ExitCodeArtifactError, "write excerpt", fmt.Errorf("raw span is outside captured window"))
+	}
+	return snapshot.Text[start:end], nil
 }
 
 func signatureHashes(failures []model.Failure) []string {
