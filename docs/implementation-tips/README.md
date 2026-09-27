@@ -1,7 +1,7 @@
 # Gaori Implementation Note
 
-Status: Current source-tree guidance through `RSTAT`
-Scope: Maintainer guidance for standalone execution, evidence artifacts, parser/rule behavior, operator-directed cleanup, session-local STDIO MCP execution, long-running host waits, and run-status insights
+Status: Current source-tree guidance through `RSTAT`, with a separately labeled LOMEM implementation plan
+Scope: Maintainer guidance for standalone execution, evidence artifacts, parser/rule behavior, operator-directed cleanup, session-local STDIO MCP execution, long-running host waits, run-status insights, and adopted bounded-memory work
 
 This document explains implementation constraints and verification expectations for contributors. It is not the parent-project adoption contract; integrators should start with the [integration guide](../integration-guide.md).
 
@@ -56,6 +56,32 @@ Human output, JSON output, MCP output, and `use-gaori-status` must consume those
 results without performing their own arithmetic. The skill may present two
 independently revision-scoped results side by side but must not derive a delta.
 Preserve command-result and extractor-status separation throughout.
+
+## LOMEM implementation guidance
+
+The adopted [LOMEM roadmap](../roadmap/README.md#lomem-bounded-memory-log-processing)
+and [dossier](../todo/TODO-LOMEM.md) describe work not yet implemented. Follow the
+six tasks in order; [RQMEM](../specs/README.md#rqmem-bounded-memory-log-processing)
+and [ADR-0021](../architecture-decision-records/README.md#adr-0021-bound-log-memory-without-changing-evidence-semantics)
+are the behavior and decision authorities. The [planned architecture](../architecture/README.md#planned-bounded-memory-log-pipeline)
+defines the shared capture/import boundary.
+
+Treat this as an end-to-end raw-evidence refactor, not a `bytes.Buffer`
+replacement. Audit runtime capture, domain values, hashing, summarize inference,
+parser slicing, excerpts, and MCP result retention. Keep the current complete-line
+tail, raw byte origins, result authority, redaction/noise ordering, and derived
+artifact limits. In particular, summarize's whole-input failure inference must
+not become tail-only, and a same-file import must not truncate its own source.
+
+Use small deterministic fixtures and retained-capacity assertions in ordinary
+tests. The dossier separately defines a finite built-binary scaling campaign and
+a proposed root `test-memory` target to be implemented with a corresponding
+`TESTING.md` contract. That target is not currently available. Do not add every
+large probe to each normal gate, confuse child memory or cumulative allocations
+with Gaori live memory, or count missing resource measurements as success.
+At closeout, replace this planning guidance with the verified implementation and
+bounded non-sensitive campaign results; do not retain runtime log paths as
+permanent documentation evidence.
 
 ## Suggested package boundaries
 

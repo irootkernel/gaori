@@ -5,6 +5,13 @@ Scope: Primary executable or documentary evidence for each completed requirement
 
 This matrix records the primary evidence for every requirement marked complete. The audit regression suite fails when a completed requirement is missing, duplicated, has no evidence, cites a `Test*` identifier that does not resolve to a repository Go test, or references an unknown or incomplete requirement. Every row must cite at least one resolvable test unless its requirement ID is an explicit non-test evidence exception in the audit regression test.
 
+The adopted [RQMEM requirements](specs/README.md#rqmem-bounded-memory-log-processing)
+are intentionally absent from the completed-evidence rows below. They remain
+unchecked until their behavior and named tests are delivered through
+[LOMEM](roadmap/README.md#lomem-bounded-memory-log-processing). The
+[LOMEM dossier](todo/TODO-LOMEM.md) owns planned verification; those plans are not
+executable evidence and must not be cited here as passing tests.
+
 | Requirement | Primary evidence |
 |---|---|
 | `GAORI-REQ-RQDEV-001` | `TestBinaryAquariumProducerMakeContext`; `TestBinaryAquariumProducerAdmission`; `TestBinaryAquariumProducerRejectsInvalidCommittedInput`; `TestBinaryAquariumProducerCommittedArtifact` |

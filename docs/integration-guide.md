@@ -54,6 +54,22 @@ The default adoption model is selective: route commands through Gaori when their
 
 Global options are position-independent within the Gaori-owned argument prefix. Integrations may use either `gaori --json run unit` or `gaori run unit --json`; arguments after an ad-hoc `--` boundary are never interpreted as Gaori globals.
 
+## Large-log resource boundary
+
+Current extraction inspects at most the final 256 KiB of complete lines and
+bounds surfaced evidence, but the current runner still retains the complete raw
+stream in memory and summarize still reads the full input. These evidence limits
+are not a whole-pipeline resident-memory guarantee.
+
+[LOMEM](roadmap/README.md#lomem-bounded-memory-log-processing) adopts a bounded-memory
+replacement for capture, import, inference, and materialization. It is planned,
+not current binary support. Its [RQMEM contract](specs/README.md#rqmem-bounded-memory-log-processing)
+preserves commands, config, MCP, artifact schemas, watcher hashes, original raw
+bytes, and the existing tail-selection semantics. No integration migration or
+consumer change is part of that work. Raw disk use remains proportional to log
+size, and the retained tail may still omit early failure spans. Summarize's
+existing full-input failure inference must remain separate from tail extraction.
+
 ## Not provided by Gaori v0.1
 
 These are current boundaries, not hidden partial features:

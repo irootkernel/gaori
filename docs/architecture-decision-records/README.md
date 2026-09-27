@@ -1,7 +1,7 @@
 # Gaori Architecture Decision Records
 
-Status: Accepted baseline decisions through `ADR-0020`
-Scope: Accepted Gaori decisions, including run-status insights
+Status: Accepted decisions through `ADR-0021`; `ADR-0021` implementation is tracked by `LOMEM`
+Scope: Accepted Gaori decisions, including run-status insights and bounded-memory log processing
 
 ## ADR status legend
 
@@ -538,6 +538,68 @@ lifecycle, cancellation, recovery, and detailed evidence inspection remain with
   review, release, workflow, or acceptance authority.
 - The source-distributed skill remains independently installed and is never
   copied or activated by the Gaori binary or its Make targets.
+
+## ADR-0021: Bound log memory without changing evidence semantics
+
+Status: Accepted
+Date: 2026-09-26
+Implementation: Adopted design, not yet implemented; see [LOMEM](../roadmap/README.md#lomem-bounded-memory-log-processing).
+
+### Context
+
+The current runner writes raw output to disk and also retains the entire stream
+in `streamCapture.b`. `RunOutput.RawLogBytes` then feeds checksum, extraction,
+and excerpt materialization. Existing-log summarize reads the whole input with
+`os.ReadFile`. Restricting regex extraction to a 256 KiB tail therefore does not
+bound these paths' memory use. In addition, summarize's failure heuristic
+currently examines the full log even when failure extraction uses only its tail.
+A tail-only rewrite of that heuristic would change inferred results.
+
+### Decision
+
+Implement one bounded raw-evidence path for captured executions and summarize.
+Keep the full original log on disk, compute its SHA-256 incrementally, and retain
+only a fixed-size tail plus byte/newline origins and bounded working state.
+Adapt extraction and excerpts to those origins instead of carrying the full log
+through the domain and CLI layers. Derive digest and retained bytes from the
+same accepted stream rather than separately reading an unstable source.
+
+Preserve the existing complete-line 256 KiB extraction window, parser/rule
+semantics, absolute spans, bounded redacted artifacts, schemas, and watcher
+contract. Preserve summarize's full-input failure predicates separately through
+bounded-memory processing, including generic raw-marker matching and each
+registry label's current ANSI and line-boundary semantics. Predicate evaluation
+may use bounded replay of the completed imported artifact when a single-pass
+implementation would be more complex; it must not use a whole-file buffer or
+silently narrow the inspected range. Captured executions need no full-log
+post-exit replay because their command result is authoritative.
+
+Preserve supported summarize source/destination aliases by copying through
+contained private disk staging when needed before destructive access to the
+existing destination. This is temporary I/O state, not a new artifact schema or
+job ledger. Keep ownership and cleanup bounded to the current operation.
+
+The [RQMEM specifications](../specs/README.md#rqmem-bounded-memory-log-processing)
+own the required behavior; the [architecture](../architecture/README.md#planned-bounded-memory-log-pipeline)
+owns the component boundary. LOMEM implements only memory-bounded processing
+under current evidence semantics. Finding earlier failure spans, expanding the
+scan window, adding a full-log extraction mode, or improving comparison,
+telemetry, and MCP discovery requires separate adoption.
+
+### Alternatives not selected
+
+- Increasing the 256 KiB extraction limit leaves full-log retention in place and changes evidence selection.
+- Keeping only a tail everywhere changes summarize's existing full-input failure verdict.
+- Whole-file memory mapping moves the storage mechanism without establishing a bounded resident-memory contract.
+- Adding a daemon, persistent index, automatic retry, or admission scheduler does not address the bounded standalone pipeline.
+
+### Consequences
+
+- Per-invocation log-processing memory depends on fixed evidence limits, not log length; concurrent invocations still require separate bounded state.
+- Raw disk usage and copy time remain proportional to input size. Alias staging can temporarily require another raw-sized disk copy.
+- The tail may still omit an early failure span, and oversized evidence remains degraded even when a useful match is retained.
+- Normal execution can finalize from captured digest/window metadata without an additional full-log scan, preserving the existing MCP shutdown-drain boundary.
+- Compatibility and memory scaling require executable evidence before implementation closeout. Accepting this ADR is not a claim that the current binary meets RQMEM.
 
 ## Future ADR candidates
 

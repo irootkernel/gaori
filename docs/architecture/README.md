@@ -1,7 +1,8 @@
 # Gaori Architecture
 
 Status: Complete through `RSTAT`
-Scope: Standalone Gaori v0.1 architecture, including session-local STDIO MCP execution, terminal awaiting, and artifact-derived run insights
+Planned work: The separately labeled LOMEM bounded-memory section is adopted but not implemented.
+Scope: Standalone Gaori v0.1 architecture, including session-local STDIO MCP execution, terminal awaiting, artifact-derived run insights, and the adopted LOMEM design
 
 This document defines Gaori's technical and artifact contracts. See the [integration guide](../integration-guide.md) for parent-project ownership, supported capability status, and rollout guidance.
 
@@ -118,6 +119,93 @@ When `--parser` is omitted, step 2 selects `generic`. A specialized parser does 
 8. Artifact writer writes excerpts only for retained failures, then summary JSON, summary Markdown, and status JSON in the same artifact layout.
 9. CLI exits `0` when summarization succeeds because no test command was executed in this mode.
 ```
+
+## Planned bounded-memory log pipeline
+
+Implementation state is owned by [LOMEM](../roadmap/README.md#lomem-bounded-memory-log-processing).
+This section describes the adopted design, not the current pipeline above.
+[ADR-0021](../architecture-decision-records/README.md#adr-0021-bound-log-memory-without-changing-evidence-semantics)
+and [RQMEM](../specs/README.md#rqmem-bounded-memory-log-processing) own its decision
+and required behavior. The current runner still retains all raw bytes, and
+summarize still reads the whole file before materialization.
+
+### Shared evidence boundary
+
+Use one small internal raw-evidence component shared by the runner and summarize
+importer. Its concrete package/type names are implementation choices, not public
+APIs. Keep process control in `internal/runner`, rooted file ownership in
+`internal/artifacts`/`internal/safety`, parser predicates in the shared registry,
+and orchestration of these components in `internal/cli`. Do not introduce a
+storage-plugin interface or a new persistent service.
+
+The bounded evidence value carries only:
+
+- Full accepted byte count and streaming SHA-256.
+- Retained original bytes, limited to the 256 KiB window, with sufficient bounded boundary state to discard a partial leading line.
+- The absolute starting byte and preceding newline count for that window.
+- Whether the original input exceeded the extraction bound and any capture error needed by the existing error path.
+
+A producer updates hash, counters, and tail for the same successfully written
+prefix while preserving the runner's serialization of stdout/stderr writes.
+Internal copy buffers must have a fixed size; a large caller write must not
+cause retained capacity to grow. Final snapshots may copy the bounded window,
+but must not alias a whole-log backing buffer. Log state is invocation-local and
+must not remain in a finished MCP registry entry after artifact finalization.
+Internal `RunOutput` consumers must stop assuming that
+`RawLogBytes` holds the complete input. No corresponding artifact field is added.
+
+### Execution path
+
+1. Keep config/rule validation, artifact-path preparation, and raw-log open before child execution.
+2. Stream child output into the raw artifact and the bounded evidence accumulator; retain the existing process, timeout, signal, and start-gate ownership.
+3. On successful raw close and containment validation, pass the immutable digest/window metadata into materialization. Do not scan the whole file again after process exit.
+4. Parse only the retained complete-line window. Parser slicing must use window-local coordinates; translate selected spans to absolute raw coordinates at one defined boundary.
+5. Apply the existing redaction, noise filtering, retained-prefix selection, and output bounds. Resolve each retained excerpt against the same bounded bytes with checked origin conversion.
+6. Publish the existing excerpts, summaries, and status in their existing order. The terminal MCP snapshot retains the usual compact result, not a raw capture buffer.
+
+### Existing-log path
+
+Open the supported input once and stream its original bytes into the preserved
+raw artifact, updating the same digest/window state. Before a destination open
+could truncate the source, compare file identity through the existing path
+boundaries. For same-file, hard-link, and allowed symlink aliases, first consume
+the source into private staging under the selected artifact boundary, then use
+the existing destination-writing semantics. Close descriptors and remove only
+owned scratch files on ordinary exit paths. A cleanup failure is reported; an
+unavoidable scratch remnant is not a completed run and must never trigger broad
+cleanup or deletion of the original source.
+
+Evaluate the existing summarize failure predicate over the entire imported
+input without retaining it. Keep this logical full-input boolean analysis
+separate from bounded failure-span extraction. Parser-owned incremental
+predicates or bounded reader-based replay over the owned completed artifact are
+acceptable; fixed overlapping chunks are not a proof of equivalence for
+arbitrarily long lines, whitespace, ANSI sequences, or anchored regexes. Do not
+add a second label registry. Verify generic raw-marker behavior separately from
+specialized visible-text predicates. Inference does not create execution argv,
+Git provenance, or real command timings.
+
+If replay is used, read the owned copied artifact rather than reopening the
+caller-named source; preserve descriptor/path integrity checks and fail closed
+on detected evidence changes. Retain the applicable read/copy/close error
+classes. No new derived completion is published after failed raw import. The
+same bounded materializer then writes the existing artifacts, and successful
+summarize still exits `0` regardless of its inferred artifact verdict.
+
+### Resource and failure boundaries
+
+Raw disk use remains linear in input size; alias staging can temporarily double
+raw storage. A fixed-size window may be copied or indexed several times, but
+neither total log length nor a single long line may enlarge the live raw input,
+visible-text transformation, line-index, or regex working input. Full-input
+heuristic evaluation must use bounded state rather than assembling such input.
+
+Keep the existing behavior for short writes, raw close errors, extraction
+internal errors, failed artifact materialization, stale fixed `--run-id` files,
+redacted diagnostics, concurrent runs, waiter cancellation, and the shared
+three-second MCP artifact-drain deadline. Streaming capture does not authorize
+changes to filesystem race guarantees or to the accepted check-then-open
+limitation documented in the implementation guidance.
 
 ## Artifact layout
 

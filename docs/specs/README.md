@@ -1,7 +1,7 @@
 # Gaori Requirement Specs
 
-Status: Current source-tree requirements through `RSTAT` and the Aquarium development producer
-Scope: Gaori v0.1 standalone baseline, post-baseline hardening, portable project configuration, CLI usability, verified rule proposals, operator-directed cleanup, session-local STDIO MCP execution with terminal awaiting, long-running await guidance, the completed parser catalog plus Dart/Patrol extraction contract, and implemented run-status and timing insights
+Status: Current source-tree requirements through `RSTAT` and the Aquarium development producer; adopted `RQMEM` requirements are not yet implemented
+Scope: Gaori v0.1 standalone baseline, post-baseline hardening, portable project configuration, CLI usability, verified rule proposals, operator-directed cleanup, session-local STDIO MCP execution with terminal awaiting, long-running await guidance, the completed parser catalog plus Dart/Patrol extraction contract, implemented run-status and timing insights, and adopted bounded-memory log processing
 Source context: deterministic Gaori v0.1 CLI, evidence, and attached MCP behavior.
 
 ## Requirement status legend
@@ -112,6 +112,65 @@ Implementation note: the original v0.1 roadmap and the recorded `RQHAR` hardenin
 - [x] `GAORI-REQ-RQSEC-005` Avoid broad fallback behavior; a specialized-parser miss reports `no_match` after a pass and `degraded` after a non-pass result, while an accepted span with missing key metadata remains `partial`.
 
 - [x] `GAORI-REQ-RQSEC-006` Provide opt-in redaction effectiveness measurement through `gaori config check --sample <raw-log>`, reporting per configured pattern, identified by its position in configured order rather than by name, the match count and replaced byte count observed during one ordered redaction pass plus the sample size and totals, never passing any surfaced value through the sampled patterns and never emitting matched text, surrounding lines, pattern names, regexes, or replacements, remaining read-only with no artifacts, and failing closed with config exit code `2` for a missing, unreadable, non-regular, or larger-than-256-KiB sample. Omitting `--sample` leaves the existing preflight output unchanged.
+
+## RQMEM: Bounded-memory log processing
+
+These requirements are adopted for `LOMEM` and are not current executable
+behavior. The [roadmap](../roadmap/README.md#lomem-bounded-memory-log-processing)
+alone owns epic/task identity, ordering, dependencies, and status. The
+[dossier](../todo/TODO-LOMEM.md) owns detailed implementation guidance,
+cross-task constraints, and verification and acceptance instructions.
+[ADR-0021](../architecture-decision-records/README.md#adr-0021-bound-log-memory-without-changing-evidence-semantics)
+records the accepted design. Existing checked requirements stay complete for
+their original scope: a bounded extraction input does not prove bounded memory
+throughout capture, import, inference, or artifact materialization.
+
+### Resource and compatibility contract
+
+For a fixed parser, configuration, and number of concurrent invocations, Gaori's
+live log-processing memory must not grow with total raw-log length `N`. The raw
+artifact still consumes `O(N)` disk space. Each invocation retains a window of at
+most `W = 256 KiB`, bounded I/O scratch, fixed-size digest/counter state, and
+parser/derived evidence bounded by that window and existing output limits.
+Temporary copies must also be bounded and must not retain a larger backing
+allocation. With `K` concurrent invocations, per-invocation memory may scale with
+`K`, not with the accumulated bytes of their logs. This is not a limit on child
+process memory, kernel page cache, disk retention, or MCP concurrency.
+
+The extraction window is exactly the existing complete-line tail: for `N > W`,
+start from the last `W` raw bytes and discard only a partial leading line. Preserve
+a final unterminated line when its beginning is retained. If no leading line
+boundary can be recovered, the scan may be empty. Preserve absolute byte and
+line coordinates into the complete, unmodified raw artifact, including CRLF,
+ANSI sequences, and multibyte text. Every oversized input remains `degraded`.
+No earlier failure extraction, larger regex limit, full-log extraction mode, or
+new CLI/config/MCP surface is included in this epic.
+
+`summarize` status inference is a separate compatibility obligation from failure
+extraction. Its existing parser-specific failure predicates inspect the whole
+input, and the generic path additionally searches its raw literal markers.
+Preserve those results with bounded-memory processing of the complete input,
+including a failure signal before the retained tail. Do not substitute tail-only
+inference, infer status from retained failure count, change ANSI handling, or
+apply each predicate independently to arbitrary chunks as though chunk edges
+were file or line boundaries. Preserve the current ANSI-removal predicate's
+behavior for complete, incomplete, and malformed escape sequences, including
+EOF and real line boundaries; generic terminal sanitization is not an equivalent
+contract. Boolean inference may stop once its result is established, but raw
+copying, accepted-prefix hashing, and tail capture must still consume the complete
+supported input or report the applicable I/O error. No inference grants an
+executed-command result to `summarize`.
+
+- [ ] `GAORI-REQ-RQMEM-001` Bound live raw-log processing memory independently of total input length for configured and ad-hoc CLI runs, both MCP start paths, and existing-log summarization, including collection, hashing, inference, extraction, and excerpt materialization. Do not reject an otherwise supported regular-file log solely for exceeding the extraction window, buffer the complete input, build a whole-file line index, or replace heap buffering with whole-file memory mapping.
+- [ ] `GAORI-REQ-RQMEM-002` Derive the full raw SHA-256, total byte count, newline accounting, and retained tail from the same successfully accepted raw-byte stream. Preserve raw bytes exactly, hash/count only the prefix actually accepted by the destination writer, detect short writes, and publish no successful capture after an I/O failure. Bound retention even when a caller supplies a write larger than the window; chunk boundaries must not change the result.
+- [ ] `GAORI-REQ-RQMEM-003` Preserve the existing extraction window, parser and rule selection, local failure IDs, failure/warning ordering, metadata, and absolute raw spans using bounded input plus explicit origin metadata. Oversized input must remain degraded, including empty-tail and useful-match cases. Keep the 256 KiB rule-fixture and config/rule input rejection contracts unchanged.
+- [ ] `GAORI-REQ-RQMEM-004` Materialize retained excerpts from the bounded captured evidence without reconstructing the whole raw log. Preserve redaction-before-noise-filtering behavior, excerpt integrity, literal references, 16 KiB excerpt limits, 50-record limits, 64 KiB rendered-summary limits, and post-redaction watcher/signature hashes. Apply local-to-absolute coordinate conversion exactly once and reject inconsistent spans rather than silently clamping them into unrelated bytes.
+- [ ] `GAORI-REQ-RQMEM-005` Stream the supported existing-log input into its preserved raw artifact with bounded memory and retain full-input summarize heuristic semantics for every registry label and the generic raw-marker path. Handle signals split across reads, long or unterminated lines, CRLF, and ANSI/multibyte boundaries without an input-length-dependent buffer. Preserve successful summarize process exit `0`, inferred artifact status/exit, absent execution provenance, and the existing internal-error distinction.
+- [ ] `GAORI-REQ-RQMEM-006` Preserve supported source/destination alias behavior during summarize without truncating the source before it is consumed. Identify same-file cases before destructive destination access, including hard-link and permitted symlink aliases, and use bounded-memory, contained private disk staging when necessary. Scratch raw bytes must not be exposed as completed evidence or weaken containment. Remove owned staging on ordinary completion/failure, report cleanup errors or leftovers explicitly, and never delete unrelated or original files as a recovery shortcut. Detected read/copy/close/validation errors must not publish a new completed summary/status set.
+- [ ] `GAORI-REQ-RQMEM-007` Preserve configured and ad-hoc argv, Git provenance, timeouts, signal forwarding, process-group cleanup, MCP phase/revision/await/cancel behavior, and raw-stage failure precedence. A raw open/write/close/validation failure keeps artifact exit `3` and creates no new derived evidence; failed imports retain their applicable config/artifact error class. Older fixed-path artifacts are never evidence that the current attempt completed. Do not add a ledger, retry, new timeout, or finalization work proportional to the full log after a captured run finishes.
+- [ ] `GAORI-REQ-RQMEM-008` Keep public CLI and MCP inputs/outputs, config versions, artifact layouts and schemas, watcher hash inputs, parser catalog/support tiers, and completed-artifact consumers compatible. No installed-state migration, artifact backfill, consumer change, release, or installation is required by this implementation work.
+- [ ] `GAORI-REQ-RQMEM-009` Demonstrate bounded retention with deterministic component/integration regressions and isolated built-binary memory measurements for execution and summarize. Include an explicitly selected regex-based specialized parser with no failure signal, a first signal near EOF, long whitespace, and long complete, incomplete, and malformed ANSI inputs; generic or early-match measurements alone are insufficient. Record parser, scenario, expected and observed verdict, input sizes, generator shape, platform/toolchain, Gaori-only peak memory, timing, disk use, and exact candidate identity. Execute the dossier's finite scaling campaign in addition to the ordinary repository gate and apply its thresholds per workload without pooling parser/scenario results; total allocations or child-process memory are not substitutes for Gaori live-memory evidence.
+- [ ] `GAORI-REQ-RQMEM-010` Map each newly completed requirement to implemented executable tests, preserve existing regression evidence, and promote current behavior to architecture and operator/integration guidance only after verification. Keep planned requirements out of the completed requirements-to-test matrix until their tests exist and pass; close the dossier under the established roadmap lifecycle without claiming release or runtime activation.
 
 ## RQWAT: Watcher status compatibility
 
