@@ -3,7 +3,7 @@
 Roadmap epic: [LOMEM](../roadmap/README.md#lomem-bounded-memory-log-processing)
 Requirements: [RQMEM](../specs/README.md#rqmem-bounded-memory-log-processing)
 Decision: [ADR-0021](../architecture-decision-records/README.md#adr-0021-bound-log-memory-without-changing-evidence-semantics)
-Architecture: [Planned bounded-memory log pipeline](../architecture/README.md#planned-bounded-memory-log-pipeline)
+Architecture: [Bounded-memory log pipeline](../architecture/README.md#bounded-memory-log-pipeline)
 
 The roadmap alone owns epic/task identity, ordering, dependencies, and status.
 This temporary dossier owns detailed implementation guidance, cross-task

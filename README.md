@@ -439,6 +439,7 @@ Add `--json` when a script needs compact command output. Global options may appe
 ## Safe defaults
 
 - The executed command's exit code is authoritative.
+- Capture, summarize inference, extraction and excerpts use bounded log-processing state while raw logs remain complete on disk; [resource measurements](docs/implementation-tips/README.md#bounded-memory-resource-campaign) cover macOS arm64. Raw disk use still grows with the log.
 - Summaries and excerpts are bounded; raw logs are preserved unchanged. Summaries retain at most 50 failures and 50 warnings, report truncation explicitly, and remain within their byte budget. Logs larger than 256 KiB use degraded extraction from a bounded complete-line tail instead of becoming internal errors.
 - Config YAML, stored and imported rule YAML, and legacy `rules propose --raw-log` inputs are limited to 256 KiB and fail with config exit code `2` when oversized. Summary-based proposals may verify a larger raw log with one streaming checksum pass that also captures the selected 256 KiB failure span and validates its line boundaries from that same stream.
 - Redaction applies to surfaced summaries, excerpts, status, and console metadata, not to raw logs or literal artifact paths. Verify coverage in advance with `gaori config check --sample <raw-log>`, which reports counts only and fails closed above 256 KiB.

@@ -5,15 +5,21 @@ Scope: Primary executable or documentary evidence for each completed requirement
 
 This matrix records the primary evidence for every requirement marked complete. The audit regression suite fails when a completed requirement is missing, duplicated, has no evidence, cites a `Test*` identifier that does not resolve to a repository Go test, or references an unknown or incomplete requirement. Every row must cite at least one resolvable test unless its requirement ID is an explicit non-test evidence exception in the audit regression test.
 
-The adopted [RQMEM requirements](specs/README.md#rqmem-bounded-memory-log-processing)
-are intentionally absent from the completed-evidence rows below. They remain
-unchecked until their behavior and named tests are delivered through
-[LOMEM](roadmap/README.md#lomem-bounded-memory-log-processing). The
-[LOMEM dossier](todo/TODO-LOMEM.md) owns planned verification; those plans are not
-executable evidence and must not be cited here as passing tests.
+RQMEM-001 through RQMEM-009 have executable evidence below. Resource scaling is
+separately exercised by `TestBinaryMemoryCampaign`; it is not part of ordinary
+`make test`. RQMEM-010 remains unchecked until the validated dossier closeout.
 
 | Requirement | Primary evidence |
 |---|---|
+| `GAORI-REQ-RQMEM-001` | `TestCaptureBoundedRetentionAndSnapshotOwnership`; `TestBoundedInferenceGrowth`; `TestExecutedWindowArtifactsAcrossRunModes`; `TestConcurrentMCPStartsIsolateCapturedEvidence`; `TestBinaryMemoryCampaign` |
+| `GAORI-REQ-RQMEM-002` | `TestCaptureAcceptedPrefix`; `TestCaptureKeepsFirstError`; `TestCaptureMatchesBoundedTail`; `TestExecuteReturnsBoundedEvidenceAndFullDigest` |
+| `GAORI-REQ-RQMEM-003` | `TestProcessWindowOrigins`; `TestProcessSnapshotWithoutWholeLog`; `TestProcessSnapshotRejectsUnboundedOrUnrepresentableInput`; `TestProcessRulesRejectsOversizedInput` |
+| `GAORI-REQ-RQMEM-004` | `TestExcerptCapturedWindowBounds`; `TestMaterializeCapturedWindowIntegrity`; `TestCapturedWindowExcerptRedactionBeforeNoise` |
+| `GAORI-REQ-RQMEM-005` | `TestSummarizePredicateCharacterization`; `TestBoundedInferenceDifferential`; `TestANSIReaderMatchesVisibleText`; `TestANSIReplayReadVolume`; `TestSummarizeIntegratedInferenceMatchesLegacy`; `TestSummarizeInferenceUsesOwnedImport` |
+| `GAORI-REQ-RQMEM-006` | `TestSummarizePreservesSourceAliases`; `TestSummarizeImportOutputBoundaries`; `TestSummarizeImportFailuresDoNotPublish`; `TestSummarizeImportArtifactFailurePrecedesSourceFailures` |
+| `GAORI-REQ-RQMEM-007` | `TestExecutionRawCloseFailurePrecedesRunError`; `TestRawStageFailurePreservesPriorDerivedArtifacts`; `TestLaterArtifactFailurePreservesPartialMaterialization`; `TestBinaryPreservesInterruptedEvidence`; `TestBinaryConcurrentBoundedMCPStarts` |
+| `GAORI-REQ-RQMEM-008` | `TestBinaryBoundedPipelineLayoutsAndConsumers`; `TestBinaryConcurrentBoundedMCPStarts`; `TestMaterializeCapturedWindowIntegrity` |
+| `GAORI-REQ-RQMEM-009` | `TestCaptureBoundedRetentionAndSnapshotOwnership`; `TestBoundedInferenceGrowth`; `TestBinaryMemoryCampaign` |
 | `GAORI-REQ-RQDEV-001` | `TestBinaryAquariumProducerMakeContext`; `TestBinaryAquariumProducerAdmission`; `TestBinaryAquariumProducerRejectsInvalidCommittedInput`; `TestBinaryAquariumProducerCommittedArtifact` |
 | `GAORI-REQ-RQDEV-002` | `TestBinaryAquariumProducerAdmission`; `TestBinaryAquariumProducerOutputContainment`; `TestBinaryAquariumProducerRejectsInvalidCommittedInput`; `TestBinaryAquariumProducerRevalidatesSource`; `TestBinaryAquariumProducerCommittedArtifact` |
 | `GAORI-REQ-RQDEV-003` | `TestVersionPrefixesAndJSONFields`; `TestVersionJSONOutput`; `TestBinaryAquariumProducerCommittedArtifact`; `TestDocumentedCLIWorkflowAgainstFreshFixture` |

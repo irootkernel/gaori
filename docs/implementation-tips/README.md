@@ -1,6 +1,6 @@
 # Gaori Implementation Note
 
-Status: Current source-tree guidance through `RSTAT`, with a separately labeled LOMEM implementation plan
+Status: Current source-tree guidance through `RSTAT` and the implemented LOMEM pipeline; final epic validation pending
 Scope: Maintainer guidance for standalone execution, evidence artifacts, parser/rule behavior, operator-directed cleanup, session-local STDIO MCP execution, long-running host waits, run-status insights, and adopted bounded-memory work
 
 This document explains implementation constraints and verification expectations for contributors. It is not the parent-project adoption contract; integrators should start with the [integration guide](../integration-guide.md).
@@ -59,31 +59,175 @@ Preserve command-result and extractor-status separation throughout.
 
 ## LOMEM implementation guidance
 
-The adopted [LOMEM roadmap](../roadmap/README.md#lomem-bounded-memory-log-processing)
-and [dossier](../todo/TODO-LOMEM.md) describe the active implementation work.
-Captured CLI/MCP execution, summarize import/inference and materialization use
-bounded state; resource acceptance remains pending. Follow the
-six tasks in order; [RQMEM](../specs/README.md#rqmem-bounded-memory-log-processing)
-and [ADR-0021](../architecture-decision-records/README.md#adr-0021-bound-log-memory-without-changing-evidence-semantics)
-are the behavior and decision authorities. The [planned architecture](../architecture/README.md#planned-bounded-memory-log-pipeline)
-defines the shared capture/import boundary.
+The [bounded pipeline architecture](../architecture/README.md#bounded-memory-log-pipeline)
+owns capture, import, inference and materialization boundaries;
+[RQMEM](../specs/README.md#rqmem-bounded-memory-log-processing) and
+[ADR-0021](../architecture-decision-records/README.md#adr-0021-bound-log-memory-without-changing-evidence-semantics)
+own behavior and design. The [roadmap](../roadmap/README.md#lomem-bounded-memory-log-processing)
+tracks final epic validation; the temporary [dossier](../todo/TODO-LOMEM.md) remains
+until validated closeout. No transitional full-log adapter remains.
 
-Treat this as an end-to-end raw-evidence refactor, not a `bytes.Buffer`
-replacement. Audit runtime capture, domain values, hashing, summarize inference,
-parser slicing, excerpts, and MCP result retention. Keep the current complete-line
-tail, raw byte origins, result authority, redaction/noise ordering, and derived
-artifact limits. In particular, summarize's whole-input failure inference must
-not become tail-only, and a same-file import must not truncate its own source.
+Keep the 256 KiB complete-line tail, absolute raw origins, command-exit authority,
+redaction-before-noise ordering and derived output limits. Summarize evaluates
+its original full-input predicates through bounded replay; its status does not
+depend on the retained failure count. Same-file imports consume the original
+before truncating the destination, using contained private staging when needed.
+A raw-stage failure publishes no new derived evidence; older fixed-path files
+may remain and do not prove the failed attempt completed.
 
-Use small deterministic fixtures and retained-capacity assertions in ordinary
-tests. The dossier separately defines a finite built-binary scaling campaign and
-a proposed root `test-memory` target to be implemented with a corresponding
-`TESTING.md` contract. That target is not currently available. Do not add every
-large probe to each normal gate, confuse child memory or cumulative allocations
-with Gaori live memory, or count missing resource measurements as success.
-At closeout, replace this planning guidance with the verified implementation and
-bounded non-sensitive campaign results; do not retain runtime log paths as
-permanent documentation evidence.
+Ordinary tests use small deterministic fixtures and retained-state assertions.
+`make test-memory` separately runs the finite built-binary campaign under
+[`TESTING.md`](../../TESTING.md#separate-memory-campaign). Never infer bounded
+memory from cumulative allocations, child-process memory or a generic early
+match alone. Keep synthetic raw logs, temporary directories and runtime evidence
+local; the bounded results below are the durable observations.
+
+## Bounded-memory resource campaign
+
+The first complete campaign on 2026-09-27 passed: `make test-memory` exited `0`
+in 163.126 seconds through the selected Gaori wrapper (`passed`, `no_match`, zero
+failures). All 72 fresh-process trials and the separate concurrent MCP session
+passed; no repeat campaign, skipped probe or threshold waiver was used. Small
+pre-campaign smoke probes established instrumentation and result decoding; they
+are not included in the scaling series.
+
+The host was macOS 27.0 arm64, Go 1.27.1 (`darwin/arm64`), Python 3.14.7 and a
+production-equivalent Gaori v0.1.17 binary. Linux resource behavior is unmeasured.
+The metric is `proc_pid_rusage` v4 `ri_lifetime_max_phys_footprint` for Gaori's own
+PID, sampled after `kqueue NOTE_EXIT` and before `waitpid`. Darwin's process-local
+physical-footprint high-water value covers the entire invocation and excludes
+producer/harness processes; it is not aggregate child RSS or total allocations.
+On the measured host, a separate C probe compiled against the installed macOS SDK
+confirmed `sizeof(struct rusage_info_v4) = 296` and byte offsets 72 for
+`ri_phys_footprint`, 240 for `ri_lifetime_max_phys_footprint`, and 280 for
+`ri_interval_max_phys_footprint`. The 16-byte UUID followed by 35 uint64 fields
+therefore places the lifetime peak at `values[28]`, as used by the harness.
+Peak values below use MiB = 1,048,576 bytes. The 600-second per-invocation watchdog
+was not reached. This is a scaling regression tolerance, not a universal maximum
+RSS guarantee or a limit on child memory, kernel cache or concurrency count.
+
+### Measured candidate
+
+- Source commit: `8820faa687f63af9403c9d9e0dc0d5f0f8d0ba09`.
+- Source manifest: `sha256:0c625e22a358e2eb80da409c54e60e17a6d222877511abf666e1692a716ed45d`.
+- Tracked HEAD-to-worktree diff: `sha256:4e125d6f91542854e4ce966ff0eb574022f6f9a2ee421e1f544253e7336c495c`.
+- Python harness: `sha256:4c09abb393b8279dd3cfbc1e85d31bfc221bf7408524a38fe6310111d8b84881`.
+- Measured binary: `sha256:91261be0881d7167f1550c5f0806f3006c7b38271416ae36a078653d846f622f`.
+- Exact staged tree recorded by the coordinator immediately before invocation:
+  `4d83d482b6180ed051cf72368a38081e23ac55d6` (separate from harness output).
+- Dirty scope: `Makefile`, `TESTING.md`, `docs/roadmap/README.md`,
+  `e2e/memory/memory_e2e_test.go`, and `scripts/test-memory`; all were staged.
+- The harness checks that its source manifest remains unchanged during the
+  campaign. It hashes sorted Git-listed tracked and non-ignored untracked paths,
+  modes and file digests, with explicit symlink/absent markers.
+- Subsequent canonical documentation and lifecycle changes record these results;
+  they are outside that measured tree and do not change production code or the
+  measured harness. Final task/epic commit identities are supplied by Git history.
+
+### Workloads and outcomes
+
+Every input contains real generated bytes, with no sparse-file shortcut.
+Generation, expected hashing and raw verification use 32 KiB chunks. Each trial
+uses a fresh temporary repository, fixed minimal config, explicit parser and no
+optional rules, noise filters or redaction patterns. Each owned temporary tree
+is removed after validation. E1 is `run unit` with a real Python producer exiting
+`1`; imports use `summarize --parser <label> input.log` and exit `0`. The MCP probe
+uses one configured and one ad-hoc start in the same fresh attached session.
+
+| Scenario | Parser | Exact generator shape at each total size | Expected and observed artifact verdict | Extracted failures |
+|---|---|---|---|---|
+| E1 | generic | Neutral short LF-terminated lines, then `Error: memory-probe` and LF; child exits 1 | failed / 1 | 1 |
+| S1 | generic | `Error: memory-probe ` then repeated `x` through EOF; no LF | failed / 1 | 0 |
+| S2 | vitest | Neutral short LF-terminated lines only | passed / 0 | 0 |
+| S3 | vitest | Neutral LF-terminated lines, then `FAIL ` at EOF | failed / 1 | 0 |
+| S4 | vitest | Repeated ASCII spaces, then `FAIL ` at EOF; no LF | failed / 1 | 0 |
+| S5 | vitest | ESC + `[` + repeated `0` + `mFAIL ` at EOF | failed / 1 | 0 |
+| S6 | vitest | ESC + `[` + repeated `0` at EOF, without final ANSI byte | passed / 0 | 0 |
+| S7 | vitest | ESC + `[` + repeated `0` + LF + `FAIL ` at EOF | failed / 1 | 0 |
+
+Neutral lines are `neutral` plus LF, with a shorter line of repeated `n` bytes
+plus LF only when needed for exact size. ESC is byte `0x1b`; no spacing in this description
+adds payload bytes. There is no unlisted final newline. The `vitest` inference
+predicate recognizes `FAIL `, while failure extraction requires a following
+name; a failed inferred verdict with zero extracted records is intentional.
+All 72 trials had the expected parser/verdict, `degraded` extraction, zero
+warnings, exact full raw size/SHA-256, valid summary checksum and watcher hash,
+and valid applicable tail spans/excerpts. Imports retained absent execution
+provenance. Early inference never shortened raw copying or checksum verification.
+
+### Trials and independent thresholds
+
+Triplets are trials 1, 2 and 3 in execution order. Disk bytes are logical regular
+file sizes for the owned input, raw artifact, derived evidence, minimal config
+and captured process output; they exclude the shared binary. They are observations,
+not allocated-block or constant-I/O claims. E1 disk use is approximately N and
+summarize approximately 2N; alias imports can separately need private staging.
+
+| Scenario | Input MiB | Peak MiB (three trials) | Elapsed seconds (three trials) | Disk bytes (three trials) |
+|---|---:|---|---|---|
+| E1 | 8 | 12.047562, 12.485039, 12.141289 | 0.065, 0.066, 0.070 | 8391687, 8391687, 8391688 |
+| E1 | 64 | 12.297539, 12.344414, 12.531937 | 0.111, 0.135, 0.159 | 67111948, 67111950, 67111950 |
+| E1 | 512 | 12.172539, 12.235016, 11.985039 | 0.598, 0.684, 0.416 | 536874004, 536874003, 536874003 |
+| S1 | 8 | 6.781868, 6.797493, 6.797516 | 0.013, 0.013, 0.013 | 16779621, 16779621, 16779621 |
+| S1 | 64 | 6.891266, 6.750641, 6.859993 | 0.050, 0.048, 0.047 | 134220134, 134220134, 134220134 |
+| S1 | 512 | 6.797493, 6.844391, 7.188118 | 0.401, 0.328, 0.360 | 1073744231, 1073744231, 1073744231 |
+| S2 | 8 | 11.234993, 11.594368, 11.688141 | 0.122, 0.120, 0.121 | 16779620, 16779619, 16779620 |
+| S2 | 64 | 11.875641, 11.938141, 11.953743 | 0.857, 0.859, 0.858 | 134220133, 134220133, 134220132 |
+| S2 | 512 | 12.078766, 11.985016, 12.125641 | 6.887, 7.163, 6.981 | 1073744230, 1073744230, 1073744230 |
+| S3 | 8 | 11.641289, 11.359993, 11.906891 | 0.125, 0.120, 0.122 | 16779620, 16779620, 16779619 |
+| S3 | 64 | 12.250618, 11.735016, 12.063118 | 0.876, 0.903, 0.895 | 134220133, 134220133, 134220133 |
+| S3 | 512 | 11.969368, 12.219368, 11.938141 | 7.075, 7.060, 7.092 | 1073744230, 1073744230, 1073744230 |
+| S4 | 8 | 7.000664, 6.969368, 6.828743 | 0.206, 0.204, 0.195 | 16779620, 16779620, 16779620 |
+| S4 | 64 | 6.859993, 6.906891, 7.188187 | 1.519, 1.529, 1.525 | 134220133, 134220133, 134220133 |
+| S4 | 512 | 6.984993, 6.922516, 7.047516 | 12.296, 12.370, 12.307 | 1073744228, 1073744230, 1073744230 |
+| S5 | 8 | 6.844391, 6.656891, 6.985016 | 0.028, 0.028, 0.029 | 16779620, 16779620, 16779620 |
+| S5 | 64 | 6.891266, 6.891266, 7.031868 | 0.169, 0.173, 0.171 | 134220133, 134220133, 134220133 |
+| S5 | 512 | 7.063118, 6.891243, 7.078743 | 1.347, 1.375, 1.306 | 1073744230, 1073744230, 1073744230 |
+| S6 | 8 | 6.828789, 6.797516, 6.906868 | 0.121, 0.122, 0.121 | 16779618, 16779620, 16779619 |
+| S6 | 64 | 6.938118, 7.250641, 7.078766 | 0.897, 0.920, 0.899 | 134220133, 134220133, 134220133 |
+| S6 | 512 | 7.188118, 7.109993, 6.969368 | 7.254, 7.173, 7.091 | 1073744230, 1073744229, 1073744230 |
+| S7 | 8 | 6.906914, 6.906868, 6.891266 | 0.116, 0.116, 0.121 | 16779620, 16779620, 16779620 |
+| S7 | 64 | 7.141243, 6.750641, 6.906891 | 0.904, 0.916, 0.909 | 134220133, 134220133, 134220133 |
+| S7 | 512 | 7.188118, 6.735016, 6.891243 | 7.173, 7.252, 7.149 | 1073744230, 1073744230, 1073744230 |
+
+Each row independently passes when both larger-size median peaks are at most
+32 MiB above that row's 8 MiB median. No parser, scenario or result is pooled.
+
+| Scenario | 8 MiB median | 64 MiB median | 512 MiB median | 64 MiB delta | 512 MiB delta | Result |
+|---|---:|---:|---:|---:|---:|---|
+| E1 | 12.141289 | 12.344414 | 12.172539 | +0.203125 | +0.031250 | pass |
+| S1 | 6.797493 | 6.859993 | 6.844391 | +0.062500 | +0.046898 | pass |
+| S2 | 11.594368 | 11.938141 | 12.078766 | +0.343773 | +0.484398 | pass |
+| S3 | 11.641289 | 12.063118 | 11.969368 | +0.421829 | +0.328079 | pass |
+| S4 | 6.969368 | 6.906891 | 6.984993 | -0.062477 | +0.015625 | pass |
+| S5 | 6.844391 | 6.891266 | 7.063118 | +0.046875 | +0.218727 | pass |
+| S6 | 6.828789 | 7.078766 | 7.109993 | +0.249977 | +0.281204 | pass |
+| S7 | 6.906868 | 6.906891 | 6.891243 | +0.000023 | -0.015625 | pass |
+
+All columns above are MiB. The largest positive delta is
+0.484398 MiB (S2 at 512 MiB).
+Deterministic `TestCaptureBoundedRetentionAndSnapshotOwnership`,
+`TestBoundedInferenceGrowth`, the all-parser differential regressions and the
+production whole-buffer call-site audit remain complementary evidence.
+
+### Concurrent MCP observation
+
+One fresh server overlapped two 64 MiB E1 children at an explicit release barrier.
+Both used `generic`, completed as `failed` / exit `1`, preserved all 67,108,864
+raw bytes, and produced separate invocation identities and artifact paths.
+The neutral lines were `neutral-a` and `neutral-b`; independent expected and
+observed hashes were:
+
+- Configured: `sha256:da2cd9074f16b9ad4a06eed766cc03c54380bb7b249f3315164d17332a39275e`.
+- Ad-hoc: `sha256:a8025556cae4451de3cb44f6b433885e0b905216b135faf4bcdf15169a250b6f`.
+
+The server's initial high-water observation was 9.859993 MiB;
+its full-session peak was 16.969391 MiB over 0.151 seconds.
+Logical disk use was 134,223,091 bytes. The largest response frame was
+1,788 bytes, within 128 KiB, with no repeated raw-stream canary.
+Summary/status integrity and bounded excerpts passed for both results, and
+newline-boundary stdin close ended the server with exit `0`. This is a separate
+concurrency observation, not a replacement for any of the 72 scaling trials.
 
 ## Suggested package boundaries
 

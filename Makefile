@@ -15,7 +15,7 @@ INTEGRATION_PACKAGES := ./internal/cli
 E2E_PACKAGES := ./e2e
 GUARDRAIL_TEST_PATTERN := ^(TestAwaitRunDocumentationContract|TestMCPDocumentationAndSkillContract|TestParserSupportDocumentationContract|TestRepositoryTestFunctions|TestRepositoryTestStageClassification|TestRepositoryUsesGaoriIdentity|TestRequirementTraceabilityAuditRejectsInvalidEvidence|TestRequirementTraceabilityMatrixCoversCompletedRequirements|TestUseGaoriCleanupAdvisoryContract|TestUseGaoriStatusSkillContract)$$
 
-.PHONY: build install install-toolchain aquarium-dev-describe aquarium-dev-build test test-prepare test-unit test-int test-e2e format lint vet guardrails clean
+.PHONY: build install install-toolchain aquarium-dev-describe aquarium-dev-build test test-prepare test-unit test-int test-e2e test-memory format lint vet guardrails clean
 
 aquarium-dev-describe:
 	@python3 scripts/aquarium-dev describe
@@ -77,3 +77,6 @@ test-e2e:
 
 clean:
 	rm -rf $(BIN_DIR)
+
+test-memory:
+	$(GO) test -count=1 -timeout 13h -v ./e2e/memory

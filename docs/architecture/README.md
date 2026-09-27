@@ -1,7 +1,7 @@
 # Gaori Architecture
 
 Status: Complete through `RSTAT`
-Planned work: LOMEM captured execution, summarize import/inference and materialization use bounded state; resource acceptance remains planned.
+LOMEM: Captured execution, summarize import/inference and materialization use bounded state. The resource campaign passed on macOS arm64; Linux is unmeasured, and final epic validation remains pending.
 Scope: Standalone Gaori v0.1 architecture, including session-local STDIO MCP execution, terminal awaiting, artifact-derived run insights, and the adopted LOMEM design
 
 This document defines Gaori's technical and artifact contracts. See the [integration guide](../integration-guide.md) for parent-project ownership, supported capability status, and rollout guidance.
@@ -170,8 +170,9 @@ signals, long whitespace, ANSI and split reads. The whole-log `RawLogBytes`
 field and production `extract.Process` and `artifacts.WriteRawLog` adapters
 have been removed. Extraction fixtures adapt to snapshots only in test code;
 the old CLI inference function remains a capped test oracle. Parser detection
-still uses its existing bounded-tail helper. Whole-pipeline resource acceptance
-remains with LOMEM-006.
+still uses its existing bounded-tail helper. The separate
+[resource campaign](../implementation-tips/README.md#bounded-memory-resource-campaign)
+records the verified macOS arm64 result; Linux remains unmeasured.
 
 `TestBinaryBoundedPipelineLayoutsAndConsumers` exercises configured/ad-hoc
 execution and summarize with oversized input through standalone, scoped and
@@ -206,12 +207,13 @@ raw and summary digests, and retained excerpt bytes/digests for every parser.
 Existing rule-only input limits, redaction/prefix tests and artifact contracts
 remain in force.
 
-## Planned bounded-memory log pipeline
+## Bounded-memory log pipeline
 
 Implementation state is owned by [LOMEM](../roadmap/README.md#lomem-bounded-memory-log-processing).
-This section describes the full adopted pipeline design. Captured execution
-and existing-log import/inference are connected; resource acceptance remains
-pending.
+This section describes the implemented pipeline. Captured execution and
+existing-log import/inference share bounded evidence. The separate built-binary
+[resource campaign](../implementation-tips/README.md#bounded-memory-resource-campaign)
+passed on macOS arm64; Linux resource scaling remains unmeasured.
 [ADR-0021](../architecture-decision-records/README.md#adr-0021-bound-log-memory-without-changing-evidence-semantics)
 and [RQMEM](../specs/README.md#rqmem-bounded-memory-log-processing) own its decision
 and required behavior.
@@ -329,8 +331,9 @@ escape sequences; the ANSI oracle also covers every byte class. Buffer-size
 assertions alone do not measure whole-process retained memory.
 `TestCaptureMatchesBoundedTail` and
 the capture tests cover accepted-prefix integrity, origins, retention and
-snapshot ownership. These are component feasibility checks; whole-pipeline
-resource acceptance remains the separate LOMEM-006 campaign.
+snapshot ownership. These component checks complement `TestBinaryMemoryCampaign`,
+which separately measures all eight required workloads through complete
+built-binary invocations and a concurrent MCP session.
 
 ### Resource and failure boundaries
 

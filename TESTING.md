@@ -13,6 +13,7 @@ Gaori is enrolled in `aquarium-test-contract/v1` with the `make` profile. The ro
 | Unit | `make test-unit` |
 | Integration | `make test-int` |
 | End to end | `make test-e2e` |
+| Separate finite resource campaign (outside `make test`) | `make test-memory` |
 
 `make test` invokes the four stage handlers once, serially, in the order shown above and stops on the first failure. Each stage handler emits one `[test] <stage> complete` line after its checks succeed; a failed stage emits no completion line and prevents all later stages from starting.
 
@@ -67,6 +68,47 @@ The tracked mapping is `.gaori/tester.yaml`. Parser availability is checked inde
 `python3` is a required prerequisite for the toolchain-script and Aquarium producer E2E scenarios. Its absence fails the E2E stage with an explicit diagnostic; it is never converted into a successful skip.
 
 The Unix Aquarium producer tests invoke the public Make targets in temporary primary Git repositories. Fixture-only Git trees and commits establish clean-main, dirty, non-main, committed-source, and remote-ahead cases without committing the working source checkout. The real producer builds the current Gaori source copied into a fixture; ignored Go source and external Go workspace/overlay settings must not enter that build. Output and symlink rejection, manifest checksum, embedded version and full SHA, and temporary-build cleanup are verified. Builds require the supported Go toolchain and may download the pinned Go modules; they contact no provider. Aquarium manager enrollment and native-hook host integration are separately verified after an approved producer commit and do not run against the real host from `make test`.
+
+## Separate memory campaign
+
+`make test-memory` runs `TestBinaryMemoryCampaign` in `e2e/memory`, using the
+same standard-library E2E framework and a production binary built by `make build`.
+It is deliberately outside the four ordinary stages and does not change their
+waiver or completion markers. Python 3.9 or newer and macOS process instrumentation
+are required; an unsupported host or unavailable metric fails rather than skips.
+Linux resource measurements are not established by this harness.
+
+The fixed campaign runs E1 and S1-S7 at exactly 8, 64 and 512 MiB, with three fresh
+Gaori processes per row and size (72 trials), followed by one fresh attached MCP
+session containing two overlapping 64 MiB E1 runs. E1 captures a real failing
+child through `generic`; S1 imports an early generic signal on an unbroken line.
+S2-S7 explicitly select `vitest`: no signal, first signal at EOF, long whitespace,
+and long complete, incomplete and malformed ANSI candidates. The exact byte
+generators and expected verdicts live in `scripts/test-memory`; small original
+predicate counterparts are covered by `TestBoundedInferenceGrowth`.
+
+The metric is Darwin `proc_pid_rusage` v4
+`ri_lifetime_max_phys_footprint`, in bytes, from Gaori's PID at `NOTE_EXIT` before
+reaping. It covers the entire invocation, including inference/materialization,
+and excludes the producer and harness. It is a process-local physical-footprint
+high-water metric, not a process-tree RSS sum or total allocation count. Every
+row compares its own three-trial median at 64 and 512 MiB against its 8 MiB median
+plus 32 MiB. Results are never pooled, and the concurrent session is a separate
+observation rather than another scaling series.
+
+The initial `make build` step has a two-minute timeout. Each measured invocation
+has a 600-second watchdog; the complete Go test has a 13-hour outer timeout.
+A timeout, I/O failure, invalid artifact, missing measurement or
+threshold failure fails the gate. There is no automatic retry or budget relaxation.
+Only one repeat campaign is permitted to investigate a concrete measurement
+problem. Inputs are real synthetic bytes generated and hashed in 32 KiB chunks;
+raw size/hash, summary checksum, watcher hash, verdict, parser, spans and excerpt
+bounds are checked before each owned temporary directory is removed. Peak memory,
+elapsed seconds and logical disk bytes are observations; disk use and total I/O
+remain proportional to input size. Output records include source commit, dirty
+paths, source-manifest/diff/harness/binary digests, versions and platform. Keep raw
+logs and temporary paths local; promote bounded results to
+[`docs/implementation-tips/README.md`](docs/implementation-tips/README.md).
 
 ## Language Diagnostics
 

@@ -1,0 +1,392 @@
+#!/usr/bin/env python3
+"""Finite, opt-in built-binary memory campaign; no third-party dependencies."""
+import ctypes
+import hashlib
+import json
+import os
+from pathlib import Path
+import platform
+import select
+import statistics
+import subprocess
+import sys
+import tempfile
+import time
+
+MIB = 1024 * 1024
+CHUNK = 32 * 1024
+WATCHDOG = 600
+ROWS = ("E1", "S1", "S2", "S3", "S4", "S5", "S6", "S7")
+SIZES = (8, 64, 512)
+SCRIPT = str(Path(__file__).resolve())
+
+
+def require(condition, message):
+    if not condition:
+        raise RuntimeError(message)
+
+
+def repeated(token, count):
+    block = token * max(1, CHUNK // len(token))
+    while count:
+        piece = block[:min(count, len(block))]
+        yield piece
+        count -= len(piece)
+
+
+def chunks(row, size, variant="neutral"):
+    """Exact dossier shapes, with no sparse writes or unlisted final LF."""
+    if row in ("E1", "S2", "S3"):
+        suffix = {"E1": b"Error: memory-probe\n", "S2": b"", "S3": b"FAIL "}[row]
+        line = variant.encode("ascii") + b"\n"
+        count, remainder = divmod(size - len(suffix), len(line))
+        yield from repeated(line, count * len(line))
+        if remainder:
+            yield b"n" * (remainder - 1) + b"\n"
+        yield suffix
+    else:
+        prefix, token, suffix = {
+            "S1": (b"Error: memory-probe ", b"x", b""),
+            "S4": (b"", b" ", b"FAIL "),
+            "S5": (b"\x1b[", b"0", b"mFAIL "),
+            "S6": (b"\x1b[", b"0", b""),
+            "S7": (b"\x1b[", b"0", b"\nFAIL "),
+        }[row]
+        yield prefix
+        yield from repeated(token, size - len(prefix) - len(suffix))
+        yield suffix
+
+
+def digest_chunks(parts, writer=None):
+    digest, count = hashlib.sha256(), 0
+    for part in parts:
+        digest.update(part)
+        count += len(part)
+        if writer is not None:
+            require(writer.write(part) == len(part), "short fixture write")
+    return count, "sha256:" + digest.hexdigest()
+
+
+def file_digest(path):
+    with path.open("rb") as source:
+        return digest_chunks(iter(lambda: source.read(CHUNK), b""))
+
+
+def bounded_bytes(path, limit=64 * 1024):
+    with path.open("rb") as source:
+        data = source.read(limit + 1)
+    require(len(data) <= limit, "oversized derived evidence: " + path.name)
+    return data
+
+
+def sha(data):
+    return "sha256:" + hashlib.sha256(data).hexdigest()
+
+
+class RUsageV4(ctypes.Structure):
+    # Darwin sys/resource.h: UUID, then 35 uint64 fields; lifetime peak is #28.
+    _fields_ = [("uuid", ctypes.c_uint8 * 16), ("values", ctypes.c_uint64 * 35)]
+
+
+class MeasuredProcess:
+    """Read the process-local lifetime peak at NOTE_EXIT, before reaping."""
+    def __init__(self, argv, repo, stdout, stderr, stdin=subprocess.DEVNULL):
+        require(sys.platform == "darwin", "resource instrumentation requires macOS; other platforms are unmeasured")
+        self.lib = ctypes.CDLL("/usr/lib/libproc.dylib", use_errno=True)
+        self.lib.proc_pid_rusage.argtypes = [ctypes.c_int, ctypes.c_int, ctypes.c_void_p]
+        self.lib.proc_pid_rusage.restype = ctypes.c_int
+        self.queue = select.kqueue()
+        self.started = time.monotonic()
+        self.deadline = self.started + WATCHDOG
+        self.process = subprocess.Popen(argv, cwd=repo, stdin=stdin, stdout=stdout, stderr=stderr)
+        try:
+            event = select.kevent(self.process.pid, filter=select.KQ_FILTER_PROC,
+                                 flags=select.KQ_EV_ADD | select.KQ_EV_ENABLE | select.KQ_EV_ONESHOT,
+                                 fflags=select.KQ_NOTE_EXIT)
+            self.queue.control([event], 0, 0)
+        except BaseException:
+            self.abort()
+            raise
+
+    def peak(self):
+        value = RUsageV4()
+        result = self.lib.proc_pid_rusage(self.process.pid, 4, ctypes.byref(value))
+        require(result == 0, "proc_pid_rusage failed: errno=" + str(ctypes.get_errno()))
+        peak = value.values[28]
+        require(peak > 0, "process-local lifetime peak is unavailable")
+        return peak
+
+    def remaining(self):
+        remaining = self.deadline - time.monotonic()
+        require(remaining > 0, "600-second invocation watchdog expired")
+        return remaining
+
+    def finish(self):
+        events = self.queue.control(None, 1, self.remaining())
+        require(events and events[0].fflags & select.KQ_NOTE_EXIT, "600-second invocation watchdog expired")
+        elapsed = time.monotonic() - self.started
+        # Popen.poll/communicate/wait would reap the process and lose this metric.
+        peak = self.peak()
+        code = self.process.wait(timeout=5)
+        self.queue.close()
+        return {"peak_bytes": peak, "seconds": round(elapsed, 3), "process_exit": code}
+
+    def abort(self):
+        # Only exceptional cleanup uses poll implicitly. Failed probes never pass.
+        if self.process.returncode is None:
+            self.process.terminate()
+            try:
+                self.process.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                self.process.kill()
+                self.process.wait(timeout=5)
+        self.queue.close()
+
+
+def config(repo, argv):
+    directory = repo / ".gaori"
+    directory.mkdir()
+    (directory / "tester.yaml").write_text(json.dumps({"version": 2, "commands": {
+        "unit": {"command": argv, "tags": ["memory"], "parser": "generic", "timeout_sec": WATCHDOG}
+    }}))
+
+
+def emit_argv(size, variant="neutral", barrier=None):
+    argv = [sys.executable, SCRIPT, "emit", "E1", str(size), variant]
+    if barrier:
+        argv.append(str(barrier))
+    return argv
+
+
+def owned_path(repo, relative):
+    path = (repo / relative).resolve()
+    require(path.is_relative_to(repo.resolve()), "artifact escaped probe root")
+    require(path.is_file(), "artifact is missing")
+    return path
+
+
+def verify_artifacts(repo, result, row, size, expected_hash):
+    raw = owned_path(repo, result["raw_log"])
+    require(file_digest(raw) == (size, expected_hash), "raw size/hash mismatch")
+    summary_path = owned_path(repo, result["summary_json"])
+    summary_bytes = bounded_bytes(summary_path)
+    summary = json.loads(summary_bytes)
+    status = json.loads(bounded_bytes(owned_path(repo, result["status_json"])))
+    bounded_bytes(owned_path(repo, result["summary_markdown"]))
+    parser = "generic" if row in ("E1", "S1") else "vitest"
+    verdict = "passed" if row in ("S2", "S6") else "failed"
+    exit_code = 0 if verdict == "passed" else 1
+    # The vitest inference marker deliberately has no test/file name, so it
+    # changes the inferred verdict without producing an extracted failure.
+    failure_count = 1 if row == "E1" else 0
+    for evidence in (result, summary, status):
+        require(evidence["status"] == verdict and evidence["exit_code"] == exit_code, "verdict changed")
+        require(evidence["extractor_status"] == "degraded", "oversized evidence is not degraded")
+    require(summary["parser"] == parser, "parser selection changed")
+    require(summary["failure_count"] == failure_count and summary["warning_count"] == 0, "unexpected extraction")
+    require(summary["raw_log_sha256"] == status["raw_log_sha256"] == expected_hash, "published raw digest mismatch")
+    require(status["summary_sha256"] == sha(summary_bytes), "summary checksum mismatch")
+    require(status["summary_path"] == result["summary_json"] and status["raw_log_path"] == result["raw_log"], "status locators changed")
+    fields = [status["command_id"], ",".join(status["tags"]), verdict, str(exit_code), "degraded", expected_hash,
+              ",".join(status["failure_signatures"] or []), ",".join(status["warning_signatures"] or []),
+              status["summary_path"], status["raw_log_path"]]
+    require(status["status_hash"] == sha("\n".join(fields).encode()), "status hash mismatch")
+    if row != "E1":
+        require(not summary.get("command_argv") and "git_revision" not in summary and "git_dirty" not in summary,
+                "summarize acquired execution provenance")
+    for failure in summary["failures"] or []:
+        span = failure["raw_span"]
+        require(size - 256 * 1024 <= span["start_byte"] < span["end_byte"] <= size, "invalid absolute tail span")
+        require(span["start_line"] <= span["end_line"], "invalid line span")
+        excerpt = bounded_bytes(owned_path(repo, str(summary_path.parent.relative_to(repo) / failure["excerpt"])), 16 * 1024)
+        require(b"memory-probe" in excerpt if row == "E1" else b"FAIL" in excerpt, "missing tail excerpt")
+    return {"expected": verdict, "observed": summary["status"], "artifact_exit": exit_code,
+            "failures": failure_count, "raw_bytes": size, "raw_sha256": expected_hash,
+            "integrity": "raw,summary,status,spans,excerpts verified"}
+
+
+def disk_bytes(repo):
+    return sum(path.stat().st_size for path in repo.rglob("*") if path.is_file())
+
+
+def source_manifest(root):
+    names = subprocess.check_output(["git", "ls-files", "--cached", "--others", "--exclude-standard", "-z"], cwd=root)
+    digest = hashlib.sha256()
+    for name in sorted(set(names.split(b"\0")) - {b""}):
+        path = Path(root) / os.fsdecode(name)
+        if path.is_symlink():
+            identity = "symlink:" + os.readlink(path)
+        elif path.is_file():
+            identity = str(path.stat().st_mode & 0o777) + ":" + file_digest(path)[1]
+        else:
+            identity = "absent"
+        digest.update(name + b"\0" + identity.encode() + b"\0")
+    return "sha256:" + digest.hexdigest()
+
+
+def trial(binary, row, mib, index):
+    size = mib * MIB
+    with tempfile.TemporaryDirectory(prefix="gaori-memory-") as temporary:
+        repo = Path(temporary).resolve()
+        config(repo, emit_argv(size))
+        if row == "E1":
+            count, expected_hash = digest_chunks(chunks(row, size))
+            args = ["run", "unit"]
+        else:
+            with (repo / "input.log").open("wb") as output:
+                count, expected_hash = digest_chunks(chunks(row, size), output)
+            args = ["summarize", "--parser", "generic" if row == "S1" else "vitest", "input.log"]
+        require(count == size, "generator size mismatch")
+        with (repo / "stdout.json").open("wb") as stdout, (repo / "stderr.txt").open("wb") as stderr:
+            process = MeasuredProcess([binary, "--repo", str(repo), "--json"] + args, repo, stdout, stderr)
+            try:
+                measurement = process.finish()
+            except BaseException:
+                process.abort()
+                raise
+        require(measurement["process_exit"] == (1 if row == "E1" else 0), "unexpected process exit")
+        require(not bounded_bytes(repo / "stderr.txt"), "unexpected stderr")
+        result = json.loads(bounded_bytes(repo / "stdout.json"))
+        evidence = verify_artifacts(repo, result, row, size, expected_hash)
+        return dict(measurement, **evidence, scenario=row, parser="generic" if row in ("E1", "S1") else "vitest",
+                    input_mib=mib, trial=index, disk_bytes=disk_bytes(repo))
+
+
+class MCP:
+    def __init__(self, measured):
+        self.measured, self.sequence, self.buffer = measured, 0, b""
+        self.wire_max = 0
+
+    def send(self, value):
+        data = json.dumps(value, separators=(",", ":")).encode() + b"\n"
+        self.measured.process.stdin.write(data)
+        self.measured.process.stdin.flush()
+
+    def request(self, method, params):
+        self.sequence += 1
+        self.send({"jsonrpc": "2.0", "id": self.sequence, "method": method, "params": params})
+        while True:
+            while b"\n" not in self.buffer:
+                ready, _, _ = select.select([self.measured.process.stdout], [], [], self.measured.remaining())
+                require(ready, "MCP watchdog expired")
+                part = os.read(self.measured.process.stdout.fileno(), CHUNK)
+                require(part, "MCP closed before response")
+                self.buffer += part
+                require(len(self.buffer) <= 128 * 1024, "unbounded MCP frame")
+            line, self.buffer = self.buffer.split(b"\n", 1)
+            self.wire_max = max(self.wire_max, len(line))
+            require(b"neutral-a\\nneutral-a\\n" not in line and b"neutral-b\\nneutral-b\\n" not in line,
+                    "raw stream leaked into MCP response")
+            value = json.loads(line)
+            if "id" not in value:
+                continue
+            require(value["id"] == self.sequence and "error" not in value, "MCP request failed")
+            return value["result"]
+
+    def tool(self, name, arguments):
+        result = self.request("tools/call", {"name": name, "arguments": arguments})
+        require(not result.get("isError"), "MCP tool failed: " + name)
+        if "structuredContent" in result:
+            return result["structuredContent"]
+        return json.loads(result["content"][0]["text"])
+
+
+def concurrent(binary):
+    size = 64 * MIB
+    with tempfile.TemporaryDirectory(prefix="gaori-memory-mcp-") as temporary:
+        repo = Path(temporary).resolve()
+        config(repo, emit_argv(size, "neutral-a", repo / "ready-a"))
+        hashes = [digest_chunks(chunks("E1", size, variant))[1] for variant in ("neutral-a", "neutral-b")]
+        with (repo / "stderr.txt").open("wb") as stderr:
+            measured = MeasuredProcess([binary, "--repo", str(repo), "mcp"], repo, subprocess.PIPE, stderr, subprocess.PIPE)
+            try:
+                client = MCP(measured)
+                client.request("initialize", {"protocolVersion": "2025-06-18", "capabilities": {},
+                                              "clientInfo": {"name": "memory-campaign", "version": "1"}})
+                client.send({"jsonrpc": "2.0", "method": "notifications/initialized"})
+                initial_peak = measured.peak()
+                starts = [client.tool("start_configured_run", {"command_id": "unit"}),
+                          client.tool("start_ad_hoc_run", {"argv": emit_argv(size, "neutral-b", repo / "ready-b"),
+                                                           "tags": ["memory"], "parser": "generic"})]
+                require(starts[0]["invocation_id"] != starts[1]["invocation_id"], "concurrent identity collision")
+                while not all((repo / name).exists() for name in ("ready-a", "ready-b")):
+                    measured.remaining()
+                    time.sleep(0.01)
+                (repo / "release").touch()
+                finals = [client.tool("await_run", {"invocation_id": start["invocation_id"]}) for start in starts]
+                for start, final in zip(starts, finals):
+                    require(final["invocation_id"] == start["invocation_id"] and final["phase"] == "finished" and not final.get("error"),
+                            "MCP terminal identity/lifecycle changed")
+                require(finals[0]["result"]["raw_log"] != finals[1]["result"]["raw_log"], "concurrent raw path collision")
+                measured.process.stdin.close()
+                measurement = measured.finish()
+                measured.process.stdout.close()
+            except BaseException:
+                measured.abort()
+                raise
+        require(measurement["process_exit"] == 0 and not bounded_bytes(repo / "stderr.txt"), "MCP shutdown failed")
+        evidence = [verify_artifacts(repo, final["result"], "E1", size, digest) for final, digest in zip(finals, hashes)]
+        return dict(measurement, scenario="MCP-2x64", initial_peak_bytes=initial_peak, wire_max_bytes=client.wire_max,
+                    independent_results=evidence, disk_bytes=disk_bytes(repo))
+
+
+def campaign(binary, root):
+    require(sys.platform == "darwin", "resource instrumentation requires macOS; Linux is unmeasured, not skipped")
+    # Each row has its own baseline; no pooling, retries or threshold adjustment.
+    source_identity = source_manifest(root)
+    provenance = {"record": "provenance", "source_manifest_sha256": source_identity,
+                  "source_commit": subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=root, text=True).strip(),
+                  "dirty_paths": subprocess.check_output(["git", "status", "--porcelain"], cwd=root, text=True).splitlines(),
+                  "tracked_diff_sha256": sha(subprocess.check_output(["git", "diff", "HEAD", "--binary", "--full-index"], cwd=root)),
+                  "harness_sha256": file_digest(Path(SCRIPT))[1], "binary_sha256": file_digest(Path(binary))[1],
+                  "gaori_version": json.loads(subprocess.check_output([binary, "version", "--json"], timeout=10)),
+                  "go_version": subprocess.check_output(["go", "version"], text=True, timeout=10).strip(),
+                  "os": platform.platform(), "architecture": platform.machine(), "python": platform.python_version(),
+                  "metric": "proc_pid_rusage v4 ri_lifetime_max_phys_footprint before waitpid; bytes, Gaori PID only",
+                  "watchdog_seconds": WATCHDOG, "threshold_bytes": 32 * MIB, "command": "make test-memory"}
+    print(json.dumps(provenance), flush=True)
+    for row in ROWS:
+        medians = {}
+        for mib in SIZES:
+            samples = []
+            for index in range(1, 4):
+                result = trial(binary, row, mib, index)
+                print(json.dumps(dict(record="trial", **result)), flush=True)
+                samples.append(result["peak_bytes"])
+            medians[mib] = statistics.median(samples)
+        deltas = {mib: medians[mib] - medians[8] for mib in (64, 512)}
+        print(json.dumps({"record": "scenario", "scenario": row, "median_bytes": medians, "delta_bytes": deltas}), flush=True)
+        require(all(delta <= 32 * MIB for delta in deltas.values()), "memory threshold exceeded: " + row)
+    print(json.dumps(dict(record="concurrency", **concurrent(binary))), flush=True)
+    require(source_manifest(root) == source_identity, "source candidate changed during campaign")
+    print(json.dumps({"record": "gate", "trials": 72, "concurrent_sessions": 1, "outcome": "passed"}), flush=True)
+
+
+def main():
+    if len(sys.argv) >= 6 and sys.argv[1] == "emit":
+        row, size, variant = sys.argv[2], int(sys.argv[3]), sys.argv[4]
+        # Emit accepts exactly one optional barrier filename, under the owned repo.
+        barrier = Path(sys.argv[5])
+        barrier.touch()
+        deadline = time.monotonic() + WATCHDOG
+        while not (barrier.parent / "release").exists():
+            require(time.monotonic() < deadline, "producer barrier watchdog expired")
+            time.sleep(0.01)
+        digest_chunks(chunks(row, size, variant), sys.stdout.buffer)
+        sys.stdout.buffer.flush()
+        return 1
+    if len(sys.argv) == 5 and sys.argv[1] == "emit":
+        digest_chunks(chunks(sys.argv[2], int(sys.argv[3]), sys.argv[4]), sys.stdout.buffer)
+        sys.stdout.buffer.flush()
+        return 1
+    require(len(sys.argv) == 4 and sys.argv[1] == "campaign", "usage: test-memory campaign <gaori-binary> <source-root>")
+    campaign(sys.argv[2], sys.argv[3])
+    return 0
+
+
+if __name__ == "__main__":
+    try:
+        sys.exit(main())
+    except Exception as error:
+        print(json.dumps({"record": "gate", "outcome": "failed", "error": str(error)}), flush=True)
+        sys.exit(1)

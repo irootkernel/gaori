@@ -543,16 +543,16 @@ lifecycle, cancellation, recovery, and detailed evidence inspection remain with
 
 Status: Accepted
 Date: 2026-09-26
-Implementation: In progress; captured CLI/MCP execution and summarize import/inference use bounded state; resource acceptance remains pending. See [LOMEM](../roadmap/README.md#lomem-bounded-memory-log-processing).
+Implementation: The bounded pipeline and macOS arm64 resource campaign are verified; final epic validation and documentation lifecycle remain tracked by [LOMEM](../roadmap/README.md#lomem-bounded-memory-log-processing).
 
 ### Context
 
-The current runner writes raw output to disk and also retains the entire stream
-in `streamCapture.b`. `RunOutput.RawLogBytes` then feeds checksum, extraction,
-and excerpt materialization. Existing-log summarize reads the whole input with
-`os.ReadFile`. Restricting regex extraction to a 256 KiB tail therefore does not
-bound these paths' memory use. In addition, summarize's failure heuristic
-currently examines the full log even when failure extraction uses only its tail.
+Before LOMEM, the runner wrote raw output to disk and also retained the entire
+stream in `streamCapture.b`. `RunOutput.RawLogBytes` fed checksum, extraction,
+and excerpt materialization, while summarize read the whole input with
+`os.ReadFile`. A 256 KiB extraction tail therefore did not bound these paths'
+memory use. Summarize's failure heuristic examined the full log even when
+failure extraction used only its tail.
 A tail-only rewrite of that heuristic would change inferred results.
 
 ### Decision
@@ -580,7 +580,7 @@ existing destination. This is temporary I/O state, not a new artifact schema or
 job ledger. Keep ownership and cleanup bounded to the current operation.
 
 The [RQMEM specifications](../specs/README.md#rqmem-bounded-memory-log-processing)
-own the required behavior; the [architecture](../architecture/README.md#planned-bounded-memory-log-pipeline)
+own the required behavior; the [architecture](../architecture/README.md#bounded-memory-log-pipeline)
 owns the component boundary. LOMEM implements only memory-bounded processing
 under current evidence semantics. Finding earlier failure spans, expanding the
 scan window, adding a full-log extraction mode, or improving comparison,
@@ -599,7 +599,7 @@ telemetry, and MCP discovery requires separate adoption.
 - Raw disk usage and copy time remain proportional to input size. Alias staging can temporarily require another raw-sized disk copy.
 - The tail may still omit an early failure span, and oversized evidence remains degraded even when a useful match is retained.
 - Normal execution can finalize from captured digest/window metadata without an additional full-log scan, preserving the existing MCP shutdown-drain boundary.
-- Compatibility and memory scaling require executable evidence before implementation closeout. Accepting this ADR is not a claim that the current binary meets RQMEM.
+- Compatibility is covered by the named component and built-binary tests; the separate resource campaign passed on macOS arm64. The [measurement record](../implementation-tips/README.md#bounded-memory-resource-campaign) bounds that claim to the measured candidate and host; it does not establish Linux scaling, release or runtime activation.
 
 ## Future ADR candidates
 

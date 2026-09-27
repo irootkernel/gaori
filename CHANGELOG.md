@@ -10,6 +10,7 @@ This file records concise shipped outcomes and the planned next stable release. 
 
 ### Fixed
 
+- Large logs now use bounded memory during capture, summarize inference, extraction and excerpt materialization while preserving original raw bytes and existing evidence semantics.
 - Gaori skills now verify MCP launch bindings before a run, fall back to the explicitly selected CLI target when uncertain, and carry config overrides through status queries.
 
 ## v0.1.17 - 2026-09-14

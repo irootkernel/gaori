@@ -60,12 +60,14 @@ Captured CLI/MCP execution streams raw bytes to disk while computing the full-lo
 digest and retaining at most the final 256 KiB of complete lines for extraction
 and materialization. Summarize copies with a fixed buffer and evaluates its
 full-input heuristic over the owned raw artifact with bounded reader state.
-Whole-pipeline resource acceptance remains pending; these evidence limits are
-not a measured resident-memory guarantee.
+The finite [resource campaign](implementation-tips/README.md#bounded-memory-resource-campaign)
+passed on macOS arm64. Its process-local high-water measurements establish the
+per-workload scaling tolerance, not a universal maximum RSS guarantee; Linux
+resource scaling is unmeasured.
 
-[LOMEM](roadmap/README.md#lomem-bounded-memory-log-processing) adopts a bounded-memory
-replacement for capture, import, inference, and materialization. Captured execution
-and summarize import/inference are connected; resource verification remains planned. Its [RQMEM contract](specs/README.md#rqmem-bounded-memory-log-processing)
+The implemented [LOMEM](roadmap/README.md#lomem-bounded-memory-log-processing)
+pipeline covers capture, import, inference and materialization. Its
+[RQMEM contract](specs/README.md#rqmem-bounded-memory-log-processing)
 preserves commands, config, MCP, artifact schemas, watcher hashes, original raw
 bytes, and the existing tail-selection semantics. No integration migration or
 consumer change is part of that work. Raw disk use remains proportional to log
