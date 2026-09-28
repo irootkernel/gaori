@@ -567,7 +567,7 @@ func TestUseGaoriStatusSkillContract(t *testing.T) {
 	}
 
 	documents := map[string][]string{
-		"CHANGELOG.md":                {"## v0.1.17 - 2026-09-14", "## v0.1.16 - 2026-09-06", "Read-only historical run statistics and caller-elapsed estimates", "use-gaori-status"},
+		"CHANGELOG.md":                {"## v0.1.18 - 2026-09-29", "## v0.1.17 - 2026-09-14", "Read-only historical run statistics and caller-elapsed estimates", "use-gaori-status"},
 		"README.md":                   {"use-gaori-status", "Neither skill is installed or activated by Gaori itself"},
 		"docs/architecture/README.md": {"Status: Complete through `RSTAT`", "use-gaori-status", "without arithmetic"},
 		"docs/architecture-decision-records/README.md": {"ADR-0020", "Status: Accepted", "use-gaori-status"},

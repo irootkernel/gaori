@@ -36,7 +36,7 @@ Gaori is not a test gate or verification authority. The parent project decides w
 Install the current release with Go. Command surfaces added since that release are documented here as they land, and the release notes under [docs/releases/](docs/releases/) record what each published version actually contains, so build from source when you need a surface the pinned release does not have yet:
 
 ```bash
-go install github.com/irootkernel/gaori@v0.1.17
+go install github.com/irootkernel/gaori@v0.1.18
 gaori --version
 ```
 
@@ -48,10 +48,10 @@ From a source checkout, use:
 make install
 ```
 
-Projects that pin a local Gaori toolchain can install the versioned binary at `~/.local/gaori/toolchains/v0.1.17/bin/`:
+Projects that pin a local Gaori toolchain can install the versioned binary at `~/.local/gaori/toolchains/v0.1.18/bin/`:
 
 ```bash
-VERSION=0.1.17 make install-toolchain
+VERSION=0.1.18 make install-toolchain
 ```
 
 ## Optional: Aquarium development channel
@@ -60,7 +60,7 @@ On Darwin arm64, maintainers can use `aquarium-dev gaori ...` after explicitly e
 
 The source exposes `make aquarium-dev-describe` and `make aquarium-dev-build AQUARIUM_DEV_OUTPUT=<absolute-empty-directory>`. See the [development producer contract and setup workflow](docs/integration-guide.md#aquarium-development-channel) for JSON fields, admission rules, approvals, and verification. Enrollment does not update a Codex MCP registration or install a stable release.
 
-`gaori version` and `gaori --version` print `gaori v<version>`. The v0.1.17 JSON payload contains exactly `name` and a `v`-prefixed `version`, for example `{"name":"gaori","version":"v0.1.17"}`. Development producer manifests retain the full source commit and executable checksum separately.
+`gaori version` and `gaori --version` print `gaori v<version>`. The v0.1.18 JSON payload contains exactly `name` and a `v`-prefixed `version`, for example `{"name":"gaori","version":"v0.1.18"}`. Development producer manifests retain the full source commit and executable checksum separately.
 
 ## Optional: configure an AI coding agent
 
@@ -129,7 +129,7 @@ an entrypoint from one revision with references from another. The current
 `existing-logs.md`, `fallbacks.md`, `lifecycle.md`, `recovery.md`, and
 `retention.md`. `use-gaori-status` is self-contained in its own `SKILL.md`.
 
-The published v0.1.17 source archive includes both skills with that release's
+The published v0.1.18 source archive includes both skills with that release's
 resource layout; this checkout may contain newer guidance. Record the selected
 commit or tag and any local changes when handing source guidance to another
 project. Binary installation through `go install`, `make install`, or
@@ -139,7 +139,7 @@ Neither skill is installed or activated by Gaori itself.
 
 ## Use the local MCP server
 
-Gaori v0.1.17 includes the STDIO MCP server, terminal-only `await_run`, and read-only historical statistics and live estimates for local coding agents. Register the selected v0.1.17 binary from the repository that should own test artifacts:
+Gaori v0.1.18 includes the STDIO MCP server, terminal-only `await_run`, and read-only historical statistics and live estimates for local coding agents. Register the selected v0.1.18 binary from the repository that should own test artifacts:
 
 ```bash
 make build
