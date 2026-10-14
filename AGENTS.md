@@ -178,9 +178,9 @@ Record in the release notes and completion report that the user waived a repeate
 #### Mulgae Review Overrides
 
 - An explicit `$aquarium:task-handler` invocation authorizes the task-scoped Mulgae review required by that workflow. Outside that workflow, run Mulgae only when the user explicitly asks for a review.
-- Assign all six roles to ZCode. Grok and Codex are registered alternatives; do not substitute one unless Master explicitly changes that policy.
+- Use the six role assignments in `.mulgae/config.yaml`. Substitute a provider only with Master's explicit approval.
 - Compose a review-only objective that requires concrete captured-target findings and preserves Gaori's standalone boundary, authoritative command-exit semantics, evidence-only parser and rule behavior, artifact containment, and raw-log contract.
-- Before provider invocation, preflight the same target and all six roles. Confirm the exact transmitted file set, the six ZCode routes, provider timeouts, and invocation budgets; stop on unsafe or overbroad capture.
+- Before provider invocation, preflight the same target and all six roles. Confirm the exact transmitted file set, the six configured role-to-provider routes, provider timeouts, and invocation budgets; stop on unsafe or overbroad capture.
 - Verify every advisory finding against the captured target and the repository authorities before recommending a change. Do not infer review acceptance, waiver, release, or runtime activation from Mulgae output.
 
 #### Verification
