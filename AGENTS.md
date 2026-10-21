@@ -16,6 +16,7 @@ Gaori's `AGENTS.md` is the canonical local guidance for AI coding agents working
 - State material assumptions affecting scope, design, compatibility, evidence semantics, or verification. Surface meaningful trade-offs and simpler approaches when they satisfy the requirement with less complexity or risk.
 - If materially different interpretations remain, present the alternatives and recommend one. Stop and ask a focused question when unresolved ambiguity would materially change the result.
 - Push back on conflicts with repository authority, safety, Gaori's standalone deterministic boundary, or Master's goal.
+- Before changing a feature, read applicable directory AGENTS.md files and the canonical documents relevant to the change. Respect the selected harness's native instruction scope and precedence.
 
 ### 3. Act on Sufficient Evidence
 
@@ -27,6 +28,7 @@ Gaori's `AGENTS.md` is the canonical local guidance for AI coding agents working
 - Touch only what the requested outcome and verification require. Match local style; do not refactor, reformat, rename, or clean up adjacent code without a task need. Every changed line must be traceable to the outcome, an accepted task, or its verification.
 - Preserve unrelated staged, unstaged, and untracked user changes. Remove only code, imports, files, generated references, or documentation made obsolete by this change. Mention unrelated defects or pre-existing dead code instead of changing them without authorization.
 - Record only independent remaining work in the canonical owners listed under Project Configuration. Never defer work required for current correctness or acceptance.
+- Read directory-guide adoption coverage in the root documentation index. Maintain affected canonical documents and existing applicable guides, including guides outside that coverage. Within adopted coverage, add guides for new feature boundaries as part of the authorized work. Report uncovered areas without unrelated backfill; guide absence alone adds no workflow blocker. Finish affected documentation before candidate review.
 
 ### 4. Carry Authorization Forward
 
@@ -140,7 +142,7 @@ Preserve these invariants:
 
 Do not claim review acceptance, waiver, final acceptance, install, release, push, or runtime activation from Gaori evidence alone.
 
-Local runtime, evidence, and tool state must stay out of source commits. The portable tracked exceptions are `.gaori/tester.yaml`, reviewed `.gaori/tester/rules/*.yaml`, `.mulgae/config.yaml`, reviewed `.mulgaeignore`, `.podway/config.yaml`, `.podway/.gitignore`, `.dolgorae/config.yaml`, `.dolgorae/.gitignore`, and the five reviewed Aquarium Procedure v2 files under `.podway/procedures/`:
+Local runtime, evidence, and tool state must stay out of source commits. The portable tracked exceptions are `.gaori/tester.yaml`, reviewed `.gaori/tester/rules/*.yaml`, `.mulgae/config.yaml`, `.podway/config.yaml`, `.podway/.gitignore`, `.dolgorae/config.yaml`, `.dolgorae/.gitignore`, and the five reviewed Aquarium Procedure v2 files under `.podway/procedures/`:
 
 ```text
 .gaori/* except tester.yaml and reviewed tester/rules/*.yaml
@@ -179,9 +181,9 @@ Record in the release notes and completion report that the user waived a repeate
 
 - An explicit `$aquarium:task-handler` invocation authorizes the task-scoped Mulgae review required by that workflow. Outside that workflow, run Mulgae only when the user explicitly asks for a review.
 - Use the six role assignments in `.mulgae/config.yaml`. Substitute a provider only with Master's explicit approval.
-- Compose a review-only objective that requires concrete captured-target findings and preserves Gaori's standalone boundary, authoritative command-exit semantics, evidence-only parser and rule behavior, artifact containment, and raw-log contract.
-- Before provider invocation, preflight the same target and all six roles. Confirm the exact transmitted file set, the six configured role-to-provider routes, provider timeouts, and invocation budgets; stop on unsafe or overbroad capture.
-- Verify every advisory finding against the captured target and the repository authorities before recommending a change. Do not infer review acceptance, waiver, release, or runtime activation from Mulgae output.
+- Compose a review-only objective that requires concrete findings against the selected target and preserves Gaori's standalone boundary, authoritative command-exit semantics, evidence-only parser and rule behavior, artifact containment, and raw-log contract.
+- Before provider invocation, preflight the same target and all six roles. Confirm project binding, admitted source selection, the six configured role-to-provider routes, provider timeouts, and invocation budgets; stop on unsafe or overbroad source selection.
+- Verify every advisory finding against the reviewed source and the repository authorities before recommending a change. Do not infer review acceptance, waiver, release, or runtime activation from Mulgae output.
 
 #### Verification
 
