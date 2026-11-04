@@ -66,11 +66,13 @@ Owner: Gaori team. Adopted on 2026-09-09 from Aquarium's accepted `SKILL-04` req
 
 Status: Done
 
-Master approved completion on 2026-09-09 after canonical development-channel enrollment and CLI smoke verification. The committed producer and local development integration are delivered. Aquarium TASK-013 retains downstream acceptance ownership; this status does not grant a stable release or production installation.
+Master approved completion on 2026-09-09 after canonical development-channel enrollment and CLI smoke verification. The committed producer and local development integration were delivered at that time. Aquarium TASK-013 retains downstream acceptance ownership; this status does not grant a stable release or production installation.
 
 | Task ID | Status | Goal | Verification | Reference |
 |---|---|---|---|---|
 | AQDEV-001 | Done | Produce exact committed local-main development executables through Aquarium's v1 Make contract; unify CLI version prefixes and retain commit/checksum provenance in the artifact manifest; enroll the canonical checkout and hand off integration to Aquarium TASK-013. | Producer admission, provenance, containment, checksum and version E2E tests; full development gate; approved exact-commit enrollment and initial publication; isolated native-hook update; launcher CLI and STDIO MCP checks; production and environment isolation. Development verification and host integration are separate milestones; downstream acceptance remains with Aquarium TASK-013. | Aquarium development producer v1 contract; `GAORI-REQ-RQDEV-001` to `GAORI-REQ-RQDEV-003` |
+
+On 2026-11-04, Master authorized removal of the aquarium-dev-only source integration following Aquarium's retirement request. The producer targets, script and dedicated tests are removed; normal Make builds, installation, CLI/MCP behavior, runtime version identity and both native skills remain supported. `AQDEV-001` retains its original completion history. See the [current requirements](../specs/README.md#rqdev-runtime-version-identity-and-retired-development-producer), [test contract](../../TESTING.md), and [integration boundary](../integration-guide.md#development-builds). This source retirement does not claim host detachment, request acceptance, installation, publication, or Aquarium's final shared-manager retirement.
 
 ## SETUP: Project foundation
 

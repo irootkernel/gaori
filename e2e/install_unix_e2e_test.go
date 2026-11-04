@@ -12,6 +12,11 @@ import (
 
 func TestMakeInstallTargetsAndResolver(t *testing.T) {
 	root := projectRoot(t)
+	buildCmd := exec.Command("make", "--no-print-directory", "-n")
+	buildCmd.Dir = root
+	if output := runExpectedExit(t, buildCmd, 0); !strings.Contains(output, "go build") {
+		t.Fatalf("default make target must build Gaori: %s", output)
+	}
 	installRoot := t.TempDir()
 
 	goBin := filepath.Join(installRoot, "gobin")

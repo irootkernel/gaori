@@ -4,6 +4,10 @@ This file records concise shipped outcomes and the planned next stable release. 
 
 ## v0.1.19 - Unreleased
 
+### Removed
+
+- The aquarium-dev producer Make targets, build helper, and dedicated tests. Normal source builds, installation, CLI/MCP behavior, version output, and both native Gaori skills remain supported. Shared host-manager retirement remains separately owned by Aquarium.
+
 ## v0.1.18 - 2026-09-29
 
 ### Changed

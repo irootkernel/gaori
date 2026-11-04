@@ -350,53 +350,8 @@ There is no v1 decoder or `--lane` compatibility alias. Old config, rule fields,
 
 For exact CLI syntax and a complete tested rule fixture, see the [CLI reference](user-interface.md). For JSON shapes and path-safety semantics, see the [architecture](architecture/README.md).
 
-## Aquarium development channel
+## Development builds
 
-Gaori implements Aquarium's frozen v1 foreground executable producer. CLI and session-local STDIO MCP use the same binary; no managed service or resident daemon is introduced. Aquarium owns enrollment, the native post-commit hook, isolated manager checkouts, immutable publication, leases, and command selectors. Gaori owns its producer and runtime identity. Stable installation and release verification remain independent.
+Use the root `make build`, `make install`, and `make install-toolchain` targets for supported source development and installation. Gaori no longer exposes the aquarium-dev producer targets. The CLI and session-local STDIO MCP interfaces and both native skills remain supported independently of that retired development channel.
 
-Run the producer at the primary Git root on local `main`:
-
-```text
-make aquarium-dev-describe
-make aquarium-dev-build AQUARIUM_DEV_OUTPUT=<absolute-empty-directory>
-```
-
-Both Make targets return exit status 0 with one JSON object on stdout on success. Nested Make callers or environments enabling directory banners must pass `--no-print-directory` to keep stdout machine-readable. Treat any nonzero exit as failure and inspect stderr; GNU Make normally returns 2 for recipe failures, without distinguishing admission rejection from a missing tool or a build failure.
-
-The read-only description reads the committed `CHANGELOG.md` and requires exactly one `## v<major>.<minor>.<patch> - Unreleased` heading. It permits a dirty local-main checkout for diagnosis but never describes uncommitted version edits. It emits exactly these five fields:
-
-| Field | Value |
-|---|---|
-| `schema` | `aquarium-dev-producer-description/v1` |
-| `project_id` | `gaori` |
-| `next_version` | The planned stable version from the committed `CHANGELOG.md` Unreleased heading |
-| `artifact_kind` | `executable` |
-| `artifact_path` | `bin/gaori` |
-
-The build requires clean Git status, including staged, unstaged, and non-ignored untracked files; detached HEAD and other branches are rejected. A local main ahead of its remote is valid; no fetch, pull, or remote equality check is required. Build source comes from the admitted commit's Git blobs, with symlinks and submodules rejected and Git replacement objects disabled. Ignored files and Git archive substitutions cannot affect source provenance.
-
-Supply an existing empty absolute output directory with no symlink ancestry, preferably outside the source checkout. On macOS, resolve temporary-directory aliases such as `/var` before supplying a path. Source scratch files, Go build/module caches, and temporary compiler output stay inside a temporary child of that directory and are removed afterward. The native Go toolchain must already meet `go.mod`; the producer disables toolchain switching, CGO, external Go workspace/overlay flags, and caller-selected cross-compilation. The producer also sets `GOENV=off` and clears `GOFLAGS`, so settings persisted with `go env -w` and caller build flags are not loaded. Export required module transport settings such as `GOPROXY` in the environment. Pinned module downloads may require network access. The source checkout is rechecked before exposing the executable, excluding only the producer-owned temporary directory if it is inside the checkout. Other non-ignored changes inside the source checkout, including siblings in an in-checkout output directory, still fail the clean check. This Git check does not inspect concurrent changes to an external output directory. An in-checkout artifact may appear as untracked output after success; ignore or remove generated output before a later build. The stable `VERSION` and `COMMIT` Make overrides do not determine development identity.
-
-Success leaves one regular executable at `bin/gaori` and emits exactly these seven fields; Make recipe echo is suppressed and build diagnostics go to stderr:
-
-| Field | Value |
-|---|---|
-| `schema` | `aquarium-dev-artifact-manifest/v1` |
-| `project_id` | `gaori` |
-| `git_sha` | The admitted full 40-character lowercase SHA |
-| `development_version` | `v<next>-dev.<sha12>` |
-| `artifact_kind` | `executable` |
-| `artifact_path` | `bin/gaori` |
-| `sha256` | `sha256:` plus the executable's 64-character lowercase SHA-256 |
-
-`gaori version`, `gaori --version`, and the `version` value from `gaori version --json` use the same `v`-prefixed version. JSON contains exactly `name` and `version`; it does not expose commit or build-date metadata. Development build provenance is recorded in the producer manifest through its full `git_sha` and executable checksum. MCP initialization continues to use its existing internal version representation; enrollment does not change an existing host's MCP registration.
-
-### Enrollment and verification
-
-After verifying the producer and explicitly approving its commit, use the installed `aquarium-dev` manager for the exact canonical checkout on Darwin arm64. Start with `aquarium-dev diagnose --repository <absolute-git-root>`. After authorization, enroll with `aquarium-dev enroll --repository <absolute-git-root> --approve-enrollment --approve-hook`, then build with `aquarium-dev rebuild --repository <absolute-git-root> --approve-build`. Aquarium distributes this channel as a CLI and MCP server; it has no paired `aquarium-dev` skill. Enrollment metadata, the owned native hook block, and the initial build require separate approvals. Inspect an existing `~/.local/bin/aquarium-dev` before considering separately approved installation or replacement. Do not manually edit manager-owned state.
-
-Verify the approved SHA through the manifest and independent executable checksum, and check the matching development version through runtime version JSON. Confirm healthy manager diagnosis and `~/.aquarium-dev/bin/gaori` resolving through the selected immutable generation. A successful command alone is insufficient: absent foreground generations may fall back to the global executable, while invalid selected generations must fail closed. Verify subsequent native-hook publication using authorized real work or an isolated fixture rather than an unrelated commit.
-
-Exercise local success and failure commands through `aquarium-dev gaori ...`, checking authoritative exit status, raw evidence preservation and bounded derived evidence. Exercise STDIO MCP in a temporary client session without changing host registration. Compare production executable identity before and after integration and verify caller environment preservation, including `CODEX_HOME`, apart from the documented PATH prepend.
-
-Return exact commit and clean-checkout identity, Aquarium revision and manager path, producer commands and complete JSON/exit statuses, checksum/runtime identity, rejection-test results, diagnosis and selection, initial and subsequent publication, consumer/isolation checks, and any skipped verification to Aquarium `TASK-013`. Runtime evidence stays local; it does not grant release QA, stable installation, or final acceptance.
+Aquarium owns retirement of shared manager enrollment, command selectors, generations, launcher, and MCP infrastructure. Removing Gaori's source producer does not detach or delete host-managed state. No Gaori controller, resident service, or Haepari resource is required by this removal.

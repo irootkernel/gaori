@@ -21,9 +21,7 @@ separately exercised by `TestBinaryMemoryCampaign`; it is not part of ordinary
 | `GAORI-REQ-RQMEM-008` | `TestBinaryBoundedPipelineLayoutsAndConsumers`; `TestBinaryConcurrentBoundedMCPStarts`; `TestMaterializeCapturedWindowIntegrity` |
 | `GAORI-REQ-RQMEM-009` | `TestCaptureBoundedRetentionAndSnapshotOwnership`; `TestBoundedInferenceGrowth`; `TestBinaryMemoryCampaign` |
 | `GAORI-REQ-RQMEM-010` | `TestRequirementTraceabilityMatrixCoversCompletedRequirements`; `TestRequirementTraceabilityAuditRejectsInvalidEvidence`; canonical outcomes and dossier disposition in the roadmap, with documentation readback and link checks |
-| `GAORI-REQ-RQDEV-001` | `TestBinaryAquariumProducerMakeContext`; `TestBinaryAquariumProducerAdmission`; `TestBinaryAquariumProducerRejectsInvalidCommittedInput`; `TestBinaryAquariumProducerCommittedArtifact` |
-| `GAORI-REQ-RQDEV-002` | `TestBinaryAquariumProducerAdmission`; `TestBinaryAquariumProducerOutputContainment`; `TestBinaryAquariumProducerRejectsInvalidCommittedInput`; `TestBinaryAquariumProducerRevalidatesSource`; `TestBinaryAquariumProducerCommittedArtifact` |
-| `GAORI-REQ-RQDEV-003` | `TestVersionPrefixesAndJSONFields`; `TestVersionJSONOutput`; `TestBinaryAquariumProducerCommittedArtifact`; `TestDocumentedCLIWorkflowAgainstFreshFixture` |
+| `GAORI-REQ-RQDEV-003` | `TestVersionPrefixesAndJSONFields`; `TestVersionJSONOutput`; `TestDocumentedCLIWorkflowAgainstFreshFixture` |
 | `GAORI-REQ-RQCLI-001` | `TestDocumentedCLIWorkflowAgainstFreshFixture`; `TestMakeInstallTargetsAndResolver` |
 | `GAORI-REQ-RQCLI-002` | `TestConfiguredRunAndExcerpt`; `TestBinaryConfiguredRunAndExcerpt` |
 | `GAORI-REQ-RQCLI-003` | `TestAdHocRunWithoutConfig`; `TestBinaryTagsSelectRulesByAllTags`; `TestBinaryTagInterfacesFailBeforeExecution`; `TestDocumentedCLIWorkflowAgainstFreshFixture` |

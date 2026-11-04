@@ -54,13 +54,7 @@ Projects that pin a local Gaori toolchain can install the versioned binary at `~
 VERSION=0.1.18 make install-toolchain
 ```
 
-## Optional: Aquarium development channel
-
-On Darwin arm64, maintainers can use `aquarium-dev gaori ...` after explicitly enrolling this source checkout with `aquarium-dev enroll`. Each development executable identifies one exact local `main` commit and lives under `~/.aquarium-dev/`; the source checkout stays in place. The producer takes its planned stable version from the committed `CHANGELOG.md` Unreleased heading.
-
-The source exposes `make aquarium-dev-describe` and `make aquarium-dev-build AQUARIUM_DEV_OUTPUT=<absolute-empty-directory>`. See the [development producer contract and setup workflow](docs/integration-guide.md#aquarium-development-channel) for JSON fields, admission rules, approvals, and verification. Enrollment does not update a Codex MCP registration or install a stable release.
-
-`gaori version` and `gaori --version` print `gaori v<version>`. The v0.1.18 JSON payload contains exactly `name` and a `v`-prefixed `version`, for example `{"name":"gaori","version":"v0.1.18"}`. Development producer manifests retain the full source commit and executable checksum separately.
+`gaori version` and `gaori --version` print `gaori v<version>`. The JSON payload contains exactly `name` and a `v`-prefixed `version`, for example `{"name":"gaori","version":"v0.1.18"}`.
 
 ## Optional: configure an AI coding agent
 
