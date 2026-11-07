@@ -2,6 +2,8 @@
 
 This file records concise shipped outcomes and the planned next stable release. Release notes before v0.1.15 remain under [`docs/releases/`](docs/releases/).
 
+## v0.1.20 - Unreleased
+
 ## v0.1.19 - 2026-11-08
 
 ### Removed
