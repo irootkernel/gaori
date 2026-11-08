@@ -66,6 +66,8 @@ For Gaori maintainers:
 8. Track current unreleased changes in the root [changelog](../CHANGELOG.md) and use the matching document under [release notes](releases/) when publishing a release.
 9. For the completed `LOMEM` epic, read the [RQMEM requirements](specs/README.md#rqmem-bounded-memory-log-processing), [ADR-0021](architecture-decision-records/README.md#adr-0021-bound-log-memory-without-changing-evidence-semantics), [bounded pipeline architecture](architecture/README.md#bounded-memory-log-pipeline), and [resource measurements](implementation-tips/README.md#bounded-memory-resource-campaign).
 
+For planned complete raw-log analysis, read the [FLOG roadmap](roadmap/README.md#flog-complete-raw-log-analysis), [execution dossier](todo/TODO-FLOG.md), [RQLOG requirements](specs/README.md#rqlog-complete-raw-log-analysis-planned), and [proposed ADR-0023](architecture-decision-records/README.md#adr-0023-complete-log-analysis-with-input-proportional-memory).
+
 ## Current delivery state
 
 The standalone v0.1 baseline and session-local STDIO MCP interface are implemented. The current published release is [v0.1.19](releases/v0.1.19.md); the source tree can be ahead of that release, and release notes record what each published version contains.
@@ -73,6 +75,8 @@ The standalone v0.1 baseline and session-local STDIO MCP interface are implement
 `GEPIC` delivered the code-owned JSON parser catalog and Experimental `dart-test` and `patrol` parsers. `RSTAT` delivers artifact-derived CLI and MCP insights plus the calculation-free `use-gaori-status` skill. `SKMOD` keeps both source skills concise, moves conditional guidance into complete reference trees linked from their entrypoints, and retains terminal `await_run` under host waiting requirements without changing Gaori's runtime surface. `AQADP`, `AWAIT-005`, and `AWAIT-007` remain deferred under their roadmap-owned activation conditions.
 
 The completed [LOMEM](roadmap/README.md#lomem-bounded-memory-log-processing) epic delivers bounded-memory capture, import, inference, and materialization without changing the existing extraction window or public contracts. The bounded pipeline and separate macOS arm64 [resource campaign](implementation-tips/README.md#bounded-memory-resource-campaign) are verified; Linux scaling remains unmeasured.
+
+[FLOG](roadmap/README.md#flog-complete-raw-log-analysis) is planned, not implemented. Its adopted design permits input-proportional analysis memory to remove raw-log analysis limits using existing parsers and Go regexp. It replaces the unimplemented bounded-memory proposal on the `idiot` branch; the current binary retains its existing tail and input limits until the implementing tasks are delivered.
 
 ## Roadmap identity and dossier lifecycle
 

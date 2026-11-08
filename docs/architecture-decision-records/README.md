@@ -1,6 +1,6 @@
 # Gaori Architecture Decision Records
 
-Status: Accepted decisions through `ADR-0021`; `ADR-0021` is implemented through `LOMEM`
+Status: Accepted decisions through `ADR-0021`; `ADR-0021` is implemented through `LOMEM`; `ADR-0023` is Proposed; `ADR-0022` is reserved for the abandoned branch proposal
 Scope: Accepted Gaori decisions, including run-status insights and bounded-memory log processing
 
 ## ADR status legend
@@ -600,6 +600,129 @@ telemetry, and MCP discovery requires separate adoption.
 - The tail may still omit an early failure span, and oversized evidence remains degraded even when a useful match is retained.
 - Normal execution can finalize from captured digest/window metadata without an additional full-log scan, preserving the existing MCP shutdown-drain boundary.
 - Compatibility is covered by the named component and built-binary tests; the separate resource campaign passed on macOS arm64. The [measurement record](../implementation-tips/README.md#bounded-memory-resource-campaign) bounds that claim to the measured candidate and host; it does not establish Linux scaling, release or runtime activation.
+
+## ADR-0023: Complete-log analysis with input-proportional memory
+
+Status: Proposed
+Date: 2026-11-09
+Delivery: [FLOG](../roadmap/README.md#flog-complete-raw-log-analysis)
+Requirements: [planned RQLOG](../specs/README.md#rqlog-complete-raw-log-analysis-planned)
+
+### Context
+
+The current binary preserves complete raw logs but extracts only the final
+256 KiB complete-line window. Large suites can place failures before that window.
+Several authoring and diagnostic surfaces also reject or truncate large raw
+inputs. The abandoned FLOG design at
+`fed6217ae3edf22d6c92b197e0bab6ef48a2d93b` sought complete analysis with memory
+independent of bytes, longest line and candidate count. Its ADR-0022 proposed a
+private Go-derived regexp executor and extensive parity/resource proof; it was
+not implemented. Reserve ADR-0022 for that historical proposal rather than
+reusing its number for a different decision.
+
+Master explicitly permits input-proportional analysis memory. This removes the
+need to reproduce Go regexp execution over disk-backed inputs.
+
+### Proposed decision
+
+Keep streaming raw capture, accepted-prefix hashing and safe summarize import.
+At shared artifact materialization, reuse captured text only when ByteOrigin and
+LineOffset are zero and len(Text) equals TotalBytes.
+Otherwise open the matching owned raw artifact through the existing containment
+helpers, read it completely, and verify byte count and SHA-256 against capture
+metadata before extraction or derived-artifact publication. A complete analysis
+snapshot has zero byte/line origins and is not marked oversized. Reuse that same
+text for extraction and excerpts; do not retain it in completed MCP results.
+
+Remove raw-analysis input guards and diagnostic tail selection. Use the existing
+Go regexp engine, line indexes, parser/rule precedence, deduplication, captures,
+replacement semantics and output selection. Do not add a new matcher, mmap,
+spill/replay framework, parser rewrite, mode, tuning flag or dependency. The
+capture ring may remain a bounded fast path; its size is no longer an analysis
+ceiling. Raw-input readers must retain regular-file checks for file-only surfaces
+and descriptor checks, closure and rooted opens where applicable. Rules test
+and legacy proposal currently lack these guards: add a regular-file check before
+open and on the opened descriptor, returning config exit 2 on non-regular inputs.
+Add the missing descriptor check to redaction sampling. Preserve
+summarize's existing supported-source and same-file alias behavior.
+
+Raw-log total size alone neither rejects analysis nor degrades extraction.
+Existing parser-quality and output-truncation causes still apply. Preserve the
+256 KiB config/rule YAML limits, 256 KiB selected proposal-span limit, block line
+limits, 16 KiB excerpts, 64 KiB rendered summaries, 50 records per kind and
+redaction-before-noise filtering. Separate selected-span terminology from the
+obsolete general regex-input bound. The legacy selected-byte guard is newly
+explicit, replacing the implicit whole-source bound. Count original selected
+bytes before CRLF normalization, excluding the last selected LF but retaining
+any final CR. Preserve legacy selected-line acceptance and its generated-rule
+clamp; only summary mode keeps its existing MaxBlockLines-2 selection limit. Rules-test signatures retain their existing
+complete output contract, even when large.
+
+A raw reload read/close, size or digest failure is an artifact error (exit 3);
+do not pass it through parser fallback or publish a new completed summary/status
+set. Keep all other existing error classes and child-result facts. Preserve the
+existing shared three-second MCP shutdown drain, cancellation semantics and
+command timeout ownership. Complete large-log finalization is not guaranteed
+inside that drain; do not claim completion before publication or silently use
+tail-only analysis when time runs out. This work adds no operation scheduler or
+new cancellation authority.
+
+### Contract transition
+
+This decision remains Proposed during documentation-only planning. FLOG-009
+records acceptance of this approved design when activating its runtime adapter;
+it does not require another prototype/feasibility project or a new engine review.
+Annotate the affected accepted ADR clauses at that transition, and update each
+later adapter's requirements and current documentation with its implementation.
+
+Partially supersede ADR-0007's raw regex-input/runtime-tail restrictions,
+ADR-0014's diagnostic tail, ADR-0015's sample cap and ADR-0021's constant-memory,
+tail-only materialization and no-post-exit-full-scan obligations as their adapters
+are delivered. Preserve their other decisions. Update affected current RQSEC,
+RQEXT and RQMEM clauses explicitly, retaining LOMEM's historical Done state and
+measurement applicability. Until implementation, those current contracts remain
+in force. Planned requirements do not enter the completed test matrix.
+
+| Delivery task | Current clauses to replace only as that adapter activates |
+|---|---|
+| FLOG-009 | RQMEM Resource and compatibility contract's memory/window/degraded paragraphs (preserve the independent full-input inference paragraphs); RQMEM-001's whole-buffer/index prohibition and constant analysis-memory guarantee; RQMEM-003's runtime window/degraded clauses; RQMEM-004's bounded-window materialization; RQMEM-007's final no-full-log-finalization sentence; RQMEM-009's flat-memory qualification; RQSEC-004's runtime/summarize tail and general regex-input bound; corresponding ADR-0007/0021 clauses, including ADR-0021's no-additional-scan consequence |
+| FLOG-010 | RQEXT-008's diagnostic window; corresponding ADR-0014 clause |
+| FLOG-011 | RQSEC-004's raw-fixture and legacy-source caps; RQMEM-003's fixture rejection clause; RQSEC-006's sample cap; corresponding ADR-0007/0015 raw-input clauses |
+| FLOG-012 | Replacement make test-memory/TESTING.md campaign and resource traceability; preserve old measurements with their original candidate applicability |
+
+FLOG-009 explicitly marks TESTING.md's old campaign inapplicable to the new
+runtime candidate; do not select it as a gate between FLOG-009 and FLOG-012.
+FLOG-012 must implement and run its replacement before epic completion. Preserve
+the independent YAML rejection, output limits and unchanged raw/lifecycle clauses.
+Each implementing task updates its affected behavioral tests at that time;
+FLOG-012 does not own delayed repair of earlier tasks' intentionally broken tests.
+
+### Alternatives and consequences
+
+- Raising the ceiling leaves an arbitrary blind spot; independent chunks can
+  change matching, deduplication and real line/EOF semantics.
+- Constant-memory complete analysis is a different, substantially larger goal.
+  The abandoned executor proposal and 189-trial campaign are not prerequisites.
+- Analysis memory grows with bytes, lines and candidates; concurrent analyses
+  add their allocations. There is no unlimited-capacity or constant-memory
+  promise. Host memory/address-space exhaustion remains possible.
+- Raw collection stays streaming, but large-log analysis adds a full read after
+  capture. Existing small-input results stay compatible; newly discovered early
+  failures can intentionally change large-input summaries and watcher hashes.
+- Input-proportional memory does not make all existing candidate processing
+  efficient: Go parent suppression and Cargo name membership have quadratic
+  paths. FLOG-009 replaces only those helpers with ancestor/name sets, preserving
+  ordering, deduplication and late-descendant semantics. Require small-equivalence
+  and dense-candidate regressions, not a new parser engine or throughput promise.
+- CLI SIGINT during post-command materialization retains existing default signal
+  behavior after the runner unregisters its handlers. Partial excerpts or summary
+  can remain; a current status.json binding the summary marks completion. No
+  new operation-wide signal controller is introduced. The dossier specifies the
+  blocked-reload shutdown test and prior-artifact preservation regression.
+- Replace the incompatible constant-memory campaign with the finite production
+  smoke specified in the dossier. Record memory/time observations without
+  asserting the old flat-memory threshold. Preserve old measurements as history,
+  not qualification of this new behavior.
 
 ## Future ADR candidates
 

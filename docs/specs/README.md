@@ -1,6 +1,6 @@
 # Gaori Requirement Specs
 
-Status: Current source-tree requirements through `RSTAT` and retirement of the Aquarium development producer; `RQMEM-001` through `RQMEM-010` are implemented and verified
+Status: Current source-tree requirements through `RSTAT` and retirement of the Aquarium development producer; `RQMEM-001` through `RQMEM-010` are implemented and verified; `RQLOG-009` through `RQLOG-014` are planned
 Scope: Gaori v0.1 standalone baseline, post-baseline hardening, portable project configuration, CLI usability, verified rule proposals, operator-directed cleanup, session-local STDIO MCP execution with terminal awaiting, long-running await guidance, the completed parser catalog plus Dart/Patrol extraction contract, implemented run-status and timing insights, and adopted bounded-memory log processing
 Source context: deterministic Gaori v0.1 CLI, evidence, and attached MCP behavior.
 
@@ -114,6 +114,29 @@ The aquarium-dev source producer was retired on 2026-11-04. `AQDEV-001` remains 
 - [x] `GAORI-REQ-RQSEC-005` Avoid broad fallback behavior; a specialized-parser miss reports `no_match` after a pass and `degraded` after a non-pass result, while an accepted span with missing key metadata remains `partial`.
 
 - [x] `GAORI-REQ-RQSEC-006` Provide opt-in redaction effectiveness measurement through `gaori config check --sample <raw-log>`, reporting per configured pattern, identified by its position in configured order rather than by name, the match count and replaced byte count observed during one ordered redaction pass plus the sample size and totals, never passing any surfaced value through the sampled patterns and never emitting matched text, surrounding lines, pattern names, regexes, or replacements, remaining read-only with no artifacts, and failing closed with config exit code `2` for a missing, unreadable, non-regular, or larger-than-256-KiB sample. Omitting `--sample` leaves the existing preflight output unchanged.
+
+## RQLOG: Complete raw-log analysis (planned)
+
+These unchecked requirements define [FLOG](../roadmap/README.md#flog-complete-raw-log-analysis).
+They describe future behavior, not the current binary.
+[Proposed ADR-0023](../architecture-decision-records/README.md#adr-0023-complete-log-analysis-with-input-proportional-memory)
+owns the design; the [execution dossier](../todo/TODO-FLOG.md) owns cross-task
+delivery and acceptance. Reserve RQLOG-001 through RQLOG-008 from the
+unimplemented design at `fed6217ae3edf22d6c92b197e0bab6ef48a2d93b`; do not reuse
+or mark them completed.
+
+Master permits analysis memory to grow with input bytes, line count and candidate
+count. There is no constant-memory guarantee for analysis. Streaming capture,
+hashing and safe import remain in place. Existing checked requirements and
+accepted ADRs still describe current behavior until the implementing task updates
+their affected clauses; preserve original LOMEM completion and measurement history.
+
+- [ ] `GAORI-REQ-RQLOG-009` Analyze complete supported raw logs in configured/ad-hoc CLI runs, both MCP start paths and summarize, including physical lines larger than 1 MiB, without a total-log/per-line analysis ceiling or a full/tail mode. Reuse existing parsers and Go regexp, preserve full-input summarize inference, and remove size-only degradation while retaining all other evidence-quality and output-truncation causes.
+- [ ] `GAORI-REQ-RQLOG-010` Evaluate every registered parser over the complete diagnostic input with exact candidate counts and each label's own heuristic, reporting scanned_bytes equal to total_bytes from actual successfully read bytes, and truncated false; these describe read coverage rather than an atomic snapshot of a changing source. Preserve fields, deterministic ordering, regular-file validation, config/rule independence, no automatic parser choice and no artifact creation.
+- [ ] `GAORI-REQ-RQLOG-011` Test rules against complete raw fixtures without total-size rejection, preserving rule-major order, exact span/count and overmatch behavior, complete human/JSON signatures and existing error classes for other failures. Keep config, stored/imported rule YAML and proposal-loading input bounds unchanged.
+- [ ] `GAORI-REQ-RQLOG-012` Accept a legacy proposal source regardless of total raw size, hash the complete original bytes, and select the requested lines exactly. Preserve summary/status/raw binding and stale-evidence rejection for summary-based proposals. Keep summary-based selected evidence at most 256 KiB and within its existing MaxBlockLines-2 selected-line budget. Add a legacy selected-byte guard of 1 through 256 KiB, counted on original bytes before CRLF normalization from the first selected line's start through the last selected line excluding its final LF but including a final CR. Preserve legacy selected-line acceptance and generated-rule/context clamping. Reject invalid selection with config exit 2 before writing a proposal. A selected-span limit is not a source-file analysis limit.
+- [ ] `GAORI-REQ-RQLOG-013` Measure redaction against the complete regular-file sample with existing ordered Go-regexp replacement and capture semantics. Report only the existing positional counts, byte counts, totals and locator; never emit matched content or pattern definitions. Preserve read-only behavior, zero-pattern behavior and omission of sample metadata when no sample was requested.
+- [ ] `GAORI-REQ-RQLOG-014` Preserve command-result authority, raw bytes/digests, absolute spans, containment, parser/rule semantics, support tiers, schemas, layouts, redaction-before-noise ordering, watcher hash inputs and existing output limits. Preserve timeout, kill, cancellation and the three-second shutdown drain, while explicitly replacing the old no-full-log-finalization obligation under ADR-0023. Add regular-file path and opened-descriptor checks to rules-test and legacy-proposal inputs and the missing descriptor check to sampling; reject non-regular input with config exit 2. Allow the bounded Go/Cargo post-processing optimizations specified in the dossier while preserving exact output semantics. Verify the production paths, resource smoke and ordinary gate; promote only observed results and existing named tests into completed traceability. No release, installation, runtime activation or downstream acceptance is implied.
 
 ## RQMEM: Bounded-memory log processing
 

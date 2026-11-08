@@ -1,7 +1,7 @@
 # Gaori Roadmap
 
-Status: Completed through `RSTAT`, `AQDEV-001`, `SKMOD`, and `LOMEM`; `AQADP`, `AWAIT-005`, and `AWAIT-007` deferred
-Scope: Implementation tracking for the Gaori v0.1 standalone baseline, hardening, tag and parser selection, release readiness, identity migration, operator-directed standalone evidence cleanup, portable project config, CLI usability improvements, session-local MCP execution, token-efficient terminal waiting and host-wait guidance, the parser catalog plus Dart/Patrol extraction epic, run-status and timing insights, Aquarium development-channel integration, deferred Aquarium qualification and downstream adoption tracking, and adopted bounded-memory log processing
+Status: Completed through `RSTAT`, `AQDEV-001`, `SKMOD`, and `LOMEM`; `FLOG` planned; `AQADP`, `AWAIT-005`, and `AWAIT-007` deferred
+Scope: Implementation tracking for the Gaori v0.1 standalone baseline, hardening, tag and parser selection, release readiness, identity migration, operator-directed standalone evidence cleanup, portable project config, CLI usability improvements, session-local MCP execution, token-efficient terminal waiting and host-wait guidance, the parser catalog plus Dart/Patrol extraction epic, run-status and timing insights, Aquarium development-channel integration, deferred Aquarium qualification and downstream adoption tracking, adopted bounded-memory log processing, and planned complete raw-log analysis
 
 This roadmap is a delivery record, not an operator guide or a promise that out-of-scope capabilities will be added. See the [integration guide](../integration-guide.md) for the current supported/unsupported capability boundary and the [todo index](../todo/README.md) for future candidates and active epic dossiers.
 
@@ -11,9 +11,35 @@ Existing `Done` entries record completion of the original v0.1 implementation sl
 
 Current implementation snapshot:
 - `In Progress`: None
-- `Planned`: None
+- `Planned`: `FLOG-009` to `FLOG-012`
 - `Done`: `LOMEM-001` to `LOMEM-006`, `SETUP-001` to `SETUP-003`, `RUNNR-001` to `RUNNR-003`, `ARTIF-001` to `ARTIF-003`, `PARSE-001` to `PARSE-011`, `SAFEY-001` to `SAFEY-004`, `CLIUX-001` to `CLIUX-008`, `RULES-001` to `RULES-005`, `DOCUM-001` to `DOCUM-003`, `HARDE-001` to `HARDE-007`, `TAGS-001`, `ADHOC-001`, `ADHOC-002`, `RELRV-001` to `RELRV-009`, `BRAND-001`, `CLEAN-001`, `PORTA-001`, `MCP-001` to `MCP-006`, `AWAIT-001` to `AWAIT-004`, `AWAIT-006`, `RSTAT-001` to `RSTAT-004`, `AQDEV-001`, `SKMOD-001`, `SKMOD-002`
 - `Deferred`: `AQADP` (`QUALI-001`, `QUALI-002`, `CONSUMER-SUDAL-001`), `AWAIT-005`, `AWAIT-007`
+
+## FLOG: Complete raw-log analysis
+
+Status: Planned
+
+Detailed SOT: [Execution dossier](../todo/TODO-FLOG.md)
+
+Owner: Gaori team. Adopted on 2026-11-09 after Master approved complete-input
+analysis with input-proportional analysis memory. Requirements:
+[RQLOG](../specs/README.md#rqlog-complete-raw-log-analysis-planned).
+Decision: [proposed ADR-0023](../architecture-decision-records/README.md#adr-0023-complete-log-analysis-with-input-proportional-memory).
+
+This replaces the unimplemented bounded-memory FLOG design on branch
+`idiot` at `fed6217ae3edf22d6c92b197e0bab6ef48a2d93b`. Reserve its
+`FLOG-001` through `FLOG-008` identifiers without scheduling them or claiming
+completion. The new sequence is
+`FLOG-009 -> FLOG-010 -> FLOG-011 -> FLOG-012`; each task depends on the previous
+task, and FLOG-009 has no incomplete predecessor. LOMEM remains a historical
+completed delivery. This plan does not change current binary behavior.
+
+| Task ID | Status | Goal | Verification | Reference |
+|---|---|---|---|---|
+| FLOG-009 | Planned | Analyze complete raw logs in CLI/MCP execution and summarize using existing parsers and Go regexp; preserve streaming capture/import and bounded surfaced evidence; replace only the quadratic Go/Cargo post-processing helpers with semantics-preserving indexes. | Early/middle/late failures above 1 MiB, every execution entrypoint, complete raw/hash/span/excerpt integrity, small-input parity, I/O faults and lifecycle regressions. | RQLOG-009, RQLOG-014; dossier FLOG-009 |
+| FLOG-010 | Planned | Evaluate parser detection over the complete input without selecting a parser or applying rules. | Exact all-label counts and heuristic verdicts, complete scan metadata, deterministic ordering, regular-file validation and no side effects. | RQLOG-010, RQLOG-014; dossier FLOG-010 |
+| FLOG-011 | Planned | Remove total raw-log size rejection from rule fixtures, legacy proposal sources and redaction samples while preserving policy-file and selected-span limits. | Late matches/overmatches, full rule-test signatures, proposal checksum/span validation without a new legacy line cap, FIFO/device rejection, ordered private sample counts, unchanged YAML bounds and error classes. | RQLOG-011 to RQLOG-014; dossier FLOG-011 |
+| FLOG-012 | Planned | Complete integrated verification, replace the obsolete constant-memory campaign, reconcile contracts and close documentation. | Focused regressions, the dossier's finite resource smoke, one applicable full make test, executable traceability, documentation/skill readback and git diff --check. | RQLOG-009 through RQLOG-014; dossier FLOG-012 |
 
 ## LOMEM: Bounded-memory log processing
 
