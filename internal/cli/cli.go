@@ -86,7 +86,7 @@ const (
 )
 
 func Main(args []string, stdout, stderr io.Writer) int {
-	return Run(args, stdout, stderr, NewBuildInfo("gaori", "0.1.19", "unknown", "unknown"))
+	return Run(args, stdout, stderr, NewBuildInfo("gaori", "0.1.20", "unknown", "unknown"))
 }
 
 func Run(args []string, stdout, stderr io.Writer, info BuildInfo) int {

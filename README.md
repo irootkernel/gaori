@@ -36,7 +36,7 @@ Gaori is not a test gate or verification authority. The parent project decides w
 Install the current release with Go. Command surfaces added since that release are documented here as they land, and the release notes under [docs/releases/](docs/releases/) record what each published version actually contains, so build from source when you need a surface the pinned release does not have yet:
 
 ```bash
-go install github.com/irootkernel/gaori@v0.1.19
+go install github.com/irootkernel/gaori@v0.1.20
 gaori --version
 ```
 
@@ -48,13 +48,13 @@ From a source checkout, use:
 make install
 ```
 
-Projects that pin a local Gaori toolchain can install the versioned binary at `~/.local/gaori/toolchains/v0.1.19/bin/`:
+Projects that pin a local Gaori toolchain can install the versioned binary at `~/.local/gaori/toolchains/v0.1.20/bin/`:
 
 ```bash
-VERSION=0.1.19 make install-toolchain
+VERSION=0.1.20 make install-toolchain
 ```
 
-`gaori version` and `gaori --version` print `gaori v<version>`. The JSON payload contains exactly `name` and a `v`-prefixed `version`, for example `{"name":"gaori","version":"v0.1.19"}`.
+`gaori version` and `gaori --version` print `gaori v<version>`. The JSON payload contains exactly `name` and a `v`-prefixed `version`, for example `{"name":"gaori","version":"v0.1.20"}`.
 
 ## Optional: configure an AI coding agent
 
@@ -123,7 +123,7 @@ an entrypoint from one revision with references from another. The current
 `existing-logs.md`, `fallbacks.md`, `lifecycle.md`, `recovery.md`, and
 `retention.md`. `use-gaori-status` is self-contained in its own `SKILL.md`.
 
-The published v0.1.19 source archive includes both skills with that release's
+The published v0.1.20 source archive includes both skills with that release's
 resource layout; this checkout may contain newer guidance. Record the selected
 commit or tag and any local changes when handing source guidance to another
 project. Binary installation through `go install`, `make install`, or
@@ -133,7 +133,7 @@ Neither skill is installed or activated by Gaori itself.
 
 ## Use the local MCP server
 
-Gaori v0.1.19 includes the STDIO MCP server, terminal-only `await_run`, and read-only historical statistics and live estimates for local coding agents. Register the selected v0.1.19 binary from the repository that should own test artifacts:
+Gaori v0.1.20 includes the STDIO MCP server, terminal-only `await_run`, and read-only historical statistics and live estimates for local coding agents. Register the selected v0.1.20 binary from the repository that should own test artifacts:
 
 ```bash
 make build
