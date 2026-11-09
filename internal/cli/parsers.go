@@ -1,7 +1,6 @@
 package cli
 
 import (
-	"bytes"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -11,7 +10,6 @@ import (
 
 	"github.com/irootkernel/gaori/internal/extract"
 	"github.com/irootkernel/gaori/internal/model"
-	"github.com/irootkernel/gaori/internal/safety"
 )
 
 const (
@@ -131,18 +129,18 @@ func parsersDetectCommand(opts globalOptions, args []string, stdout, stderr io.W
 		return int(model.ExitCodeConfigError)
 	}
 
-	raw, totalBytes, err := readDetectRawLog(opts.RepoRoot, fs.Arg(0))
+	raw, err := readDetectRawLog(opts.RepoRoot, fs.Arg(0), fileImportIO().openSource)
 	if err != nil {
 		writeLine(stderr, err)
 		return model.ExitCodeFor(err)
 	}
 
+	// Both counts are the bytes read; truncated stays false for JSON compatibility.
 	detection := extract.DetectParsers(raw)
 	result := parsersDetectResult{
 		Parsers:      detection.Candidates,
 		ScannedBytes: detection.ScannedBytes,
-		TotalBytes:   int(totalBytes),
-		Truncated:    detection.Truncated || totalBytes > int64(len(raw)),
+		TotalBytes:   len(raw),
 	}
 	for _, candidate := range detection.Candidates {
 		if candidate.Indicates {
@@ -158,11 +156,7 @@ func parsersDetectCommand(opts globalOptions, args []string, stdout, stderr io.W
 		writef(stdout, "%s\tfailures=%d\tindicates=%t\n", candidate.Parser, candidate.Failures, candidate.Indicates)
 	}
 	writef(stdout, "Parsers: %d (recognized=%d)\n", len(result.Parsers), result.Recognized)
-	if result.Truncated {
-		writef(stdout, "Scanned %d of %d bytes (truncated; counts describe the final complete-line window only)\n", result.ScannedBytes, result.TotalBytes)
-	} else {
-		writef(stdout, "Scanned %d of %d bytes\n", result.ScannedBytes, result.TotalBytes)
-	}
+	writef(stdout, "Scanned %d of %d bytes\n", result.ScannedBytes, result.TotalBytes)
 	if result.Recognized == 0 {
 		writeLine(stdout, "No parser summary heuristic recognized this log.")
 	}
@@ -175,12 +169,11 @@ func parsersDetectCommand(opts globalOptions, args []string, stdout, stderr io.W
 // regular-file check runs before the open because opening a special file such as
 // a FIFO would block instead of failing closed.
 //
-// At most safety.MaxRegexInputBytes are read, taken from the end of the file so
-// the window matches the one extraction scans. Detection reports only counts, so
-// it never needs the bytes ahead of that window, and reading the whole file would
-// let a diagnostic command hold an unbounded log in memory and run every parser
-// pattern across it. The reported total is the file size, not the window.
-func readDetectRawLog(repoRoot, arg string) (raw []byte, totalBytes int64, err error) {
+// The whole file is read so detection covers the complete log. The returned
+// bytes are what was actually read; the opened file's reported size is not
+// consulted, so a file that changes during the read is described by the bytes
+// read rather than by an atomic snapshot.
+func readDetectRawLog(repoRoot, arg string, open func(string) (importFile, error)) (raw []byte, err error) {
 	resolved := arg
 	if !filepath.IsAbs(resolved) {
 		resolved = filepath.Join(repoRoot, arg)
@@ -189,51 +182,35 @@ func readDetectRawLog(repoRoot, arg string) (raw []byte, totalBytes int64, err e
 	// blocks, so a check performed on the already-open descriptor would never be
 	// reached. This is the same ordering config check --sample uses.
 	if info, err := os.Stat(resolved); err != nil {
-		return nil, 0, detectReadError(err)
+		return nil, detectReadError(err)
 	} else if !info.Mode().IsRegular() {
-		return nil, 0, detectReadError(fmt.Errorf("path %q is not a regular file", arg))
+		return nil, detectReadError(fmt.Errorf("path %q is not a regular file", arg))
 	}
 
-	file, err := os.Open(resolved)
+	file, err := open(resolved)
 	if err != nil {
-		return nil, 0, detectReadError(err)
+		return nil, detectReadError(err)
 	}
 	defer func() {
 		if closeErr := file.Close(); closeErr != nil && err == nil {
-			raw, totalBytes, err = nil, 0, detectReadError(closeErr)
+			raw, err = nil, detectReadError(closeErr)
 		}
 	}()
 	// Re-check the descriptor actually opened, so the guard applies to the file
 	// being read rather than only to the path that was stated.
 	info, err := file.Stat()
 	if err != nil {
-		return nil, 0, detectReadError(err)
+		return nil, detectReadError(err)
 	}
 	if !info.Mode().IsRegular() {
-		return nil, 0, detectReadError(fmt.Errorf("path %q is not a regular file", arg))
+		return nil, detectReadError(fmt.Errorf("path %q is not a regular file", arg))
 	}
 
-	totalBytes = info.Size()
-	oversized := totalBytes > int64(safety.MaxRegexInputBytes)
-	if oversized {
-		if _, err := file.Seek(totalBytes-int64(safety.MaxRegexInputBytes), io.SeekStart); err != nil {
-			return nil, 0, detectReadError(err)
-		}
-	}
-	window, err := io.ReadAll(io.LimitReader(file, int64(safety.MaxRegexInputBytes)))
+	raw, err = io.ReadAll(file)
 	if err != nil {
-		return nil, 0, detectReadError(err)
+		return nil, detectReadError(err)
 	}
-	if oversized {
-		// Start at a complete line so a partial first line cannot be matched,
-		// matching how extraction aligns its own bounded tail.
-		if newline := bytes.IndexByte(window, '\n'); newline >= 0 {
-			window = window[newline+1:]
-		} else {
-			window = nil
-		}
-	}
-	return window, totalBytes, nil
+	return raw, nil
 }
 
 func detectReadError(err error) error {

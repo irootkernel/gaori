@@ -82,23 +82,6 @@ func absoluteSpan(span model.RawSpan, snapshot rawevidence.Snapshot) model.RawSp
 	return span
 }
 
-func boundedTail(text string) (string, int, int, bool) {
-	if len(text) <= safety.MaxRegexInputBytes {
-		return text, 0, 0, false
-	}
-
-	start := len(text) - safety.MaxRegexInputBytes
-	if text[start-1] != '\n' {
-		if newline := strings.IndexByte(text[start:], '\n'); newline >= 0 {
-			start += newline + 1
-		} else {
-			start = len(text)
-		}
-	}
-	lineOffset := strings.Count(text[:start], "\n")
-	return text[start:], start, lineOffset, true
-}
-
 func buildLineIndex(text string, startByte, lineOffset int) []lineIndex {
 	if text == "" && startByte > 0 {
 		return nil

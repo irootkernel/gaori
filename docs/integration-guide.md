@@ -78,7 +78,8 @@ semantics for runs and summarize: early failures beyond the former window are no
 extracted, so large-log summaries and watcher hashes can change. No integration
 migration or consumer change is required. Raw disk use remains proportional to
 log size. Summarize's full-input failure inference stays separate from
-extraction. `parsers detect` keeps its tail scan until FLOG-010.
+extraction. FLOG-010 likewise makes `parsers detect` scan the complete log, so
+its counts for a large log can change; its JSON fields are unchanged.
 
 ## Not provided by Gaori v0.1
 

@@ -525,10 +525,10 @@ snapshot only when it holds the whole stream and otherwise rereads and verifies
 the complete raw artifact. `Process` and legacy summarize inference exist only in
 test fixtures.
 
-Remaining whole-value operations do not load execution/import logs: parser
-detection reads at most the 256 KiB tail, rule fixtures/proposal inputs and
-redaction samples use the existing limited readers, and excerpt lookup reads a
-summary artifact. Preserve those consumer contracts instead of widening this
+Other whole-value operations sit outside execution and import: parser
+detection reads the complete caller-named log (FLOG-010), rule fixtures/proposal
+inputs and redaction samples use the existing limited readers, and excerpt
+lookup reads a summary artifact. Preserve those consumer contracts instead of widening this
 change into unrelated parser or input-policy work.
 
 The built-binary layout/consumer and concurrent MCP tests in

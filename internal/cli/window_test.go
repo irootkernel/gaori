@@ -5,6 +5,7 @@ package cli
 import (
 	"bytes"
 	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -164,4 +165,14 @@ func TestCapturedWindowExcerptRedactionBeforeNoise(t *testing.T) {
 	if err != nil || !bytes.Equal(preserved, raw) {
 		t.Fatalf("raw originals changed: %v", err)
 	}
+}
+
+func materializeArtifacts(req model.RunRequest, cfg model.Config, paths model.ArtifactPaths, rawSHA, relRaw string, runOutput model.RunOutput, applicableRules []model.Rule, source materializationSource) (runResult, error) {
+	return materializeArtifactsWithExtractor(req, cfg, paths, rawSHA, relRaw, runOutput, applicableRules, source, extract.ProcessSnapshot, fileImportIO().openOwned)
+}
+
+// completeTestEvidence is the complete analysis snapshot materialization uses.
+func completeTestEvidence(raw []byte) rawevidence.Snapshot {
+	digest := sha256.Sum256(raw)
+	return rawevidence.Snapshot{Text: string(raw), SHA256: hex.EncodeToString(digest[:]), TotalBytes: int64(len(raw))}
 }

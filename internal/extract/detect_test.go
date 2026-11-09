@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"github.com/irootkernel/gaori/internal/model"
-	"github.com/irootkernel/gaori/internal/safety"
+	"github.com/irootkernel/gaori/internal/rawevidence"
 )
 
 // documentedParserLabels mirrors the labels published in README.md,
@@ -105,19 +105,141 @@ func TestDetectParsersOrderIsDeterministic(t *testing.T) {
 	}
 }
 
-func TestDetectParsersReportsBoundedTailTruncation(t *testing.T) {
+// detectFiller is more than 1 MiB of newline-terminated lines that no parser
+// label or heuristic recognizes, so placing it beside a log moves that log's
+// evidence far outside the former 256 KiB tail without adding any.
+var detectFiller = strings.Repeat(strings.Repeat("neutral filler ", 64)+"\n", (1<<20)/960+1)
+
+// detectFillerGeneric pins the one fixture whose generic count legitimately
+// changes beside filler. In go-test.raw.log alone, the markers on lines 1 and 3
+// both clamp their context to the first and final lines, share one byte span and
+// deduplicate. Filler on either side lifts one clamp, so all three markers
+// become distinct candidates in both positions.
+var detectFillerGeneric = map[string]int{"go-test": 3}
+
+// TestDetectParsersScansCompleteInput places every fixture before and after the
+// filler. Counts and verdicts must equal the vector of the same fixture bytes
+// alone for all labels in both positions, except the pinned generic count above;
+// a tail-only scan cannot satisfy the head case. The EOF fixture has no final
+// newline, so its baseline is the same unterminated text: heuristics such as
+// vitest's `^\s*FAIL\s+` need whitespace after a final FAIL.
+func TestDetectParsersScansCompleteInput(t *testing.T) {
 	t.Parallel()
-	tail := "--- FAIL: TestTail (0.00s)\n"
-	head := strings.Repeat("head noise line\n", safety.MaxRegexInputBytes/16+16)
-	detection := DetectParsers([]byte(head + tail))
-	if !detection.Truncated {
-		t.Fatal("expected an oversized log to report truncation")
+	if len(detectFiller) <= 1<<20 {
+		t.Fatalf("filler is %d bytes, want more than 1 MiB", len(detectFiller))
 	}
-	if detection.ScannedBytes > safety.MaxRegexInputBytes {
-		t.Fatalf("scanned %d bytes, want at most %d", detection.ScannedBytes, safety.MaxRegexInputBytes)
+	filler := DetectParsers([]byte(detectFiller))
+	if filler.ScannedBytes != len(detectFiller) {
+		t.Fatalf("filler scanned %d of %d bytes", filler.ScannedBytes, len(detectFiller))
 	}
-	if got := detection.Candidates[candidateIndex(t, detection, "go-test")].Failures; got != 1 {
-		t.Fatalf("go-test candidate count = %d, want the single failure inside the scanned tail", got)
+	for _, candidate := range filler.Candidates {
+		if candidate.Failures != 0 || candidate.Indicates {
+			t.Fatalf("filler is not neutral for %s: %+v", candidate.Parser, candidate)
+		}
+	}
+
+	for _, label := range documentedParserLabels {
+		t.Run(label, func(t *testing.T) {
+			t.Parallel()
+			fixture := string(readFixture(t, label+".raw.log"))
+			if !strings.HasSuffix(fixture, "\n") {
+				fixture += "\n"
+			}
+			unterminated := strings.TrimSuffix(fixture, "\n")
+			for _, position := range []struct {
+				name  string
+				text  string
+				alone string
+			}{
+				{name: "head", text: fixture + detectFiller, alone: fixture},
+				{name: "eof", text: detectFiller + unterminated, alone: unterminated},
+			} {
+				want := DetectParsers([]byte(position.alone)).Candidates
+				if count, ok := detectFillerGeneric[label]; ok {
+					want[slices.IndexFunc(want, func(c ParserCandidate) bool { return c.Parser == "generic" })].Failures = count
+					slices.SortStableFunc(want, compareParserCandidates)
+				}
+				detection := DetectParsers([]byte(position.text))
+				if detection.ScannedBytes != len(position.text) {
+					t.Fatalf("%s: scanned %d of %d bytes", position.name, detection.ScannedBytes, len(position.text))
+				}
+				if !reflect.DeepEqual(detection.Candidates, want) {
+					t.Fatalf("%s: candidates differ from the fixture alone:\ngot  %v\nwant %v", position.name, detection.Candidates, want)
+				}
+				// The own label agrees with complete-input extraction and the
+				// exported heuristic over the same text.
+				own := detection.Candidates[candidateIndex(t, detection, label)]
+				run := model.RunOutput{Status: model.RunStatusFailed, Metadata: model.RunMetadata{Parser: label}}
+				processed, err := ProcessSnapshot(rawevidence.Snapshot{Text: position.text, TotalBytes: int64(len(position.text))}, run, nil)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if own.Failures != len(processed.Failures) || own.Indicates != ParserIndicatesFailure(label, position.text) {
+					t.Fatalf("%s: %+v disagrees with extraction (%d failures) or its heuristic", position.name, own, len(processed.Failures))
+				}
+			}
+		})
+	}
+}
+
+// TestDetectParsersGoCargoIdentitiesAcrossCompleteInput pins post-processing
+// that depends on evidence on both sides of the filler. The expected names follow
+// from the parsers' source semantics: Go deduplicates by test name and drops any
+// slash-delimited ancestor of a later failure; Cargo skips a panic whose name an
+// earlier record already holds and deduplicates by name, file and line.
+func TestDetectParsersGoCargoIdentitiesAcrossCompleteInput(t *testing.T) {
+	t.Parallel()
+	for _, testCase := range []struct {
+		label string
+		head  string
+		eof   string
+		want  []string
+	}{
+		{
+			label: "go-test",
+			head:  "--- FAIL: TestParent (0.00s)\n--- FAIL: TestHeadOnly (0.00s)\n--- FAIL: TestDup (0.00s)\n",
+			eof:   "--- FAIL: TestDup (0.00s)\n--- FAIL: TestParent/late_child (0.00s)\n",
+			// TestDup repeats with no file:line, so it deduplicates; the late
+			// descendant suppresses its earlier parent.
+			want: []string{"TestHeadOnly", "TestDup", "TestParent/late_child"},
+		},
+		{
+			label: "cargo-test",
+			head: "---- tests::dup stdout ----\n" +
+				"thread 'tests::dup' panicked at src/lib.rs:3:5:\n" +
+				"thread 'tests::head_only' panicked at src/lib.rs:5:5:\n" +
+				"thread 'tests::early' panicked at src/lib.rs:7:5:\n",
+			eof: "---- tests::dup stdout ----\n" +
+				"thread 'tests::dup' panicked at src/lib.rs:3:5:\n" +
+				"thread 'tests::late' panicked at src/lib.rs:9:5:\n" +
+				"---- tests::early stdout ----\n" +
+				"note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace",
+			// Both dup blocks capture src/lib.rs:3 and deduplicate; both dup
+			// panics are skipped by name. The early panic precedes its block, so
+			// it is kept, and the block without file:line is a distinct record.
+			want: []string{"tests::dup", "tests::head_only", "tests::early", "tests::late", "tests::early"},
+		},
+	} {
+		t.Run(testCase.label, func(t *testing.T) {
+			t.Parallel()
+			text := testCase.head + detectFiller + testCase.eof
+			detection := DetectParsers([]byte(text))
+			if got := detection.Candidates[candidateIndex(t, detection, testCase.label)].Failures; got != len(testCase.want) {
+				t.Fatalf("%s candidates = %d, want %d", testCase.label, got, len(testCase.want))
+			}
+			run := model.RunOutput{Status: model.RunStatusFailed, Metadata: model.RunMetadata{Parser: testCase.label}}
+			processed, err := ProcessSnapshot(rawevidence.Snapshot{Text: text, TotalBytes: int64(len(text))}, run, nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+			names := make([]string, 0, len(processed.Failures))
+			for _, failure := range processed.Failures {
+				names = append(names, failure.TestName)
+			}
+			if !slices.Equal(names, testCase.want) {
+				t.Fatalf("%s names = %q, want %q", testCase.label, names, testCase.want)
+			}
+		})
 	}
 }
 
@@ -146,8 +268,8 @@ func TestDetectParsersDoesNotChangeExtraction(t *testing.T) {
 func TestDetectParsersHandlesEmptyInput(t *testing.T) {
 	t.Parallel()
 	detection := DetectParsers(nil)
-	if detection.Truncated {
-		t.Error("empty input must not report truncation")
+	if detection.ScannedBytes != 0 {
+		t.Errorf("empty input scanned %d bytes", detection.ScannedBytes)
 	}
 	if len(detection.Candidates) != len(documentedParserLabels) {
 		t.Fatalf("reported %d candidates, want %d", len(detection.Candidates), len(documentedParserLabels))

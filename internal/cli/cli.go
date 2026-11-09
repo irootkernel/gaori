@@ -580,10 +580,6 @@ func executeSummarizeWithIO(req model.RunRequest, rawLogArg string, files import
 	return result, 0, nil
 }
 
-func materializeArtifacts(req model.RunRequest, cfg model.Config, paths model.ArtifactPaths, rawSHA, relRaw string, runOutput model.RunOutput, applicableRules []model.Rule, source materializationSource) (runResult, error) {
-	return materializeArtifactsWithExtractor(req, cfg, paths, rawSHA, relRaw, runOutput, applicableRules, source, extract.ProcessSnapshot, fileImportIO().openOwned)
-}
-
 func materializeArtifactsWithExtractor(req model.RunRequest, cfg model.Config, paths model.ArtifactPaths, rawSHA, relRaw string, runOutput model.RunOutput, applicableRules []model.Rule, source materializationSource, extractor extractionProcessor, openOwned ownedOpener) (runResult, error) {
 	// A reload failure is an artifact error raised before any derived artifact
 	// is written; it never becomes a parser miss or degraded extraction.

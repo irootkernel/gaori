@@ -5,6 +5,8 @@ package cli
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"slices"
@@ -12,7 +14,7 @@ import (
 	"testing"
 
 	"github.com/irootkernel/gaori/internal/extract"
-	"github.com/irootkernel/gaori/internal/safety"
+	"github.com/irootkernel/gaori/internal/model"
 )
 
 func TestParsersListReportsEveryRegistryLabel(t *testing.T) {
@@ -69,8 +71,8 @@ func TestParsersDetectReportsCandidatesWithoutArtifacts(t *testing.T) {
 	if result.Recognized != 1 {
 		t.Fatalf("recognized = %d, want 1", result.Recognized)
 	}
-	if result.Truncated || result.ScannedBytes != result.TotalBytes {
-		t.Fatalf("unexpected truncation: %+v", result)
+	if result.Truncated || result.ScannedBytes != len(vitestShapedLog) || result.TotalBytes != len(vitestShapedLog) {
+		t.Fatalf("unexpected scan metadata: %+v", result)
 	}
 
 	if _, err := os.Stat(filepath.Join(repo, ".gaori")); !os.IsNotExist(err) {
@@ -157,13 +159,16 @@ func TestParsersDetectExitsZeroWhenNoLabelReportsCandidates(t *testing.T) {
 	}
 }
 
-func TestParsersDetectReportsTruncationForOversizedRawLog(t *testing.T) {
+func TestParsersDetectScansCompleteRawLog(t *testing.T) {
 	t.Parallel()
 	repo := t.TempDir()
-	// Far larger than the scan window, so a whole-file read would be obvious.
-	head := "SENTINELHEAD0001 --- FAIL: TestHead (0.00s)\n" + strings.Repeat("head noise line\n", 16*safety.MaxRegexInputBytes/16)
-	oversized := head + "--- FAIL: TestTail (0.00s)\n"
-	writeDetectSample(t, repo, "big.raw.log", oversized)
+	const sentinel = "SENTINELHEAD0001"
+	// The head carries a Go failure and the cargo-test heuristic's summary line;
+	// more than 1 MiB of neutral lines separates them from the EOF failure.
+	head := "--- FAIL: Test" + sentinel + " (0.00s)\ntest result: FAILED. 0 passed; 1 failed\n"
+	filler := strings.Repeat(strings.Repeat("neutral filler ", 64)+"\n", (1<<20)/960+1)
+	large := head + filler + "--- FAIL: TestTail (0.00s)"
+	writeDetectSample(t, repo, "big.raw.log", large)
 
 	var stdout, stderr bytes.Buffer
 	if exitCode := Main([]string{"--repo", repo, "--json", "parsers", "detect", "big.raw.log"}, &stdout, &stderr); exitCode != 0 {
@@ -173,18 +178,105 @@ func TestParsersDetectReportsTruncationForOversizedRawLog(t *testing.T) {
 	if err := json.Unmarshal(stdout.Bytes(), &result); err != nil {
 		t.Fatal(err)
 	}
-	if !result.Truncated {
-		t.Fatal("expected truncation for an oversized log")
+	if result.Truncated || result.ScannedBytes != len(large) || result.TotalBytes != len(large) {
+		t.Fatalf("scan metadata = scanned %d total %d truncated %t, want %d of %d untruncated", result.ScannedBytes, result.TotalBytes, result.Truncated, len(large), len(large))
 	}
-	if result.ScannedBytes > safety.MaxRegexInputBytes {
-		t.Fatalf("scanned %d bytes, want at most %d", result.ScannedBytes, safety.MaxRegexInputBytes)
+	if got := result.Parsers[candidateIndexByLabel(t, result, "go-test")].Failures; got != 2 {
+		t.Fatalf("go-test candidates = %d, want the head and EOF failures", got)
 	}
-	if result.TotalBytes != len(oversized) {
-		t.Fatalf("total_bytes = %d, want the file size %d", result.TotalBytes, len(oversized))
+	if !result.Parsers[candidateIndexByLabel(t, result, "cargo-test")].Indicates {
+		t.Fatal("cargo-test heuristic missed its head-only summary line")
 	}
-	// The head failure is outside the window, so only the tail one is counted.
-	if got := result.Parsers[candidateIndexByLabel(t, result, "go-test")].Failures; got != 1 {
-		t.Fatalf("go-test candidates = %d, want only the failure inside the scan window", got)
+
+	stdout.Reset()
+	stderr.Reset()
+	if exitCode := Main([]string{"--repo", repo, "parsers", "detect", "big.raw.log"}, &stdout, &stderr); exitCode != 0 {
+		t.Fatalf("exit=%d stderr=%s", exitCode, stderr.String())
+	}
+	human := stdout.String() + stderr.String()
+	if want := fmt.Sprintf("Scanned %d of %d bytes\n", len(large), len(large)); !strings.Contains(human, want) || strings.Contains(human, "truncated") {
+		t.Fatalf("human output omits %q or mentions truncation: %s", want, human)
+	}
+	if strings.Contains(human, sentinel) {
+		t.Fatalf("human output leaked %q", sentinel)
+	}
+	if _, err := os.Stat(filepath.Join(repo, ".gaori")); !os.IsNotExist(err) {
+		t.Fatalf("detect created .gaori state: %v", err)
+	}
+}
+
+// detectSizeInfo reports a size that differs from the file's content.
+type detectSizeInfo struct{ os.FileInfo }
+
+func (detectSizeInfo) Size() int64 { return 1 }
+
+// TestParsersDetectReadFaults drives readDetectRawLog through injected
+// descriptor faults. Every open, stat, type, read and close failure is a config
+// error with no bytes. A descriptor size that disagrees with the content is not a
+// fault: the bytes actually read are returned.
+func TestParsersDetectReadFaults(t *testing.T) {
+	t.Parallel()
+	repo := t.TempDir()
+	content := "--- FAIL: TestOne (0.00s)\n" + strings.Repeat("neutral\n", 4096)
+	writeDetectSample(t, repo, "unit.raw.log", content)
+	injected := errors.New("injected detect fault")
+
+	for _, name := range []string{"open", "stat", "nonregular", "read", "close", "size-mismatch"} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			var opened *importFaultFile
+			open := func(path string) (importFile, error) {
+				if name == "open" {
+					return nil, injected
+				}
+				file, err := fileImportIO().openSource(path)
+				if err != nil {
+					return nil, err
+				}
+				opened = &importFaultFile{importFile: file}
+				switch name {
+				case "stat":
+					opened.stat = func() (os.FileInfo, error) { return nil, injected }
+				case "nonregular":
+					opened.stat = func() (os.FileInfo, error) {
+						info, err := file.Stat()
+						return importNonRegularInfo{info}, err
+					}
+				case "read":
+					// Return real bytes together with the error, so a partial read
+					// cannot be reported as the log.
+					opened.read = func(p []byte) (int, error) {
+						n, _ := file.Read(p[:min(len(p), 8)])
+						return n, injected
+					}
+				case "close":
+					opened.close = func() error { return errors.Join(file.Close(), injected) }
+				case "size-mismatch":
+					opened.stat = func() (os.FileInfo, error) {
+						info, err := file.Stat()
+						return detectSizeInfo{info}, err
+					}
+				}
+				return opened, nil
+			}
+
+			raw, err := readDetectRawLog(repo, "unit.raw.log", open)
+			if name == "size-mismatch" {
+				if err != nil || string(raw) != content {
+					t.Fatalf("read %d bytes, err=%v; want all %d bytes", len(raw), err, len(content))
+				}
+			} else {
+				if err == nil || raw != nil || model.ExitCodeFor(err) != int(model.ExitCodeConfigError) {
+					t.Fatalf("raw=%d bytes err=%v, want a config error and no bytes", len(raw), err)
+				}
+				if name != "nonregular" && !errors.Is(err, injected) {
+					t.Fatalf("error %v does not wrap the injected fault", err)
+				}
+			}
+			if opened != nil && opened.closes != 1 {
+				t.Fatalf("closed %d times, want 1", opened.closes)
+			}
+		})
 	}
 }
 

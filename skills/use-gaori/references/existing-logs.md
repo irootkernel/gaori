@@ -26,6 +26,6 @@ gaori --json --repo <target-root> parsers detect <raw-log>
 
 Detection reads only that log, loads no config, creates nothing, and shows no log content. Several labels may match. Its order is not a recommendation, and Gaori never chooses the label. Read [authoring](authoring.md#built-in-configuration) for the available labels and support tiers before selecting one; `gaori --json parsers list` and `gaori --json parsers catalog` describe the installed binary.
 
-For logs larger than 256 KiB, `parsers detect` evaluates only the complete-line tail within that limit, including its per-label inferred verdicts. It does not perform `summarize`'s full-input status inference. Neither zero detected candidates nor a passing tail verdict rules out an earlier failure signal.
+`parsers detect` evaluates the complete log, including each label's own heuristic verdict. It does not perform `summarize`'s status inference, so zero detected candidates or no recognizing label do not rule out a failure signal that no parser pattern covers.
 
 State why the chosen label fits, then summarize explicitly within the existing authority. Never chain detection into summarization automatically. Experimental or incomplete extraction may need manual confirmation, but it cannot change the original command result.

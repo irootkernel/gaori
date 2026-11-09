@@ -7,7 +7,7 @@ import (
 
 // ParserCandidate reports what one supported parser label would find in the
 // supplied input. Failures counts the candidate spans that label's extractor
-// produces inside the bounded scan window; Indicates is that label's own summary
+// produces over the complete input; Indicates is that label's own summary
 // heuristic over the same input and is false for a label that has none.
 type ParserCandidate struct {
 	Parser    string `json:"parser"`
@@ -21,7 +21,6 @@ type ParserCandidate struct {
 type ParserDetection struct {
 	Candidates   []ParserCandidate
 	ScannedBytes int
-	Truncated    bool
 }
 
 // DetectParsers evaluates every supported parser label against raw and returns
@@ -36,11 +35,9 @@ type ParserDetection struct {
 // a fallback.
 func DetectParsers(raw []byte) ParserDetection {
 	text := string(raw)
-	scan, startByte, lineOffset, truncated := boundedTail(text)
-	lines := buildLineIndex(scan, startByte, lineOffset)
+	lines := buildLineIndex(text, 0, 0)
 	// Strip ANSI once and reuse for every label instead of paying for it per
-	// call the way parserFailures and ParserIndicatesFailure each do. Callers
-	// bound the input, so this copy is bounded too.
+	// call the way parserFailures and ParserIndicatesFailure each do.
 	visibleLines := parserVisibleLines(lines)
 	visibleAll := visibleText(text)
 
@@ -50,8 +47,7 @@ func DetectParsers(raw []byte) ParserDetection {
 		descriptor := parserRegistry[label]
 		candidate := ParserCandidate{Parser: label}
 		if descriptor.failures != nil {
-			// Lines and text must share a coordinate base. Detection uses full
-			// text and absolute offsets; process uses window-local values.
+			// Lines and text share the complete-input coordinate base.
 			candidate.Failures = len(descriptor.failures(visibleLines, text))
 		}
 		if descriptor.indicates != nil {
@@ -61,7 +57,7 @@ func DetectParsers(raw []byte) ParserDetection {
 	}
 	slices.SortStableFunc(candidates, compareParserCandidates)
 
-	return ParserDetection{Candidates: candidates, ScannedBytes: len(scan), Truncated: truncated}
+	return ParserDetection{Candidates: candidates, ScannedBytes: len(text)}
 }
 
 func compareParserCandidates(a, b ParserCandidate) int {

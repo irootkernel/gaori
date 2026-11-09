@@ -40,3 +40,21 @@ func TestParsersDetectRejectsSpecialRawLog(t *testing.T) {
 		t.Fatalf("rejected input created project state: %v", err)
 	}
 }
+
+// TestParsersDetectRejectsCharacterDevice rejects a device by path type before
+// opening it, so its contents are never read.
+func TestParsersDetectRejectsCharacterDevice(t *testing.T) {
+	t.Parallel()
+	info, err := os.Stat(os.DevNull)
+	if err != nil || info.Mode()&os.ModeCharDevice == 0 {
+		t.Skipf("%s is not a character device: %v", os.DevNull, err)
+	}
+	repo := t.TempDir()
+	var stdout, stderr bytes.Buffer
+	if exitCode := Main([]string{"--repo", repo, "parsers", "detect", os.DevNull}, &stdout, &stderr); exitCode != 2 {
+		t.Fatalf("exit = %d, want 2 (stdout=%s stderr=%s)", exitCode, stdout.String(), stderr.String())
+	}
+	if stdout.Len() != 0 {
+		t.Fatalf("stdout = %q, want empty", stdout.String())
+	}
+}

@@ -1,6 +1,6 @@
 # Gaori Architecture Decision Records
 
-Status: Accepted decisions through `ADR-0023`; `ADR-0021` is implemented through `LOMEM`; `ADR-0023` is accepted with its run/summarize adapter delivered in source by `FLOG-009` and its remaining adapters planned; `ADR-0022` is reserved for the abandoned branch proposal
+Status: Accepted decisions through `ADR-0023`; `ADR-0021` is implemented through `LOMEM`; `ADR-0023` is accepted with its run/summarize adapter delivered in source by `FLOG-009`, its parser-detection adapter by `FLOG-010` and its remaining adapters planned; `ADR-0022` is reserved for the abandoned branch proposal
 Scope: Accepted Gaori decisions, including run-status insights and bounded-memory log processing
 
 ## ADR status legend
@@ -287,7 +287,7 @@ This is a structural boundary only. It does not change which labels are availabl
 
 ## ADR-0014: Parser discovery reports candidates and never selects a parser
 
-Status: Accepted
+Status: Accepted; diagnostic-tail clause superseded by [ADR-0023](#adr-0023-complete-log-analysis-with-input-proportional-memory) (FLOG-010)
 Date: 2026-08-17
 
 ### Context
@@ -312,6 +312,8 @@ Discovery output must never be wired into extraction as a fallback or used to re
 - Candidate counts and heuristic verdicts both describe the bounded scan window, so evidence outside that window is not reported and `truncated` says so.
 - A label may still report a positive verdict with zero candidates, because a heuristic and an extractor can disagree about the same window.
 - Adding a parser remains one registry entry plus its extractor; discovery follows automatically.
+
+FLOG-010 update: under ADR-0023, detection reads and scans the complete caller-named regular file. The final-256 KiB window and its bounded-memory rationale no longer apply: candidate counts and heuristic verdicts describe every byte read, `scanned_bytes` equals `total_bytes`, both taken from the bytes actually read, and `truncated` is always false. Detection memory grows with the log. Registry evaluation, display order, regular-file checks, no config, rules, artifacts or recommended label, and exit `0` without candidates are unchanged.
 
 ## ADR-0015: Redaction effectiveness is reported as ordered-pass counts only
 
@@ -611,7 +613,7 @@ Status: Accepted
 Date: 2026-11-09
 Delivery: [FLOG](../roadmap/README.md#flog-complete-raw-log-analysis)
 Requirements: [RQLOG](../specs/README.md#rqlog-complete-raw-log-analysis)
-Implementation: FLOG-009 delivers the run/summarize runtime adapter in source; the FLOG-010 to FLOG-012 adapters remain planned. Acceptance records source implementation status only; it claims no installation, release or runtime activation.
+Implementation: FLOG-009 delivers the run/summarize runtime adapter and FLOG-010 the parser-detection adapter in source; the FLOG-011 and FLOG-012 adapters remain planned. Acceptance records source implementation status only; it claims no installation, release or runtime activation.
 
 ### Context
 

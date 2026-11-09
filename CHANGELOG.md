@@ -6,8 +6,8 @@ This file records concise shipped outcomes and the planned next stable release. 
 
 ### Changed
 
-- Analyze complete raw logs in CLI/MCP runs and `summarize`, finding failures before the final 256 KiB without size-only degradation while memory grows with log size;
-  parser detection and authoring input limits remain until their implementing tasks.
+- Analyze complete raw logs in CLI/MCP runs, `summarize` and `parsers detect`, finding failures before the final 256 KiB without size-only degradation while memory grows with log size;
+  authoring input limits remain until their implementing task.
 
 ### Fixed
 

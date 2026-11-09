@@ -1,8 +1,6 @@
 package cli
 
 import (
-	"crypto/sha256"
-	"encoding/hex"
 	"encoding/json"
 	"io"
 	"os"
@@ -91,12 +89,6 @@ func capturedTestEvidence(t *testing.T, raw []byte) rawevidence.Snapshot {
 		t.Fatal(err)
 	}
 	return snapshot
-}
-
-// completeTestEvidence is the complete analysis snapshot materialization uses.
-func completeTestEvidence(raw []byte) rawevidence.Snapshot {
-	digest := sha256.Sum256(raw)
-	return rawevidence.Snapshot{Text: string(raw), SHA256: hex.EncodeToString(digest[:]), TotalBytes: int64(len(raw))}
 }
 
 // Legacy whole-input oracle, restricted to capped test fixtures.

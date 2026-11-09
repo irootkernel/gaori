@@ -46,14 +46,19 @@ func TestBinaryParserDiscoveryIsReadOnly(t *testing.T) {
 	if err != nil {
 		t.Fatalf("parsers detect failed: %v output=%s", err, detectOutput)
 	}
-	var detected struct {
-		Parsers []struct {
-			Parser    string `json:"parser"`
-			Indicates bool   `json:"indicates"`
-		} `json:"parsers"`
-		Recognized int  `json:"recognized"`
-		Truncated  bool `json:"truncated"`
+	type candidate struct {
+		Parser    string `json:"parser"`
+		Failures  int    `json:"failures"`
+		Indicates bool   `json:"indicates"`
 	}
+	type detection struct {
+		Parsers      []candidate `json:"parsers"`
+		Recognized   int         `json:"recognized"`
+		ScannedBytes int         `json:"scanned_bytes"`
+		TotalBytes   int         `json:"total_bytes"`
+		Truncated    bool        `json:"truncated"`
+	}
+	var detected detection
 	if err := json.Unmarshal(detectOutput, &detected); err != nil {
 		t.Fatalf("decode parsers detect: %v output=%s", err, detectOutput)
 	}
@@ -72,6 +77,28 @@ func TestBinaryParserDiscoveryIsReadOnly(t *testing.T) {
 		if strings.Contains(string(output), sentinel) {
 			t.Fatalf("discovery echoed sample content: %s", output)
 		}
+	}
+
+	// More than 1 MiB separates a head failure from an EOF failure; both are
+	// counted and the complete file is reported as scanned.
+	large := "--- FAIL: TestHead (0.00s)\n" + strings.Repeat(strings.Repeat("neutral filler ", 64)+"\n", (1<<20)/960+1) + "--- FAIL: TestTail (0.00s)\n"
+	if err := os.WriteFile(filepath.Join(repo, "big.raw.log"), []byte(large), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	largeOutput, err := exec.Command(bin, "--repo", repo, "--json", "parsers", "detect", "big.raw.log").CombinedOutput()
+	if err != nil {
+		t.Fatalf("parsers detect failed: %v output=%s", err, largeOutput)
+	}
+	var complete detection
+	if err := json.Unmarshal(largeOutput, &complete); err != nil {
+		t.Fatalf("decode parsers detect: %v output=%s", err, largeOutput)
+	}
+	if complete.Truncated || complete.ScannedBytes != len(large) || complete.TotalBytes != len(large) {
+		t.Fatalf("large detection scanned %d of %d bytes (truncated=%t), want all %d", complete.ScannedBytes, complete.TotalBytes, complete.Truncated, len(large))
+	}
+	goTest := slices.IndexFunc(complete.Parsers, func(c candidate) bool { return c.Parser == "go-test" })
+	if goTest < 0 || complete.Parsers[goTest].Failures != 2 {
+		t.Fatalf("go-test candidates = %+v, want the head and EOF failures", complete.Parsers)
 	}
 
 	if _, err := os.Stat(filepath.Join(repo, ".gaori")); !os.IsNotExist(err) {
