@@ -345,8 +345,9 @@ assertions alone do not measure whole-process retained memory.
 `TestCaptureMatchesBoundedTail` and
 the capture tests cover accepted-prefix integrity, origins, retention and
 snapshot ownership. These component checks complement `TestBinaryMemoryCampaign`,
-which separately measures all eight required workloads through complete
-built-binary invocations and a concurrent MCP session.
+which, since FLOG-012, separately runs the finite complete-log resource smoke:
+nine built-binary invocations and a concurrent MCP session that gate
+correctness and completion and observe Gaori-only memory without a threshold.
 
 ### Resource and failure boundaries
 
@@ -641,7 +642,7 @@ When extraction fails internally, Gaori preserves the raw log and writes empty f
 - The only information Gaori derives from raw-log content into a surface redaction cannot protect is an aggregate match and replaced-byte count per configured pattern, reported by `config check --sample`. Matched text, surrounding lines, byte or line offsets, per-match detail, and pattern definitions are never surfaced (`ADR-0015`).
 - Summaries, excerpts, status JSON, and console-safe surfaced text apply configured redaction to command metadata and extracted evidence, including command argv, identifiers, tags, failure source paths, signatures, test names, stack entries, and warnings.
 - Artifact-reference fields such as `raw_log`, `summary_path`, `raw_log_path`, and excerpt references remain literal locators so watchers, automation, and operators can resolve them. Operators must not place secrets in artifact-bearing identifiers or paths.
-- Status signature hashes and `status_hash` are computed from the final redacted metadata and signatures. Canonical comma-joined tags follow `command_id` in the ordered watcher field set.
+- Status signature hashes and `status_hash` are computed from the final redacted metadata and signatures. Each `failure_signatures` and `warning_signatures` entry is the SHA-256 of the final redacted signature text as a JSON decoder reads it from the summary, so an invalid UTF-8 byte counts as one U+FFFD; the summary, raw log, spans and excerpts are unchanged. Canonical comma-joined tags follow `command_id` in the ordered watcher field set, and the field set and `status_hash` formula are unchanged.
 - Documentation and CLI output should warn that raw logs may contain unredacted secrets or sensitive values and should be shared cautiously.
 
 ## Extension points

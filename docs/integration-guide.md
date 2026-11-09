@@ -66,8 +66,10 @@ digest. Analysis memory therefore grows with input bytes, lines and candidates,
 and concurrent analyses add their memory; host memory remains a practical limit.
 A reload failure is artifact exit `3` with no new derived artifacts. The earlier
 [resource campaign](implementation-tips/README.md#bounded-memory-resource-campaign)
-qualified the historical LOMEM candidate only; its replacement finite smoke
-belongs to FLOG-012. Linux resource scaling is unmeasured.
+qualified the historical LOMEM candidate only. Since FLOG-012, `make test-memory`
+runs a finite complete-log resource smoke that gates correctness and completion
+and records Gaori-only memory without a threshold. Linux resource scaling is
+unmeasured.
 
 The implemented [LOMEM](roadmap/README.md#lomem-bounded-memory-log-processing)
 pipeline covers capture, import, inference and materialization. Its
@@ -300,7 +302,7 @@ A watcher that suppresses duplicate notifications must hash exactly this ordered
 9. `summary_path`
 10. `raw_log_path`
 
-Gaori also writes `status_hash` from these final, redacted surfaced values. A parent watcher owns polling frequency, notification policy, retries, retention, and any transition into an external state store.
+Gaori also writes `status_hash` from these final, redacted surfaced values. Each `failure_signatures` and `warning_signatures` entry is the SHA-256 of the redacted signature text as a JSON decoder reads it from the summary, with one U+FFFD per invalid UTF-8 byte; the field set and formula are unchanged. A run whose signature contained invalid UTF-8 therefore gets a different `status_hash` than earlier builds produced, while valid UTF-8 runs are unchanged. A parent watcher owns polling frequency, notification policy, retries, retention, and any transition into an external state store.
 
 An attached coding agent may instead use `gaori mcp` after verifying, from host evidence tied to the running connection, that the server's launch repository, required inherited environment, selected config, and intended output directory match the selected check. An explicit absolute output directory may be outside the repository; verify the raw-log destination before starting. A shared command ID, server version, changed host configuration, or agent shell environment does not prove that binding. When it cannot be established, use a new CLI invocation with an explicit canonical `--repo`, selected overrides, and required environment before any start. A config-free ad-hoc run does not need `config check`; its returned `command` is a generated ID, so compare the redacted summary `command_argv` with the retained start arguments where possible. Once a run starts, retain its original invocation or process identity rather than rerunning it to switch transports. For a correctly bound MCP server, start a run, then call `await_run` with only the returned invocation ID when terminal completion is the next required event. `await_run` has no Gaori-owned timeout; host cancellation or timeout ends only that waiter, and the same session-local invocation may be awaited again. Use `wait_run` with the returned revision when bounded phase or revision observation is required. Omit ad-hoc and wait timeouts for their 600-second and 50-second defaults; explicit values must be non-null positive JSON integers within the advertised schema bounds. Use `cancel_run` only for explicit cancellation. Its `accepted: true` means that call recorded the first cancellation request for an unfinished invocation; it does not guarantee a `killed` final result or stop evidence materialization. Repeated requests and requests after `finished` return false, and every caller must wait for `finished` before consuming the authoritative status and exit code. This avoids OS process polling but does not create durable state. Closing stdin at a newline-delimited frame boundary cancels active runs with exit `0`: after every in-flight process-start gate resolves and cancellation is delivered, the server drains artifacts for at most three seconds. The gate wait prevents late child creation and is not part of that drain budget. A truncated final frame exits `4`, while SIGINT/SIGTERM use the same shutdown ordering and exit `130`/`143`. If the MCP server disconnects, reconcile the command and final artifacts before retrying; a new server cannot recover the old invocation ID.
 

@@ -11,8 +11,8 @@ Existing `Done` entries record completion of the original v0.1 implementation sl
 
 Current implementation snapshot:
 - `In Progress`: None
-- `Planned`: `FLOG-012`
-- `Done`: `FLOG-009`, `FLOG-010`, `FLOG-011`, `LOMEM-001` to `LOMEM-006`, `SETUP-001` to `SETUP-003`, `RUNNR-001` to `RUNNR-003`, `ARTIF-001` to `ARTIF-003`, `PARSE-001` to `PARSE-011`, `SAFEY-001` to `SAFEY-004`, `CLIUX-001` to `CLIUX-008`, `RULES-001` to `RULES-005`, `DOCUM-001` to `DOCUM-003`, `HARDE-001` to `HARDE-007`, `TAGS-001`, `ADHOC-001`, `ADHOC-002`, `RELRV-001` to `RELRV-009`, `BRAND-001`, `CLEAN-001`, `PORTA-001`, `MCP-001` to `MCP-006`, `AWAIT-001` to `AWAIT-004`, `AWAIT-006`, `RSTAT-001` to `RSTAT-004`, `AQDEV-001`, `SKMOD-001`, `SKMOD-002`
+- `Planned`: None
+- `Done`: `FLOG-009`, `FLOG-010`, `FLOG-011`, `FLOG-012`, `LOMEM-001` to `LOMEM-006`, `SETUP-001` to `SETUP-003`, `RUNNR-001` to `RUNNR-003`, `ARTIF-001` to `ARTIF-003`, `PARSE-001` to `PARSE-011`, `SAFEY-001` to `SAFEY-004`, `CLIUX-001` to `CLIUX-008`, `RULES-001` to `RULES-005`, `DOCUM-001` to `DOCUM-003`, `HARDE-001` to `HARDE-007`, `TAGS-001`, `ADHOC-001`, `ADHOC-002`, `RELRV-001` to `RELRV-009`, `BRAND-001`, `CLEAN-001`, `PORTA-001`, `MCP-001` to `MCP-006`, `AWAIT-001` to `AWAIT-004`, `AWAIT-006`, `RSTAT-001` to `RSTAT-004`, `AQDEV-001`, `SKMOD-001`, `SKMOD-002`
 - `Deferred`: `AQADP` (`QUALI-001`, `QUALI-002`, `CONSUMER-SUDAL-001`), `AWAIT-005`, `AWAIT-007`
 
 ## FLOG: Complete raw-log analysis
@@ -35,14 +35,16 @@ task, and FLOG-009 has no incomplete predecessor. LOMEM remains a historical
 completed delivery. FLOG-009 delivers the run/summarize runtime adapter in the
 source tree. FLOG-010 implements complete parser detection in the source tree.
 FLOG-011 implements complete authoring-tool inputs in the source tree;
-FLOG-012 remains planned.
+FLOG-012 delivers integrated verification and the replacement resource smoke in the
+source tree. Final whole-epic integration, closeout and Master overall acceptance
+remain pending.
 
 | Task ID | Status | Goal | Verification | Reference |
 |---|---|---|---|---|
 | FLOG-009 | Done | Analyze complete raw logs in CLI/MCP execution and summarize using existing parsers and Go regexp; preserve streaming capture/import and bounded surfaced evidence; replace only the quadratic Go/Cargo post-processing helpers with semantics-preserving indexes. | Early/middle/late failures above 1 MiB, every execution entrypoint, complete raw/hash/span/excerpt integrity, small-input parity, I/O faults and lifecycle regressions. | RQLOG-009, RQLOG-014; dossier FLOG-009 |
 | FLOG-010 | Done | Evaluate parser detection over the complete input without selecting a parser or applying rules. | Exact all-label counts and heuristic verdicts, complete scan metadata, deterministic ordering, regular-file validation and no side effects. | RQLOG-010, RQLOG-014; dossier FLOG-010 |
 | FLOG-011 | Done | Remove total raw-log size rejection from rule fixtures, legacy proposal sources and redaction samples while preserving policy-file and selected-span limits. | Late matches/overmatches, full rule-test signatures, proposal checksum/span validation without a new legacy line cap, FIFO/device rejection, ordered private sample counts, unchanged YAML bounds and error classes. | RQLOG-011 to RQLOG-014; dossier FLOG-011 |
-| FLOG-012 | Planned | Complete integrated verification, replace the obsolete constant-memory campaign, reconcile contracts and close documentation. | Focused regressions, the dossier's finite resource smoke, one applicable full make test, executable traceability, documentation/skill readback and git diff --check. | RQLOG-009 through RQLOG-014; dossier FLOG-012 |
+| FLOG-012 | Done | Complete integrated verification, replace the obsolete constant-memory campaign, reconcile contracts and close documentation. | Focused regressions, the dossier's finite resource smoke, one applicable full make test, executable traceability, documentation/skill readback and git diff --check. | RQLOG-009 through RQLOG-014; dossier FLOG-012 |
 
 ## LOMEM: Bounded-memory log processing
 

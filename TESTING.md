@@ -69,13 +69,6 @@ The tracked mapping is `.gaori/tester.yaml`. Parser availability is checked inde
 
 ## Separate memory campaign
 
-Applicability: the campaign below qualified the historical LOMEM bounded-memory
-candidate. Since FLOG-009 ([ADR-0023](docs/architecture-decision-records/README.md#adr-0023-complete-log-analysis-with-input-proportional-memory)),
-run and summarize analysis grow with input size, so this campaign's flat-memory
-thresholds do not apply to the current candidate and it is not a gate between
-FLOG-009 and FLOG-012. FLOG-012 replaces it behind the same `make test-memory`
-target; until then the target still runs the historical harness.
-
 `make test-memory` runs `TestBinaryMemoryCampaign` in `e2e/memory`, using the
 same standard-library E2E framework and a production binary built by `make build`.
 It is deliberately outside the four ordinary stages and does not change their
@@ -84,37 +77,55 @@ or newer, and macOS process instrumentation are required; an unsupported host or
 unavailable metric fails rather than skips.
 Linux resource measurements are not established by this harness.
 
-The fixed campaign runs E1 and S1-S7 at exactly 8, 64 and 512 MiB, with three fresh
-Gaori processes per row and size (72 trials), followed by one fresh attached MCP
-session containing two overlapping 64 MiB E1 runs. E1 captures a real failing
-child through `generic`; S1 imports an early generic signal on an unbroken line.
-S2-S7 explicitly select `vitest`: no signal, first signal at EOF, long whitespace,
-and long complete, incomplete and malformed ANSI candidates. The exact byte
-generators and expected verdicts live in `scripts/test-memory`; small original
-predicate counterparts are covered by `TestBoundedInferenceGrowth`.
+Since FLOG-012 the target runs a finite complete-log resource smoke for
+[ADR-0023](docs/architecture-decision-records/README.md#adr-0023-complete-log-analysis-with-input-proportional-memory):
+analysis memory grows with input size, so the smoke gates correctness and
+completion within its watchdogs and only observes memory. It applies no memory
+threshold and makes no capacity or allocation-efficiency claim. It runs nine fresh
+Gaori invocations, one per row and size, at exactly 1, 8 and 32 MiB, with no
+medians, pooling or automatic retries:
+
+| Row | Workload | Required result |
+|---|---|---|
+| Run generic | A real child writes `Error: memory-probe`, then neutral complete lines, and exits `1` | Process `1`, failed/1, one `partial` failure at the start |
+| Summarize generic | The same bytes through `summarize --parser generic` | Process `0`, inferred failed/1, one `partial` failure at the start |
+| Summarize Vitest | Neutral complete lines followed by the complete `internal/extract/testdata/vitest.raw.log`, through `summarize --parser vitest` | Process `0`, inferred failed/1, one `precise` failure at EOF |
+
+One fresh attached MCP session then runs two overlapping 8 MiB generic runs (one
+configured, one ad-hoc) released by a shared barrier, and checks distinct
+invocations and raw paths, terminal `await_run` results, bounded raw-free frames
+and server shutdown. The exact byte generators, remainder lines, spans, failure
+metadata, signature hashes and excerpt digests are pinned in `scripts/test-memory`.
+Every row and both MCP runs must retain exactly one failure and zero warnings
+without truncation, with the exact raw size and SHA-256, summary checksum, status
+hash, signature hash, span and excerpt bytes; summarize rows carry no execution
+provenance. The obsolete LOMEM thresholds and trial series are not run.
 
 The metric is Darwin `proc_pid_rusage` v4
 `ri_lifetime_max_phys_footprint`, in bytes, from Gaori's PID at `NOTE_EXIT` before
 reaping. It covers the entire invocation, including inference/materialization,
 and excludes the producer and harness. It is a process-local physical-footprint
-high-water metric, not a process-tree RSS sum or total allocation count. Every
-row compares its own three-trial median at 64 and 512 MiB against its 8 MiB median
-plus 32 MiB. Results are never pooled, and the concurrent session is a separate
-observation rather than another scaling series.
+high-water metric, not a process-tree RSS sum or total allocation count.
 
-The initial `make build` step has a two-minute timeout. Each measured invocation
-has a 600-second watchdog; the complete Go test has a 13-hour outer timeout.
-A timeout, I/O failure, invalid artifact, missing measurement or
-threshold failure fails the gate. There is no automatic retry or budget relaxation.
-Only one repeat campaign is permitted to investigate a concrete measurement
-problem. Inputs are real synthetic bytes generated and hashed in 32 KiB chunks;
-raw size/hash, summary checksum, watcher hash, verdict, parser, spans and excerpt
-bounds are checked before each owned temporary directory is removed. Peak memory,
-elapsed seconds and logical disk bytes are observations; disk use and total I/O
-remain proportional to input size. Output records include source commit, dirty
-paths, source-manifest/diff/harness/binary digests, versions and platform. Keep raw
-logs and temporary paths local; promote bounded results to
+The initial `make build` step has a two-minute timeout. Each row has a 120-second
+watchdog that covers the Gaori invocation, artifact verification and temporary
+root removal; the MCP session has one 240-second watchdog covering initialize,
+both starts and awaits, artifact reconciliation, stdin close, reaping and
+temporary root removal. Waits emit a `progress` milestone at least every 10
+seconds between `start`, `wait` and `finish` milestones. The complete Go test has
+a 30-minute outer timeout; one minute before it, the Go test interrupts the
+harness so it stops the measured process, then kills it after a 10-second delay.
+A timeout, I/O failure, invalid artifact or missing measurement fails the gate,
+including cleanup after an expired watchdog. Peak memory, elapsed seconds and
+logical disk bytes are observations. Output records include source commit, dirty
+paths, source-manifest/diff/harness/binary/fixture digests, versions and platform.
+Keep raw logs and temporary paths local; promote bounded results to
 [`docs/implementation-tips/README.md`](docs/implementation-tips/README.md).
+
+Historical applicability: the earlier campaign behind this target (rows E1 and
+S1-S7 at 8, 64 and 512 MiB with three trials each and a flat-memory threshold)
+qualified the LOMEM bounded-memory candidate only. Its recorded measurements stay
+in the implementation notes as history and do not qualify current analysis.
 
 ## Language Diagnostics
 

@@ -1,6 +1,6 @@
 # Gaori Architecture Decision Records
 
-Status: Accepted decisions through `ADR-0023`; `ADR-0021` is implemented through `LOMEM`; `ADR-0023` is accepted with its run/summarize adapter delivered in source by `FLOG-009`, its parser-detection adapter by `FLOG-010` and its remaining adapters planned; `ADR-0022` is reserved for the abandoned branch proposal
+Status: Accepted decisions through `ADR-0023`; `ADR-0021` is implemented through `LOMEM`; `ADR-0023` is accepted with its run/summarize adapter delivered in source by `FLOG-009`, its parser-detection adapter by `FLOG-010`, its authoring-tool adapter by `FLOG-011` and its replacement resource smoke by `FLOG-012` (final whole-epic integration and closeout pending); `ADR-0022` is reserved for the abandoned branch proposal
 Scope: Accepted Gaori decisions, including run-status insights and bounded-memory log processing
 
 ## ADR status legend
@@ -112,7 +112,7 @@ Gaori writes compact status JSON for polling. Configured redaction is applied to
 
 - Gaori supports no-agent polling without embedding watcher logic.
 - Status fields and path references must stay stable.
-- `status_hash` is calculated after redaction from the final surfaced values.
+- `status_hash` is calculated after redaction from the final surfaced values. Signature-hash inputs are the redacted signature text as a JSON decoder reads it from the summary (one U+FFFD per invalid UTF-8 byte).
 - Full review remains outside Gaori.
 
 ## ADR-0006: Go single-binary implementation baseline
@@ -617,7 +617,7 @@ Status: Accepted
 Date: 2026-11-09
 Delivery: [FLOG](../roadmap/README.md#flog-complete-raw-log-analysis)
 Requirements: [RQLOG](../specs/README.md#rqlog-complete-raw-log-analysis)
-Implementation: FLOG-009 delivers the run/summarize runtime adapter, FLOG-010 the parser-detection adapter and FLOG-011 the authoring-tool adapter in source; FLOG-012 remains planned. Acceptance records source implementation status only; it claims no installation, release or runtime activation.
+Implementation: FLOG-009 delivers the run/summarize runtime adapter, FLOG-010 the parser-detection adapter and FLOG-011 the authoring-tool adapter and FLOG-012 the replacement resource smoke and integrated verification in source; final whole-epic integration, closeout and Master overall acceptance remain pending. Acceptance records source implementation status only; it claims no installation, release or runtime activation.
 
 ### Context
 

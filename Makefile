@@ -71,4 +71,4 @@ clean:
 	rm -rf $(BIN_DIR)
 
 test-memory:
-	$(GO) test -count=1 -timeout 13h -v ./e2e/memory
+	$(GO) test -count=1 -timeout 30m -v ./e2e/memory

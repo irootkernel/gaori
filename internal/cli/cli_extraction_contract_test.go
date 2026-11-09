@@ -10,10 +10,12 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 
 	"github.com/irootkernel/gaori/internal/artifacts"
+	"github.com/irootkernel/gaori/internal/extract"
 	"github.com/irootkernel/gaori/internal/model"
 	"github.com/irootkernel/gaori/internal/rawevidence"
 	"github.com/irootkernel/gaori/internal/safety"
@@ -354,6 +356,98 @@ func TestLargeSummarizeAnalyzesCompleteLog(t *testing.T) {
 				t.Fatalf("early failure not found at its absolute start: %+v", summary.Failures[0].RawSpan)
 			}
 		})
+	}
+}
+
+// largeSummarizeFiller repeats internal/extract's detectFiller: more than 1 MiB
+// of newline-terminated text that no registered parser or heuristic recognizes.
+var largeSummarizeFiller = strings.Repeat(strings.Repeat("neutral filler ", 64)+"\n", (1<<20)/960+1)
+
+type failureTuple struct {
+	Signature, File, TestName string
+	Line                      int
+}
+
+func failureTuples(failures []model.Failure) []failureTuple {
+	tuples := make([]failureTuple, 0, len(failures))
+	for _, failure := range failures {
+		tuples = append(tuples, failureTuple{failure.Signature, failure.File, failure.TestName, failure.Line})
+	}
+	return tuples
+}
+
+// TestLargeSummarizeEveryRegisteredParser places every label's own fixture
+// before and after more than 1 MiB of neutral filler, in the construction
+// TestDetectParsersScansCompleteInput proves count-neutral. Summarize must
+// equal complete in-memory extraction of the same bytes and keep the evidence of
+// the fixture alone, so neither the head nor the EOF signal is lost.
+func TestLargeSummarizeEveryRegisteredParser(t *testing.T) {
+	t.Parallel()
+	if len(largeSummarizeFiller) != 1050373 {
+		t.Fatalf("filler is %d bytes, want 1050373", len(largeSummarizeFiller))
+	}
+	labels := extract.SupportedParsers()
+	if len(labels) != 17 {
+		t.Fatalf("registry has %d labels, want 17", len(labels))
+	}
+	for _, label := range labels {
+		raw, err := os.ReadFile(filepath.Join("..", "extract", "testdata", label+".raw.log"))
+		if err != nil {
+			t.Fatalf("%s fixture: %v", label, err)
+		}
+		fixture := string(raw)
+		if !strings.HasSuffix(fixture, "\n") {
+			fixture += "\n"
+		}
+		unterminated := strings.TrimSuffix(fixture, "\n")
+		for _, position := range []struct {
+			name, text, alone string
+		}{
+			{"head", fixture + largeSummarizeFiller, fixture},
+			{"eof", largeSummarizeFiller + unterminated, unterminated},
+		} {
+			t.Run(label+"/"+position.name, func(t *testing.T) {
+				t.Parallel()
+				repo := t.TempDir()
+				rawPath := filepath.Join(repo, "input.log")
+				if err := os.WriteFile(rawPath, []byte(position.text), 0o600); err != nil {
+					t.Fatal(err)
+				}
+				result, code, err := executeSummarize(model.RunRequest{RepoRoot: repo, RunID: "every-parser", Parser: label}, rawPath)
+				if err != nil || code != 0 {
+					t.Fatalf("summarize = %+v, %d, %v", result, code, err)
+				}
+				var summary model.Summary
+				readJSONArtifact(t, filepath.Join(repo, result.SummaryJSON), &summary)
+				if summary.RawLogSHA256 != fmt.Sprintf("sha256:%x", sha256.Sum256([]byte(position.text))) {
+					t.Fatal("raw digest does not cover the complete input")
+				}
+				run := model.RunOutput{Status: summary.Status, Metadata: model.RunMetadata{Parser: label}}
+				complete, err := extract.ProcessSnapshot(rawevidence.Snapshot{Text: position.text, TotalBytes: int64(len(position.text))}, run, nil)
+				if err != nil {
+					t.Fatal(err)
+				}
+				alone, err := extract.ProcessSnapshot(rawevidence.Snapshot{Text: position.alone, TotalBytes: int64(len(position.alone))}, run, nil)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if len(alone.Failures) == 0 {
+					t.Fatalf("%s fixture alone yields no failures", label)
+				}
+				if len(summary.Failures) != len(complete.Failures) || summary.ExtractorStatus != complete.ExtractorStatus {
+					t.Fatalf("summary %d failures/%s, complete extraction %d/%s", len(summary.Failures), summary.ExtractorStatus, len(complete.Failures), complete.ExtractorStatus)
+				}
+				for i, failure := range summary.Failures {
+					want := complete.Failures[i]
+					if failure.ID != want.ID || failure.RawSpan != want.RawSpan || !slices.Equal(failure.StackTop, want.StackTop) {
+						t.Fatalf("failure %d = %+v, complete extraction %+v", i, failure, want)
+					}
+				}
+				if got, want := failureTuples(summary.Failures), failureTuples(alone.Failures); !slices.Equal(got, want) || summary.ExtractorStatus != alone.ExtractorStatus {
+					t.Fatalf("evidence differs from the fixture alone:\ngot  %+v %s\nwant %+v %s", got, summary.ExtractorStatus, want, alone.ExtractorStatus)
+				}
+			})
+		}
 	}
 }
 

@@ -10,11 +10,13 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"strings"
 	"syscall"
 	"testing"
 	"time"
 
+	"github.com/irootkernel/gaori/internal/artifacts"
 	"github.com/irootkernel/gaori/internal/model"
 	"github.com/irootkernel/gaori/internal/safety"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
@@ -51,6 +53,15 @@ func assertCompleteLogEvidence(t *testing.T, repo string, result binaryRunResult
 	}
 	if result.Status != wantStatus || summary.ExitCode != wantExit || summary.ExtractorStatus != model.ExtractorStatusPrecise || len(summary.Failures) != 3 {
 		t.Fatalf("result %s/%d extractor %s with %d failures", result.Status, summary.ExitCode, summary.ExtractorStatus, len(summary.Failures))
+	}
+	// Watcher hashes: sorted SHA-256 of the redacted signatures, then the fixed field formula.
+	wantHashes := []string{
+		"sha256:588010b557a6c971048d52a64e25a9fdc739da73c4b8f0ea9a66777a9ad3a5a0",
+		"sha256:7cd0a1a5a5f4f51444cba6762804b52dc4024d2ffb4d1cbb03812f6227e5a44d",
+		"sha256:9bc031f8bd8ac61c4cc4308cff4986ac56c8df647766e988676d5b42ceadfd4f",
+	}
+	if !slices.Equal(status.FailureSignatures, wantHashes) || status.StatusHash != artifacts.ComputeStatusHash(status) {
+		t.Fatalf("watcher hashes: signatures %v status_hash %s", status.FailureSignatures, status.StatusHash)
 	}
 	for i, name := range []string{"early", "middle", "late"} {
 		failure := summary.Failures[i]
@@ -185,6 +196,74 @@ func TestBinaryCompleteLogAnalysisEntrypoints(t *testing.T) {
 		requireExitCode(t, cmd.Wait(), 143, append(stdout.Bytes(), stderr.Bytes()...))
 		result := decodeBinaryRunResult(t, stdout.Bytes())
 		assertCompleteLogEvidence(t, killRepo, result, raw, model.RunStatusKilled, 143, false)
+	})
+	t.Run("layouts and consumers", func(t *testing.T) {
+		for _, layout := range []string{"scoped", "relative", "external"} {
+			layoutRepo := t.TempDir()
+			if err := os.WriteFile(filepath.Join(layoutRepo, "input.log"), raw, 0o600); err != nil {
+				t.Fatal(err)
+			}
+			writeCompleteLogConfig(t, layoutRepo, "cat input.log; exit 7")
+			prefix, expectedBase := boundedPipelineLayout(t, layoutRepo, layout)
+			for _, surface := range []struct {
+				args              []string
+				processExit, exit int
+			}{
+				{[]string{"run", "unit"}, 7, 7},
+				{[]string{"run", "--parser", "generic", "--tag", "unit", "--", "sh", "-c", "cat input.log; exit 7"}, 7, 7},
+				{[]string{"summarize", "--parser", "generic", "input.log"}, 0, 1},
+			} {
+				result, _ := runBinaryJSONWithExit(t, bin, layoutRepo, surface.processExit, append(append([]string(nil), prefix...), surface.args...)...)
+				assertCompleteLogEvidence(t, layoutRepo, result, raw, model.RunStatusFailed, surface.exit, true)
+				relative, err := filepath.Rel(expectedBase, filepath.Join(layoutRepo, result.RawLog))
+				if err != nil || relative == ".." || strings.HasPrefix(relative, ".."+string(filepath.Separator)) {
+					t.Fatalf("%s raw escaped its layout: %q %v", layout, result.RawLog, err)
+				}
+				excerpt := boundedPipelineJSON[struct {
+					Content string `json:"content"`
+				}](t, bin, layoutRepo, "excerpt", "--summary", result.SummaryJSON, "F001")
+				if !strings.Contains(excerpt.Content, "token=<redacted>") || strings.Contains(excerpt.Content, "token=secret") {
+					t.Fatalf("%s excerpt consumer redaction: %q", layout, excerpt.Content)
+				}
+				summary, _, _ := loadBinaryRunArtifacts(t, layoutRepo, result)
+				proposal := boundedPipelineJSON[model.RuleProposal](t, bin, layoutRepo, "rules", "propose", "--summary", result.SummaryJSON, "--failure", "F001")
+				if proposal.Rule.Provenance.SourceLogSHA256 != summary.RawLogSHA256 || proposal.Rule.Provenance.SourceSpan != summary.Failures[0].RawSpan {
+					t.Fatalf("%s proposal provenance: %+v", layout, proposal.Rule.Provenance)
+				}
+			}
+		}
+	})
+	t.Run("mcp cancel keeps early evidence", func(t *testing.T) {
+		cancelRepo := t.TempDir()
+		if err := os.WriteFile(filepath.Join(cancelRepo, "input.log"), raw, 0o600); err != nil {
+			t.Fatal(err)
+		}
+		writeCompleteLogConfig(t, cancelRepo, "cat input.log; echo started; while :; do sleep 1; done")
+		ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
+		defer cancel()
+		cmd := exec.CommandContext(ctx, bin, "--repo", cancelRepo, "mcp")
+		cmd.Dir = cancelRepo
+		client := mcp.NewClient(&mcp.Implementation{Name: "complete-log-cancel-test", Version: "1"}, nil)
+		session, err := client.Connect(ctx, &mcp.CommandTransport{Command: cmd}, nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer func() {
+			if err := session.Close(); err != nil {
+				t.Errorf("close MCP: %v", err)
+			}
+		}()
+		started := boundedMCPTool[mcpBinarySnapshot](t, ctx, session, "start_configured_run", map[string]any{"command_id": "unit"})
+		waitForRawMarker(t, waitForInterruptedRaw(t, cancelRepo, ""), "started\n")
+		cancelled := boundedMCPTool[mcpBinaryCancelOutput](t, ctx, session, "cancel_run", map[string]any{"invocation_id": started.InvocationID})
+		if !cancelled.Accepted || !cancelled.Snapshot.CancellationRequested {
+			t.Fatalf("cancel response = %+v", cancelled)
+		}
+		final := boundedMCPTool[mcpBinarySnapshot](t, ctx, session, "await_run", map[string]any{"invocation_id": started.InvocationID})
+		if final.Phase != "finished" || final.Error != nil || final.Result.Status != model.RunStatusKilled || final.Result.ExitCode != 137 {
+			t.Fatalf("cancelled terminal snapshot: %+v", final)
+		}
+		assertCompleteLogEvidence(t, cancelRepo, final.Result, raw, model.RunStatusKilled, 137, false)
 	})
 }
 

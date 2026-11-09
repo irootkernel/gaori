@@ -16,6 +16,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/irootkernel/gaori/internal/artifacts"
 	"github.com/irootkernel/gaori/internal/config"
@@ -813,16 +814,31 @@ func excerptContent(snapshot rawevidence.Snapshot, span model.RawSpan) (string, 
 func signatureHashes(failures []model.Failure) []string {
 	out := make([]string, 0, len(failures))
 	for _, failure := range failures {
-		out = append(out, artifacts.SHA256([]byte(failure.Signature)))
+		out = append(out, artifacts.SHA256([]byte(jsonDecodedText(failure.Signature))))
 	}
 	sort.Strings(out)
 	return out
 }
 
+// jsonDecodedText returns the text a JSON decoder reads back from summary.json:
+// encoding/json writes each invalid UTF-8 byte as one U+FFFD, so signature hashes
+// must hash that text to match decoded-summary consumers. Valid text is unchanged.
+func jsonDecodedText(text string) string {
+	if utf8.ValidString(text) {
+		return text
+	}
+	var b strings.Builder
+	// Ranging over a string yields one U+FFFD for each invalid byte.
+	for _, r := range text {
+		b.WriteRune(r)
+	}
+	return b.String()
+}
+
 func warningSignatureHashes(warnings []model.Warning) []string {
 	out := make([]string, 0, len(warnings))
 	for _, warning := range warnings {
-		out = append(out, artifacts.SHA256([]byte(warning.Signature)))
+		out = append(out, artifacts.SHA256([]byte(jsonDecodedText(warning.Signature))))
 	}
 	sort.Strings(out)
 	return out

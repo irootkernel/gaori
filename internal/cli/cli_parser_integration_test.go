@@ -6,6 +6,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -243,6 +244,69 @@ func TestAdHocParserAndTagsSelectRules(t *testing.T) {
 	}
 	if len(summary.Failures) != 1 || summary.Failures[0].Signature != "SELECTED" {
 		t.Fatalf("unexpected selected rule failures: %+v", summary.Failures)
+	}
+}
+
+// TestCompleteLogRuleSelectionAndPrecedence applies exact parser/tag rule
+// selection over a log above 1 MiB: matching rules take precedence over the
+// parser fallback, a duplicate rule span is deduplicated globally, and a late
+// match is found; without matching rules the go-test fallback finds late evidence.
+func TestCompleteLogRuleSelectionAndPrecedence(t *testing.T) {
+	t.Parallel()
+	noise := strings.Repeat("noise line\n", (1<<20)/10)
+	late := "--- FAIL: TestLate (0.00s)\n    late_test.go:9: boom\n\n"
+	for _, tc := range []struct {
+		name      string
+		log       string
+		files     []string
+		extractor model.ExtractorStatus
+	}{
+		{"rules", "SELECTED\n\nWRONG_PARSER\n\nMISSING_TAG\n\n" + noise + "SELECTED\n\n" + late, []string{"", ""}, model.ExtractorStatusPartial},
+		{"fallback", "WRONG_PARSER\n\nMISSING_TAG\n\n" + noise + late, []string{"late_test.go"}, model.ExtractorStatusPrecise},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			repo := t.TempDir()
+			rulesDir := filepath.Join(repo, ".gaori", "tester", "rules")
+			if err := os.MkdirAll(rulesDir, 0o755); err != nil {
+				t.Fatal(err)
+			}
+			for _, rule := range []struct{ id, parser, tags, marker string }{
+				{"selected", "go-test", "[go, unit]", "SELECTED"},
+				{"duplicate", "go-test", "[go, unit]", "SELECTED"},
+				{"wrong-parser", "generic", "[go, unit]", "WRONG_PARSER"},
+				{"missing-tag", "go-test", "[go, e2e]", "MISSING_TAG"},
+			} {
+				content := "id: " + rule.id + "\ntags: " + rule.tags + "\nparser: " + rule.parser + "\nstatus: active\nprovenance:\n  created_by: tester\n  source_run: complete-log\n  source_command: ad-hoc\n  source_log_sha256: sha256:abc\n  source_span:\n    start_line: 1\n    end_line: 1\n  reason: complete-log selector fixture\nmatch:\n  start:\n    regex: '^" + rule.marker + "$'\n  end:\n    any_of:\n      - regex: '^$'\n    max_block_lines: 2\n  include_context:\n    before: 0\n    after: 0\nconfidence: high\n"
+				if err := os.WriteFile(filepath.Join(rulesDir, rule.id+".yaml"), []byte(content), 0o644); err != nil {
+					t.Fatal(err)
+				}
+			}
+			if err := os.WriteFile(filepath.Join(repo, "input.log"), []byte(tc.log), 0o600); err != nil {
+				t.Fatal(err)
+			}
+			result := runAdHocJSONWithExit(t, repo, 1, "run", "--parser", "go-test", "--tag", "unit", "--tag", "go", "--", "sh", "-c", "cat input.log; exit 1")
+			summary := readRunSummary(t, repo, result)
+			if summary.ExtractorStatus != tc.extractor || len(summary.Failures) != len(tc.files) {
+				t.Fatalf("extractor %s with failures %+v", summary.ExtractorStatus, summary.Failures)
+			}
+			lateStart := strings.LastIndex(tc.log, "SELECTED\n")
+			for i, failure := range summary.Failures {
+				if failure.ID != fmt.Sprintf("F%03d", i+1) || failure.File != tc.files[i] {
+					t.Fatalf("failure %d: %+v", i, failure)
+				}
+			}
+			if tc.name == "rules" {
+				first, second := summary.Failures[0], summary.Failures[1]
+				if first.Signature != "SELECTED" || first.RawSpan.StartByte != 0 || first.RawSpan.StartLine != 1 || second.Signature != "SELECTED" || second.RawSpan.StartByte != lateStart {
+					t.Fatalf("rule failures: %+v", summary.Failures)
+				}
+				return
+			}
+			if failure := summary.Failures[0]; failure.TestName != "TestLate" || failure.Line != 9 || failure.RawSpan.StartByte != strings.Index(tc.log, "--- FAIL") {
+				t.Fatalf("fallback failure: %+v", failure)
+			}
+		})
 	}
 }
 

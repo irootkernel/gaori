@@ -86,6 +86,22 @@ func assertBoundedPipelineArtifacts(t *testing.T, repo string, result binaryRunR
 	return summary
 }
 
+// boundedPipelineLayout returns the global options selecting an artifact layout
+// and the directory that must contain that layout's raw logs.
+func boundedPipelineLayout(t *testing.T, repo, layout string) ([]string, string) {
+	t.Helper()
+	switch layout {
+	case "scoped":
+		return []string{"--run-id", "fixed"}, filepath.Join(repo, ".gaori", "runs", "scoped", "fixed", "artifacts", "test")
+	case "relative":
+		return []string{"--output-dir", "custom"}, filepath.Join(repo, "custom", "runs")
+	case "external":
+		output := t.TempDir()
+		return []string{"--output-dir", output}, filepath.Join(output, "runs")
+	}
+	return nil, filepath.Join(repo, ".gaori", "runs", "standalone")
+}
+
 func TestBinaryBoundedPipelineLayoutsAndConsumers(t *testing.T) {
 	bin := buildBinary(t, projectRoot(t))
 	for _, layout := range []string{"standalone", "scoped", "relative", "external"} {
@@ -96,20 +112,7 @@ func TestBinaryBoundedPipelineLayoutsAndConsumers(t *testing.T) {
 				t.Fatal(err)
 			}
 			writeBoundedPipelineConfig(t, repo, "cat input.log; exit 7")
-			var prefix []string
-			expectedBase := filepath.Join(repo, ".gaori", "runs", "standalone")
-			switch layout {
-			case "scoped":
-				prefix = []string{"--run-id", "fixed"}
-				expectedBase = filepath.Join(repo, ".gaori", "runs", "scoped", "fixed", "artifacts", "test")
-			case "relative":
-				prefix = []string{"--output-dir", "custom"}
-				expectedBase = filepath.Join(repo, "custom", "runs")
-			case "external":
-				output := t.TempDir()
-				prefix = []string{"--output-dir", output}
-				expectedBase = filepath.Join(output, "runs")
-			}
+			prefix, expectedBase := boundedPipelineLayout(t, repo, layout)
 			var results []binaryRunResult
 			for _, surface := range []string{"configured", "adhoc", "summarize"} {
 				args := append([]string(nil), prefix...)

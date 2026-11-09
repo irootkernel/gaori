@@ -1,5 +1,11 @@
 #!/usr/bin/env python3
-"""Finite, opt-in built-binary memory campaign; no third-party dependencies."""
+"""Finite, opt-in built-binary complete-log resource smoke; no third-party dependencies.
+
+Nine fresh invocations (run generic, summarize generic, summarize vitest at exactly
+1, 8 and 32 MiB) plus one fresh MCP session with two overlapping 8 MiB generic runs.
+Correctness and completion within each watchdog gate the smoke; Gaori-PID peak
+physical footprint and elapsed time are observations, never a pass/fail threshold.
+"""
 import ctypes
 import hashlib
 import json
@@ -7,7 +13,6 @@ import os
 from pathlib import Path
 import platform
 import select
-import statistics
 import subprocess
 import sys
 import tempfile
@@ -15,15 +20,40 @@ import time
 
 MIB = 1024 * 1024
 CHUNK = 32 * 1024
-WATCHDOG = 600
-ROWS = ("E1", "S1", "S2", "S3", "S4", "S5", "S6", "S7")
-SIZES = (8, 64, 512)
+WATCHDOG = 120
+MCP_SESSION = 240
+PROGRESS = 10
+SIZES = (1, 8, 32)
+ROWS = ("run-generic", "summarize-generic", "summarize-vitest")
 SCRIPT = str(Path(__file__).resolve())
+VITEST_FIXTURE = Path(SCRIPT).parent.parent / "internal" / "extract" / "testdata" / "vitest.raw.log"
+
+# Pinned generator constants and oracles (FLOG-012 plan v2/v4 and appendix A).
+GENERIC_HEAD = b"Error: memory-probe\n"
+REMAINDER = {b"neutral": b"nnn\n", b"neutral-a": b"nnnnnnn\n", b"neutral-b": b"nnnnnnn\n"}
+VITEST_FIXTURE_BYTES = 348
+VITEST_FIXTURE_SHA256 = "sha256:80838627f450efc1cfbfb49499a747fafb2aab4cb449234f73612991842f204b"
+GENERIC_SIGNATURE = "Error: memory-probe"
+VITEST_SIGNATURE = "AssertionError: expected false to be true"
+EXCERPT_SHA256 = {
+    b"neutral": (115, "sha256:d5106ef007bf039fc40874fa7865fd1368b042f3b318b549a4224a3b948f36f4"),
+    b"neutral-a": (139, "sha256:42a7d9c64c176a20c2225a62d049a01e7d07aa7e98c3ba5b15ccab2a23c6b8a1"),
+    b"neutral-b": (139, "sha256:33fb09046bd1829d05681c6af97b0977b2bcf1b469b462fba15e6f1974d1a5db"),
+    "vitest": (236, "sha256:d8a7bbbdcf80c5f8eab017b9e0611f4562e937616ed8a817182e3a7621560ba4"),
+}
+MCP_RAW_SHA256 = {
+    b"neutral-a": "sha256:a4c1d631f6cdbc8c14ba012d5de3ec1b675e44e44dbddc1ad2ee4c500058ce74",
+    b"neutral-b": "sha256:d3174c9290196c8222e512de4655e521a8d174ba9d80ee1dcbd255b96e5309f5",
+}
 
 
 def require(condition, message):
     if not condition:
         raise RuntimeError(message)
+
+
+def milestone(event, **fields):
+    print(json.dumps(dict(record="milestone", event=event, **fields)), flush=True)
 
 
 def repeated(token, count):
@@ -34,27 +64,24 @@ def repeated(token, count):
         count -= len(piece)
 
 
-def chunks(row, size, variant="neutral"):
-    """Exact dossier shapes, with no sparse writes or unlisted final LF."""
-    if row in ("E1", "S2", "S3"):
-        suffix = {"E1": b"Error: memory-probe\n", "S2": b"", "S3": b"FAIL "}[row]
-        line = variant.encode("ascii") + b"\n"
-        count, remainder = divmod(size - len(suffix), len(line))
-        yield from repeated(line, count * len(line))
-        if remainder:
-            yield b"n" * (remainder - 1) + b"\n"
-        yield suffix
-    else:
-        prefix, token, suffix = {
-            "S1": (b"Error: memory-probe ", b"x", b""),
-            "S4": (b"", b" ", b"FAIL "),
-            "S5": (b"\x1b[", b"0", b"mFAIL "),
-            "S6": (b"\x1b[", b"0", b""),
-            "S7": (b"\x1b[", b"0", b"\nFAIL "),
-        }[row]
-        yield prefix
-        yield from repeated(token, size - len(prefix) - len(suffix))
-        yield suffix
+def neutral_lines(size, variant):
+    """size bytes of complete candidate-free lines ending in the pinned remainder line."""
+    line = variant + b"\n"
+    remainder = REMAINDER[variant]
+    count, extra = divmod(size, len(line))
+    require(extra == len(remainder), "unpinned generator remainder")
+    yield from repeated(line, count * len(line))
+    yield remainder
+
+
+def generic_chunks(size, variant=b"neutral"):
+    yield GENERIC_HEAD
+    yield from neutral_lines(size - len(GENERIC_HEAD), variant)
+
+
+def vitest_chunks(size, fixture):
+    yield from neutral_lines(size - len(fixture), b"neutral")
+    yield fixture
 
 
 def digest_chunks(parts, writer=None):
@@ -90,19 +117,19 @@ class RUsageV4(ctypes.Structure):
 
 class MeasuredProcess:
     """Read the process-local lifetime peak at NOTE_EXIT, before reaping."""
-    def __init__(self, argv, repo, stdout, stderr, stdin=subprocess.DEVNULL):
+    def __init__(self, argv, repo, stdout, stderr, deadline, label, stdin=subprocess.DEVNULL):
         require(sys.platform == "darwin", "resource instrumentation requires macOS; other platforms are unmeasured")
         self.lib = ctypes.CDLL("/usr/lib/libproc.dylib", use_errno=True)
         self.lib.proc_pid_rusage.argtypes = [ctypes.c_int, ctypes.c_int, ctypes.c_void_p]
         self.lib.proc_pid_rusage.restype = ctypes.c_int
+        self.label, self.deadline = label, deadline
         self.queue = select.kqueue()
         self.started = time.monotonic()
-        self.deadline = self.started + WATCHDOG
         self.process = subprocess.Popen(argv, cwd=repo, stdin=stdin, stdout=stdout, stderr=stderr)
         try:
             event = select.kevent(self.process.pid, filter=select.KQ_FILTER_PROC,
-                                 flags=select.KQ_EV_ADD | select.KQ_EV_ENABLE | select.KQ_EV_ONESHOT,
-                                 fflags=select.KQ_NOTE_EXIT)
+                                  flags=select.KQ_EV_ADD | select.KQ_EV_ENABLE | select.KQ_EV_ONESHOT,
+                                  fflags=select.KQ_NOTE_EXIT)
             self.queue.control([event], 0, 0)
         except BaseException:
             self.abort()
@@ -118,18 +145,23 @@ class MeasuredProcess:
 
     def remaining(self):
         remaining = self.deadline - time.monotonic()
-        require(remaining > 0, "600-second invocation watchdog expired")
+        require(remaining > 0, f"{self.label}: watchdog expired")
         return remaining
 
     def finish(self):
-        events = self.queue.control(None, 1, self.remaining())
-        require(events and events[0].fflags & select.KQ_NOTE_EXIT, "600-second invocation watchdog expired")
+        milestone("wait", label=self.label)
+        while True:
+            events = self.queue.control(None, 1, min(PROGRESS, self.remaining()))
+            if events:
+                break
+            milestone("progress", label=self.label, elapsed_seconds=round(time.monotonic() - self.started, 1))
+        require(events[0].fflags & select.KQ_NOTE_EXIT, f"{self.label}: unexpected process event")
         elapsed = time.monotonic() - self.started
         # Popen.poll/communicate/wait would reap the process and lose this metric.
         peak = self.peak()
         code = self.process.wait(timeout=5)
         self.queue.close()
-        return {"peak_bytes": peak, "seconds": round(elapsed, 3), "process_exit": code}
+        return {"peak_bytes": peak, "gaori_seconds": round(elapsed, 3), "process_exit": code}
 
     def abort(self):
         # Only exceptional cleanup uses poll implicitly. Failed probes never pass.
@@ -152,7 +184,7 @@ def config(repo, argv):
 
 
 def emit_argv(size, variant="neutral", barrier=None):
-    argv = [sys.executable, SCRIPT, "emit", "E1", str(size), variant]
+    argv = [sys.executable, SCRIPT, "emit", str(size), variant]
     if barrier:
         argv.append(str(barrier))
     return argv
@@ -165,7 +197,24 @@ def owned_path(repo, relative):
     return path
 
 
-def verify_artifacts(repo, result, row, size, expected_hash):
+def expected_failure(row, size, variant):
+    """Exact retained failure for a row: span, metadata, signature and excerpt."""
+    if row == "summarize-vitest":
+        lines_before = (size - VITEST_FIXTURE_BYTES) // 8 + 1
+        return {"raw_span": {"start_line": lines_before + 7, "end_line": lines_before + 14,
+                             "start_byte": size - 237, "end_byte": size - 1},
+                "file": "src/foo.ts", "line": 42, "test_name": "renders empty state",
+                "signature": VITEST_SIGNATURE, "extractor": "precise", "parser": "vitest",
+                "excerpt": EXCERPT_SHA256["vitest"]}
+    line = len(variant) + 1
+    return {"raw_span": {"start_line": 1, "end_line": 13, "start_byte": 0, "end_byte": len(GENERIC_HEAD) + 12 * line - 1},
+            "file": None, "line": None, "test_name": None,
+            "signature": GENERIC_SIGNATURE, "extractor": "partial", "parser": "generic",
+            "excerpt": EXCERPT_SHA256[variant]}
+
+
+def verify_artifacts(repo, result, row, size, expected_hash, variant=b"neutral"):
+    want = expected_failure(row, size, variant)
     raw = owned_path(repo, result["raw_log"])
     require(file_digest(raw) == (size, expected_hash), "raw size/hash mismatch")
     summary_path = owned_path(repo, result["summary_json"])
@@ -173,36 +222,32 @@ def verify_artifacts(repo, result, row, size, expected_hash):
     summary = json.loads(summary_bytes)
     status = json.loads(bounded_bytes(owned_path(repo, result["status_json"])))
     bounded_bytes(owned_path(repo, result["summary_markdown"]))
-    parser = "generic" if row in ("E1", "S1") else "vitest"
-    verdict = "passed" if row in ("S2", "S6") else "failed"
-    exit_code = 0 if verdict == "passed" else 1
-    # The vitest inference marker deliberately has no test/file name, so it
-    # changes the inferred verdict without producing an extracted failure.
-    failure_count = 1 if row == "E1" else 0
     for evidence in (result, summary, status):
-        require(evidence["status"] == verdict and evidence["exit_code"] == exit_code, "verdict changed")
-        require(evidence["extractor_status"] == "degraded", "oversized evidence is not degraded")
-    require(summary["parser"] == parser, "parser selection changed")
-    require(summary["failure_count"] == failure_count and summary["warning_count"] == 0, "unexpected extraction")
+        require(evidence["status"] == "failed" and evidence["exit_code"] == 1, "verdict changed")
+        require(evidence["extractor_status"] == want["extractor"], "unexpected extractor status")
+    require(summary["parser"] == want["parser"], "parser selection changed")
+    require(summary["failure_count"] == 1 and summary["warning_count"] == 0, "unexpected extraction counts")
+    require(not summary.get("failures_truncated") and not summary.get("warnings_truncated"), "evidence truncated")
     require(summary["raw_log_sha256"] == status["raw_log_sha256"] == expected_hash, "published raw digest mismatch")
     require(status["summary_sha256"] == sha(summary_bytes), "summary checksum mismatch")
     require(status["summary_path"] == result["summary_json"] and status["raw_log_path"] == result["raw_log"], "status locators changed")
-    fields = [status["command_id"], ",".join(status["tags"]), verdict, str(exit_code), "degraded", expected_hash,
-              ",".join(status["failure_signatures"] or []), ",".join(status["warning_signatures"] or []),
-              status["summary_path"], status["raw_log_path"]]
+    require(status["failure_signatures"] == [sha(want["signature"].encode())] and not status["warning_signatures"], "status signatures changed")
+    fields = [status["command_id"], ",".join(status["tags"]), "failed", "1", want["extractor"], expected_hash,
+              ",".join(status["failure_signatures"]), "", status["summary_path"], status["raw_log_path"]]
     require(status["status_hash"] == sha("\n".join(fields).encode()), "status hash mismatch")
-    if row != "E1":
+    if row != "run-generic":
         require(not summary.get("command_argv") and "git_revision" not in summary and "git_dirty" not in summary,
                 "summarize acquired execution provenance")
-    for failure in summary["failures"] or []:
-        span = failure["raw_span"]
-        require(size - 256 * 1024 <= span["start_byte"] < span["end_byte"] <= size, "invalid absolute tail span")
-        require(span["start_line"] <= span["end_line"], "invalid line span")
-        excerpt = bounded_bytes(owned_path(repo, str(summary_path.parent.relative_to(repo) / failure["excerpt"])), 16 * 1024)
-        require(b"memory-probe" in excerpt if row == "E1" else b"FAIL" in excerpt, "missing tail excerpt")
-    return {"expected": verdict, "observed": summary["status"], "artifact_exit": exit_code,
-            "failures": failure_count, "raw_bytes": size, "raw_sha256": expected_hash,
-            "integrity": "raw,summary,status,spans,excerpts verified"}
+    failure = summary["failures"][0]
+    require(failure["raw_span"] == want["raw_span"], "retained span changed: " + json.dumps(failure["raw_span"]))
+    require(failure["signature"] == want["signature"] and failure.get("file") == want["file"]
+            and failure.get("line") == want["line"] and failure.get("test_name") == want["test_name"], "failure metadata changed")
+    excerpt = bounded_bytes(owned_path(repo, str(summary_path.parent.relative_to(repo) / failure["excerpt"])), 16 * 1024)
+    require((len(excerpt), sha(excerpt)) == want["excerpt"], "excerpt bytes changed")
+    return {"expected": "failed", "observed": summary["status"], "artifact_exit": 1, "failures": 1, "warnings": 0,
+            "extractor_status": want["extractor"], "raw_bytes": size, "raw_sha256": expected_hash,
+            "raw_span": failure["raw_span"], "excerpt_sha256": want["excerpt"][1],
+            "integrity": "raw,summary,status,signature,span,metadata,excerpt verified"}
 
 
 def disk_bytes(repo):
@@ -224,32 +269,41 @@ def source_manifest(root):
     return "sha256:" + digest.hexdigest()
 
 
-def trial(binary, row, mib, index):
+def trial(binary, row, mib, fixture):
     size = mib * MIB
+    label = f"{row}/{mib}MiB"
+    started = time.monotonic()
+    deadline = started + WATCHDOG
+    milestone("start", label=label)
     with tempfile.TemporaryDirectory(prefix="gaori-memory-") as temporary:
         repo = Path(temporary).resolve()
         config(repo, emit_argv(size))
-        if row == "E1":
-            count, expected_hash = digest_chunks(chunks(row, size))
+        if row == "run-generic":
+            count, expected_hash = digest_chunks(generic_chunks(size))
             args = ["run", "unit"]
         else:
+            chunks = generic_chunks(size) if row == "summarize-generic" else vitest_chunks(size, fixture)
             with (repo / "input.log").open("wb") as output:
-                count, expected_hash = digest_chunks(chunks(row, size), output)
-            args = ["summarize", "--parser", "generic" if row == "S1" else "vitest", "input.log"]
+                count, expected_hash = digest_chunks(chunks, output)
+            args = ["summarize", "--parser", "generic" if row == "summarize-generic" else "vitest", "input.log"]
         require(count == size, "generator size mismatch")
         with (repo / "stdout.json").open("wb") as stdout, (repo / "stderr.txt").open("wb") as stderr:
-            process = MeasuredProcess([binary, "--repo", str(repo), "--json"] + args, repo, stdout, stderr)
+            process = MeasuredProcess([binary, "--repo", str(repo), "--json"] + args, repo, stdout, stderr, deadline, label)
             try:
                 measurement = process.finish()
             except BaseException:
                 process.abort()
                 raise
-        require(measurement["process_exit"] == (1 if row == "E1" else 0), "unexpected process exit")
+        require(measurement["process_exit"] == (1 if row == "run-generic" else 0), "unexpected process exit")
         require(not bounded_bytes(repo / "stderr.txt"), "unexpected stderr")
         result = json.loads(bounded_bytes(repo / "stdout.json"))
         evidence = verify_artifacts(repo, result, row, size, expected_hash)
-        return dict(measurement, **evidence, scenario=row, parser="generic" if row in ("E1", "S1") else "vitest",
-                    input_mib=mib, trial=index, disk_bytes=disk_bytes(repo))
+        disk = disk_bytes(repo)
+    row_seconds = time.monotonic() - started
+    # Verification and temporary-root removal count against the same watchdog.
+    require(row_seconds <= WATCHDOG, f"{label}: {WATCHDOG}-second row watchdog expired after cleanup")
+    milestone("finish", label=label, row_seconds=round(row_seconds, 3))
+    return dict(measurement, **evidence, scenario=row, input_mib=mib, row_seconds=round(row_seconds, 3), disk_bytes=disk)
 
 
 class MCP:
@@ -267,8 +321,11 @@ class MCP:
         self.send({"jsonrpc": "2.0", "id": self.sequence, "method": method, "params": params})
         while True:
             while b"\n" not in self.buffer:
-                ready, _, _ = select.select([self.measured.process.stdout], [], [], self.measured.remaining())
-                require(ready, "MCP watchdog expired")
+                ready, _, _ = select.select([self.measured.process.stdout], [], [], min(PROGRESS, self.measured.remaining()))
+                if not ready:
+                    milestone("progress", label=self.measured.label, waiting=method,
+                              elapsed_seconds=round(time.monotonic() - self.measured.started, 1))
+                    continue
                 part = os.read(self.measured.process.stdout.fileno(), CHUNK)
                 require(part, "MCP closed before response")
                 self.buffer += part
@@ -292,13 +349,18 @@ class MCP:
 
 
 def concurrent(binary):
-    size = 64 * MIB
+    size = 8 * MIB
+    label = "mcp-2x8MiB"
+    started = time.monotonic()
+    deadline = started + MCP_SESSION
+    milestone("start", label=label)
     with tempfile.TemporaryDirectory(prefix="gaori-memory-mcp-") as temporary:
         repo = Path(temporary).resolve()
         config(repo, emit_argv(size, "neutral-a", repo / "ready-a"))
-        hashes = [digest_chunks(chunks("E1", size, variant))[1] for variant in ("neutral-a", "neutral-b")]
+        hashes = [digest_chunks(generic_chunks(size, variant))[1] for variant in (b"neutral-a", b"neutral-b")]
+        require(hashes == [MCP_RAW_SHA256[b"neutral-a"], MCP_RAW_SHA256[b"neutral-b"]], "MCP generator changed")
         with (repo / "stderr.txt").open("wb") as stderr:
-            measured = MeasuredProcess([binary, "--repo", str(repo), "mcp"], repo, subprocess.PIPE, stderr, subprocess.PIPE)
+            measured = MeasuredProcess([binary, "--repo", str(repo), "mcp"], repo, subprocess.PIPE, stderr, deadline, label, subprocess.PIPE)
             try:
                 client = MCP(measured)
                 client.request("initialize", {"protocolVersion": "2025-06-18", "capabilities": {},
@@ -318,6 +380,8 @@ def concurrent(binary):
                     require(final["invocation_id"] == start["invocation_id"] and final["phase"] == "finished" and not final.get("error"),
                             "MCP terminal identity/lifecycle changed")
                 require(finals[0]["result"]["raw_log"] != finals[1]["result"]["raw_log"], "concurrent raw path collision")
+                evidence = [verify_artifacts(repo, final["result"], "run-generic", size, digest, variant)
+                            for final, digest, variant in zip(finals, hashes, (b"neutral-a", b"neutral-b"))]
                 measured.process.stdin.close()
                 measurement = measured.finish()
                 measured.process.stdout.close()
@@ -325,58 +389,56 @@ def concurrent(binary):
                 measured.abort()
                 raise
         require(measurement["process_exit"] == 0 and not bounded_bytes(repo / "stderr.txt"), "MCP shutdown failed")
-        evidence = [verify_artifacts(repo, final["result"], "E1", size, digest) for final, digest in zip(finals, hashes)]
-        return dict(measurement, scenario="MCP-2x64", initial_peak_bytes=initial_peak, wire_max_bytes=client.wire_max,
-                    independent_results=evidence, disk_bytes=disk_bytes(repo))
+        disk = disk_bytes(repo)
+    session_seconds = time.monotonic() - started
+    # Initialize, starts, awaits, reconciliation, stdin close, reap and cleanup share one clock.
+    require(session_seconds <= MCP_SESSION, f"{label}: {MCP_SESSION}-second session watchdog expired after cleanup")
+    milestone("finish", label=label, session_seconds=round(session_seconds, 3))
+    return dict(measurement, scenario=label, initial_peak_bytes=initial_peak, wire_max_bytes=client.wire_max,
+                session_seconds=round(session_seconds, 3), independent_results=evidence, disk_bytes=disk)
 
 
 def campaign(binary, root):
     require(sys.platform == "darwin", "resource instrumentation requires macOS; Linux is unmeasured, not skipped")
-    # Each row has its own baseline; no pooling, retries or threshold adjustment.
+    fixture = VITEST_FIXTURE.read_bytes()
+    require(sha(fixture) == VITEST_FIXTURE_SHA256 and len(fixture) == VITEST_FIXTURE_BYTES, "vitest fixture changed")
     source_identity = source_manifest(root)
     provenance = {"record": "provenance", "source_manifest_sha256": source_identity,
                   "source_commit": subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=root, text=True).strip(),
-                  "dirty_paths": subprocess.check_output(["git", "status", "--porcelain"], cwd=root, text=True).splitlines(),
+                  "dirty_paths": subprocess.check_output(["git", "status", "--porcelain", "--untracked-files=all"], cwd=root, text=True).splitlines(),
                   "tracked_diff_sha256": sha(subprocess.check_output(["git", "diff", "HEAD", "--binary", "--full-index"], cwd=root)),
                   "harness_sha256": file_digest(Path(SCRIPT))[1], "binary_sha256": file_digest(Path(binary))[1],
+                  "vitest_fixture_sha256": VITEST_FIXTURE_SHA256,
                   "gaori_version": json.loads(subprocess.check_output([binary, "version", "--json"], timeout=10)),
                   "go_version": subprocess.check_output(["go", "version"], text=True, timeout=10).strip(),
                   "os": platform.platform(), "architecture": platform.machine(), "python": platform.python_version(),
                   "metric": "proc_pid_rusage v4 ri_lifetime_max_phys_footprint before waitpid; bytes, Gaori PID only",
-                  "watchdog_seconds": WATCHDOG, "threshold_bytes": 32 * MIB, "command": "make test-memory"}
+                  "row_watchdog_seconds": WATCHDOG, "mcp_session_seconds": MCP_SESSION, "progress_seconds": PROGRESS,
+                  "rows": list(ROWS), "sizes_mib": list(SIZES), "threshold": "none (observation only)",
+                  "command": "make test-memory"}
     print(json.dumps(provenance), flush=True)
+    # One fresh invocation per row and size; no medians, pooling or retries.
     for row in ROWS:
-        medians = {}
         for mib in SIZES:
-            samples = []
-            for index in range(1, 4):
-                result = trial(binary, row, mib, index)
-                print(json.dumps(dict(record="trial", **result)), flush=True)
-                samples.append(result["peak_bytes"])
-            medians[mib] = statistics.median(samples)
-        deltas = {mib: medians[mib] - medians[8] for mib in (64, 512)}
-        print(json.dumps({"record": "scenario", "scenario": row, "median_bytes": medians, "delta_bytes": deltas}), flush=True)
-        require(all(delta <= 32 * MIB for delta in deltas.values()), "memory threshold exceeded: " + row)
+            print(json.dumps(dict(record="trial", **trial(binary, row, mib, fixture))), flush=True)
     print(json.dumps(dict(record="concurrency", **concurrent(binary))), flush=True)
     require(source_manifest(root) == source_identity, "source candidate changed during campaign")
-    print(json.dumps({"record": "gate", "trials": 72, "concurrent_sessions": 1, "outcome": "passed"}), flush=True)
+    print(json.dumps({"record": "gate", "invocations": len(ROWS) * len(SIZES), "concurrent_sessions": 1, "outcome": "passed"}), flush=True)
+
 
 
 def main():
-    if len(sys.argv) >= 6 and sys.argv[1] == "emit":
-        row, size, variant = sys.argv[2], int(sys.argv[3]), sys.argv[4]
-        # Emit accepts exactly one optional barrier filename, under the owned repo.
-        barrier = Path(sys.argv[5])
-        barrier.touch()
-        deadline = time.monotonic() + WATCHDOG
-        while not (barrier.parent / "release").exists():
-            require(time.monotonic() < deadline, "producer barrier watchdog expired")
-            time.sleep(0.01)
-        digest_chunks(chunks(row, size, variant), sys.stdout.buffer)
-        sys.stdout.buffer.flush()
-        return 1
-    if len(sys.argv) == 5 and sys.argv[1] == "emit":
-        digest_chunks(chunks(sys.argv[2], int(sys.argv[3]), sys.argv[4]), sys.stdout.buffer)
+    if len(sys.argv) in (4, 5) and sys.argv[1] == "emit":
+        size, variant = int(sys.argv[2]), sys.argv[3].encode("ascii")
+        if len(sys.argv) == 5:
+            # The optional barrier proves overlap; it never outlives the MCP session budget.
+            barrier = Path(sys.argv[4])
+            barrier.touch()
+            deadline = time.monotonic() + MCP_SESSION
+            while not (barrier.parent / "release").exists():
+                require(time.monotonic() < deadline, "producer barrier watchdog expired")
+                time.sleep(0.01)
+        digest_chunks(generic_chunks(size, variant), sys.stdout.buffer)
         sys.stdout.buffer.flush()
         return 1
     require(len(sys.argv) == 4 and sys.argv[1] == "campaign", "usage: test-memory campaign <gaori-binary> <source-root>")

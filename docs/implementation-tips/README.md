@@ -79,17 +79,56 @@ A raw-stage failure publishes no new derived evidence; older fixed-path files
 may remain and do not prove the failed attempt completed.
 
 Ordinary tests use small deterministic fixtures and retained-state assertions.
-`make test-memory` separately runs the finite built-binary campaign under
-[`TESTING.md`](../../TESTING.md#separate-memory-campaign). Never infer bounded
+`make test-memory` separately runs the finite built-binary complete-log resource
+smoke under [`TESTING.md`](../../TESTING.md#separate-memory-campaign). Never infer bounded
 memory from cumulative allocations, child-process memory or a generic early
 match alone. Keep synthetic raw logs, temporary directories and runtime evidence
 local; the bounded results below are the durable observations.
+
+## Complete-log resource smoke
+
+Applicability: these are finite observations of the FLOG-012 source candidate on one
+host. They gate nothing beyond the correctness and watchdog checks in
+[`TESTING.md`](../../TESTING.md#separate-memory-campaign) and make no capacity,
+allocation-efficiency or Linux claim.
+
+The first run on 2026-11-09 passed: `make test-memory` exited `0` with nine fresh
+invocations and one MCP session, each retaining exactly the pinned failure, span,
+signature hash and excerpt with zero warnings and no truncation. Host: macOS 27.0.1
+arm64, go1.27.1 darwin/arm64, Python 3.14.7. Identity: source candidate manifest
+`sha256:1f16d33c5897ad043358d2b6415b3a7926c166e6e510d40305ff3844f9dcfd37` (base
+`7fd2507a0ed7bed2876d4e421ff575b29d0cdc34` plus uncommitted FLOG-012 changes), binary
+`sha256:e75f49119d0d4cd55109b188e7638ce5422d9f16509aeb182df1bd480a499498` (version
+v0.1.19, linker commit `7fd2507`; built from that uncommitted candidate, not a released
+binary), harness
+`sha256:bc157c2dc5b7443b0e1bbfb828acbbe5fb620377acc50ed95c88a07e56c053f3`, Vitest fixture
+`sha256:80838627f450efc1cfbfb49499a747fafb2aab4cb449234f73612991842f204b`.
+
+Peak values use MiB = 1,048,576 bytes and are Gaori-PID lifetime physical footprint.
+Row seconds include artifact verification and temporary-root removal.
+
+| Row | Input | Extractor | Peak MiB | Gaori s | Row s |
+|---|---:|---|---:|---:|---:|
+| Run generic | 1 MiB | partial | 24.9 | 0.075 | 0.078 |
+| Run generic | 8 MiB | partial | 129.8 | 0.190 | 0.199 |
+| Run generic | 32 MiB | partial | 509.9 | 0.575 | 0.603 |
+| Summarize generic | 1 MiB | partial | 23.4 | 0.025 | 0.028 |
+| Summarize generic | 8 MiB | partial | 135.0 | 0.123 | 0.133 |
+| Summarize generic | 32 MiB | partial | 502.1 | 0.496 | 0.531 |
+| Summarize Vitest | 1 MiB | precise | 23.9 | 0.040 | 0.044 |
+| Summarize Vitest | 8 MiB | precise | 128.5 | 0.244 | 0.253 |
+| Summarize Vitest | 32 MiB | precise | 507.0 | 0.986 | 1.020 |
+| MCP, two overlapping runs | 2 x 8 MiB | partial | 207.8 | 0.211 | 0.219 (session) |
+
+Peak memory grew roughly in proportion to input size, as ADR-0023 accepts. No
+progress milestone was needed because every wait finished within 10 seconds.
 
 ## Bounded-memory resource campaign
 
 Applicability: these measurements qualify the historical LOMEM candidate only.
 FLOG-009's complete-log analysis is not flat-memory, so this campaign does not
-qualify or gate it; its replacement finite resource smoke belongs to FLOG-012.
+qualify or gate it; since FLOG-012, `make test-memory` runs the complete-log
+resource smoke instead.
 
 The first complete campaign on 2026-09-27 passed: `make test-memory` exited `0`
 in 163.126 seconds through the selected Gaori wrapper (`passed`, `no_match`, zero
@@ -415,7 +454,7 @@ confidence: medium
 
 Validation rejects unknown YAML fields, extra YAML documents, missing IDs or provenance, duplicate IDs, negative or oversized context, a combined matched-block/context budget above 160 lines, excessive `max_block_lines`, invalid capture groups, invalid or unsupported regex, inconsistent active/disabled deletion reasons, and rule overmatch during rule-only `rules test` extraction. Config, stored rule, and imported rule YAML are limited to 256 KiB before decoding.
 
-Summary-based proposal accepts only matching regular summary, status, and raw-log artifacts. Verify the status hash, exact summary checksum, locators, surfaced metadata, and signature hashes before streaming the complete raw log and capturing the selected bounded span. Keep the legacy manual metadata/span form separate and limited to its 256 KiB raw-log input contract.
+Summary-based proposal accepts only matching regular summary, status, and raw-log artifacts. Verify the status hash, exact summary checksum, locators, surfaced metadata, and signature hashes before streaming the complete raw log and capturing the selected bounded span. Keep the legacy manual metadata/span form separate: it reads a source of any size and selects 1 to 256 KiB of original bytes.
 
 Rule proposals are addressed by file name, not rule ID. `Propose` deliberately reuses the same generated ID when the same span is proposed again, so proposal loading must not apply the duplicate-ID rejection that active-rule loading applies. Keep proposal listing read-only: it must not promote, rewrite, or reorder candidates, and a proposal must never enter extraction selection.
 

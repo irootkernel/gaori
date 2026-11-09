@@ -5,12 +5,19 @@ Scope: Primary executable or documentary evidence for each completed requirement
 
 This matrix records the primary evidence for every requirement marked complete. The audit regression suite fails when a completed requirement is missing, duplicated, has no evidence, cites a `Test*` identifier that does not resolve to a repository Go test, or references an unknown or incomplete requirement. Every row must cite at least one resolvable test unless its requirement ID is an explicit non-test evidence exception in the audit regression test.
 
-RQMEM-001 through RQMEM-010 have executable evidence below. Resource scaling is
-separately exercised by `TestBinaryMemoryCampaign`; it is not part of ordinary
-`make test`. The roadmap links the completed epic's canonical outcomes.
+RQMEM-001 through RQMEM-010 have executable evidence below. Their resource
+scaling was qualified by the historical LOMEM campaign; since FLOG-012,
+`TestBinaryMemoryCampaign` runs the complete-log resource smoke instead. It is
+not part of ordinary `make test`. The roadmap links the completed epic's canonical outcomes.
 
 | Requirement | Primary evidence |
 |---|---|
+| `GAORI-REQ-RQLOG-009` | `TestProcessLargeLogAnalyzesCompleteInput`; `TestLargePassingRunAnalyzesCompleteLog`; `TestLargeSummarizeAnalyzesCompleteLog`; `TestCompleteLogAnalysisConfiguredAndAdHoc`; `TestBinaryCompleteLogAnalysisEntrypoints`; `TestCompleteLogCrossSurfaceBoundaries`; `TestCompleteLogEncodingAndRedaction`; `TestLargeSummarizeEveryRegisteredParser` |
+| `GAORI-REQ-RQLOG-010` | `TestDetectParsersScansCompleteInput`; `TestDetectParsersGoCargoIdentitiesAcrossCompleteInput`; `TestParsersDetectScansCompleteRawLog`; `TestParsersDetectReadFaults`; `TestParsersDetectRejectsCharacterDevice` |
+| `GAORI-REQ-RQLOG-011` | `TestProcessRulesAnalyzesCompleteInput`; `TestTestRuleAnalyzesCompleteFixture`; `TestRulesTestReportsCompleteFixtureResults`; `TestCompleteLogRuleSelectionAndPrecedence` |
+| `GAORI-REQ-RQLOG-012` | `TestProposeAcceptsCompleteSourceAndGuardsSelectedBytes`; `TestProposeSelectedByteGuardLineEndings`; `TestRulesProposeAcceptsLargeLegacySource` |
+| `GAORI-REQ-RQLOG-013` | `TestConfigCheckSampleMeasuresCompleteSample` |
+| `GAORI-REQ-RQLOG-014` | `TestAnalysisSnapshotReuseAndReload`; `TestMCPCloseDrainReturnsDuringBlockedReload`; `TestMCPFinishedResultsRetainNoAnalysisText`; `TestProcessSnapshotRejectsUnrepresentableInput`; `TestGoParentSuppressionMatchesLegacy`; `TestCargoNameMembershipMatchesLegacy`; `TestBinaryDenseGoCargoCandidates`; `TestTestRuleRejectsSpecialRawLog`; `TestProposeRejectsSpecialRawLog`; `TestConfigCheckSampleRejectsCharacterDevice`; `TestReadRegularFileRejectsSpecialFiles`; `TestSignatureHashesMatchDecodedSummary`; `TestRedactSummaryMalformedSignatureHashesMatchDecodedSummary`; `TestBinaryMemoryCampaign` |
 | `GAORI-REQ-RQMEM-001` | `TestCaptureBoundedRetentionAndSnapshotOwnership`; `TestBoundedInferenceGrowth`; `TestExecutedWindowArtifactsAcrossRunModes`; `TestConcurrentMCPStartsIsolateCapturedEvidence`; `TestBinaryMemoryCampaign` |
 | `GAORI-REQ-RQMEM-002` | `TestCaptureAcceptedPrefix`; `TestCaptureKeepsFirstError`; `TestCaptureMatchesBoundedTail`; `TestExecuteReturnsBoundedEvidenceAndFullDigest` |
 | `GAORI-REQ-RQMEM-003` | `TestProcessWindowOrigins`; `TestProcessSnapshotWithoutWholeLog`; `TestProcessSnapshotRejectsUnrepresentableInput`; `TestProcessRulesAnalyzesCompleteInput`; `TestTestRuleAnalyzesCompleteFixture` |

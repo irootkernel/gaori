@@ -66,7 +66,7 @@ For Gaori maintainers:
 8. Track current unreleased changes in the root [changelog](../CHANGELOG.md) and use the matching document under [release notes](releases/) when publishing a release.
 9. For the completed `LOMEM` epic, read the [RQMEM requirements](specs/README.md#rqmem-bounded-memory-log-processing), [ADR-0021](architecture-decision-records/README.md#adr-0021-bound-log-memory-without-changing-evidence-semantics), [bounded pipeline architecture](architecture/README.md#bounded-memory-log-pipeline), and [resource measurements](implementation-tips/README.md#bounded-memory-resource-campaign).
 
-For complete raw-log analysis (FLOG-009 run/summarize analysis, FLOG-010 parser detection and FLOG-011 authoring inputs implemented in source; FLOG-012 planned), read the [FLOG roadmap](roadmap/README.md#flog-complete-raw-log-analysis), [execution dossier](todo/TODO-FLOG.md), [RQLOG requirements](specs/README.md#rqlog-complete-raw-log-analysis), and [accepted ADR-0023](architecture-decision-records/README.md#adr-0023-complete-log-analysis-with-input-proportional-memory).
+For complete raw-log analysis (FLOG-009 run/summarize analysis, FLOG-010 parser detection and FLOG-011 authoring inputs implemented in source; FLOG-012 integrated verification implemented in source; final whole-epic integration, closeout and Master overall acceptance pending), read the [FLOG roadmap](roadmap/README.md#flog-complete-raw-log-analysis), [execution dossier](todo/TODO-FLOG.md), [RQLOG requirements](specs/README.md#rqlog-complete-raw-log-analysis), and [accepted ADR-0023](architecture-decision-records/README.md#adr-0023-complete-log-analysis-with-input-proportional-memory).
 
 ## Current delivery state
 
