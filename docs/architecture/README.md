@@ -1,8 +1,9 @@
 # Gaori Architecture
 
-Status: Complete through `RSTAT` and `LOMEM`
-LOMEM: Captured execution, summarize import/inference and materialization use bounded state. The resource campaign passed on macOS arm64; Linux is unmeasured.
-Scope: Standalone Gaori v0.1 architecture, including session-local STDIO MCP execution, terminal awaiting, artifact-derived run insights, and the bounded-memory log pipeline
+Status: Complete through `RSTAT` and `LOMEM`; `FLOG` complete-log analysis implemented in source by FLOG-009 through FLOG-012, with epic closeout pending
+LOMEM (historical): its candidate used bounded state for captured execution, summarize import/inference and window materialization; its resource campaign passed on macOS arm64.
+FLOG: capture, hashing and summarize import/inference stay bounded, while analysis and excerpt materialization hold the complete raw text, so their memory grows with input size (ADR-0023). Linux is unmeasured.
+Scope: Standalone Gaori v0.1 architecture, including session-local STDIO MCP execution, terminal awaiting, artifact-derived run insights, the bounded capture/import pipeline and complete-log analysis
 
 This document defines Gaori's technical and artifact contracts. See the [integration guide](../integration-guide.md) for parent-project ownership, supported capability status, and rollout guidance.
 

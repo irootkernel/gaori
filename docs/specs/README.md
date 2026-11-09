@@ -1,6 +1,6 @@
 # Gaori Requirement Specs
 
-Status: Current source-tree requirements through `RSTAT` and retirement of the Aquarium development producer; `RQMEM-001` through `RQMEM-010` are implemented and verified, with FLOG-009 updates to their analysis-memory and extraction-window clauses; `RQLOG-009` through `RQLOG-014` are in progress (run/summarize complete analysis implemented by FLOG-009, complete parser detection by FLOG-010, complete authoring inputs and their regular-file guards by FLOG-011)
+Status: Current source-tree requirements through `RSTAT` and retirement of the Aquarium development producer; `RQMEM-001` through `RQMEM-010` are implemented and verified, with FLOG-009 updates to their analysis-memory and extraction-window clauses; `RQLOG-009` through `RQLOG-014` are implemented and verified (run/summarize complete analysis by FLOG-009, complete parser detection by FLOG-010, complete authoring inputs and their regular-file guards by FLOG-011, integrated verification and the resource smoke by FLOG-012), with FLOG epic closeout pending
 Scope: Gaori v0.1 standalone baseline, post-baseline hardening, portable project configuration, CLI usability, verified rule proposals, operator-directed cleanup, session-local STDIO MCP execution with terminal awaiting, long-running await guidance, the completed parser catalog plus Dart/Patrol extraction contract, implemented run-status and timing insights, adopted bounded-memory log processing, and complete raw-log analysis in progress
 Source context: deterministic Gaori v0.1 CLI, evidence, and attached MCP behavior.
 

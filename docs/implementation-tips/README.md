@@ -95,9 +95,11 @@ allocation-efficiency or Linux claim.
 The first run on 2026-11-09 passed: `make test-memory` exited `0` with nine fresh
 invocations and one MCP session, each retaining exactly the pinned failure, span,
 signature hash and excerpt with zero warnings and no truncation. Host: macOS 27.0.1
-arm64, go1.27.1 darwin/arm64, Python 3.14.7. Identity: source candidate manifest
-`sha256:1f16d33c5897ad043358d2b6415b3a7926c166e6e510d40305ff3844f9dcfd37` (base
-`7fd2507a0ed7bed2876d4e421ff575b29d0cdc34` plus uncommitted FLOG-012 changes), binary
+arm64, go1.27.1 darwin/arm64, Python 3.14.7. Identity, as recorded by the harness: source manifest
+`sha256:4841ee0726d272a7d8ac90693110056b9873c6123611ba072bdce06d3d856b65` and tracked diff
+`sha256:1a5962ed6a992a6d73619e7728bab251bcd4db4168ac4eaea040f9fadda1a389` over base
+`7fd2507a0ed7bed2876d4e421ff575b29d0cdc34`; that observed dirty scope was the uncommitted
+FLOG-012 changes plus an unrelated staged `.gitignore` change. Binary
 `sha256:e75f49119d0d4cd55109b188e7638ce5422d9f16509aeb182df1bd480a499498` (version
 v0.1.19, linker commit `7fd2507`; built from that uncommitted candidate, not a released
 binary), harness
