@@ -326,18 +326,113 @@ func TestConfigCheckSampleReportsNoConfiguredPatterns(t *testing.T) {
 	}
 }
 
+// completeSampleConfig orders a token pattern before a pattern that only matches
+// inside tokens, and a capture replacement before a pattern that only matches its
+// expansion, so complete-sample counts prove sequential application.
+const completeSampleConfig = `version: 2
+commands: {}
+redaction:
+  patterns:
+    - name: token-SENTINELNAME0007
+      regex: 'token=SENTINELTOK[0-9]+'
+      replace: 'token=<t>'
+    - name: consumed
+      regex: 'SENTINELTOK'
+      replace: '<never>'
+    - name: user
+      regex: 'user=(\w+)'
+      replace: '<${1}-SENTINELHIDE>'
+    - name: expansion
+      regex: 'SENTINELHIDE'
+      replace: '<h>'
+`
+
+func TestConfigCheckSampleMeasuresCompleteSample(t *testing.T) {
+	t.Parallel()
+	const early, late = "token=SENTINELTOK0001 user=SENTINELUSERA\n", "token=SENTINELTOK0002 user=SENTINELUSERB\n"
+	leaks := []string{"SENTINELTOK", "SENTINELUSER", "SENTINELHIDE", "SENTINELNAME", "token=", "user="}
+	// In the largest sample the filler is one physical line of 1 MiB + 1 bytes, so
+	// the late pair, including the consumed pattern's only input, sits beyond it.
+	for _, size := range []int{safety.MaxConfigRuleInputBytes - 1, safety.MaxConfigRuleInputBytes, safety.MaxConfigRuleInputBytes + 1, 1<<20 + 1 + len(early) + len(late) + 1} {
+		sample := early + strings.Repeat("x", size-len(early)-len(late)-1) + "\n" + late
+		repo := t.TempDir()
+		if err := os.MkdirAll(filepath.Join(repo, ".gaori"), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(repo, ".gaori", "tester.yaml"), []byte(completeSampleConfig), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(repo, "unit.raw.log"), []byte(sample), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		var stdout, stderr bytes.Buffer
+		if exitCode := Main([]string{"--repo", repo, "--json", "config", "check", "--sample", "unit.raw.log"}, &stdout, &stderr); exitCode != 0 {
+			t.Fatalf("size %d: exit=%d stderr=%s", size, exitCode, stderr.String())
+		}
+		for _, leak := range leaks {
+			if strings.Contains(stdout.String()+stderr.String(), leak) {
+				t.Fatalf("size %d: output leaked %q", size, leak)
+			}
+		}
+		var result configCheckResult
+		if err := json.Unmarshal(stdout.Bytes(), &result); err != nil {
+			t.Fatal(err)
+		}
+		got := result.RedactionSample
+		want := []configCheckRedactionPattern{
+			{Position: 1, Matches: 2, Bytes: 2 * len("token=SENTINELTOK0001")},
+			{Position: 2, Matches: 0, Bytes: 0},
+			{Position: 3, Matches: 2, Bytes: 2 * len("user=SENTINELUSERA")},
+			{Position: 4, Matches: 2, Bytes: 2 * len("SENTINELHIDE")},
+		}
+		if got == nil || got.SampleBytes != size || len(got.Patterns) != len(want) || got.TotalMatches != 6 || got.ReplacedBytes != 2*(21+18+12) {
+			t.Fatalf("size %d: redaction_sample = %+v", size, got)
+		}
+		for i := range want {
+			if got.Patterns[i] != want[i] {
+				t.Fatalf("size %d: pattern %d = %+v, want %+v", size, i+1, got.Patterns[i], want[i])
+			}
+		}
+		if _, err := os.Stat(filepath.Join(repo, ".gaori", "runs")); !os.IsNotExist(err) {
+			t.Fatalf("size %d: sample mode created runtime state: %v", size, err)
+		}
+	}
+
+	repo := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(repo, ".gaori"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(repo, ".gaori", "tester.yaml"), []byte("version: 2\ncommands: {}\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	sample := early + strings.Repeat("x", 1<<20+1) + "\n"
+	if err := os.WriteFile(filepath.Join(repo, "unit.raw.log"), []byte(sample), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	var stdout, stderr bytes.Buffer
+	if exitCode := Main([]string{"--repo", repo, "--json", "config", "check", "--sample", "unit.raw.log"}, &stdout, &stderr); exitCode != 0 {
+		t.Fatalf("zero patterns: exit=%d stderr=%s", exitCode, stderr.String())
+	}
+	var result configCheckResult
+	if err := json.Unmarshal(stdout.Bytes(), &result); err != nil {
+		t.Fatal(err)
+	}
+	if got := result.RedactionSample; got == nil || got.SampleBytes != len(sample) || len(got.Patterns) != 0 || got.TotalMatches != 0 || got.ReplacedBytes != 0 {
+		t.Fatalf("zero patterns: redaction_sample = %+v", got)
+	}
+	if strings.Contains(stdout.String()+stderr.String(), "SENTINELTOK") {
+		t.Fatal("zero patterns: output leaked sample content")
+	}
+}
+
 func TestConfigCheckSampleFailsClosedOnUnusableSample(t *testing.T) {
 	t.Parallel()
 	repo := writeSampleModeRepo(t, "token=SENTINELREGEX0004MATCHED0001\n")
 	if err := os.MkdirAll(filepath.Join(repo, "adir"), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	oversized := strings.Repeat("x", safety.MaxConfigRuleInputBytes+1)
-	if err := os.WriteFile(filepath.Join(repo, "big.raw.log"), []byte(oversized), 0o644); err != nil {
-		t.Fatal(err)
-	}
 
-	for _, sample := range []string{"missing.raw.log", "adir", "big.raw.log"} {
+	for _, sample := range []string{"missing.raw.log", "adir"} {
 		t.Run(sample, func(t *testing.T) {
 			var stdout, stderr bytes.Buffer
 			exitCode := Main([]string{"--repo", repo, "config", "check", "--sample", sample}, &stdout, &stderr)

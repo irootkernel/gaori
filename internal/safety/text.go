@@ -1,7 +1,6 @@
 package safety
 
 import (
-	"fmt"
 	"regexp"
 	"strings"
 
@@ -9,12 +8,17 @@ import (
 )
 
 const (
+	// MaxRegexInputBytes is the former raw-analysis boundary. No production input
+	// is limited by it; tests keep it as a boundary-fixture size.
 	MaxRegexInputBytes = 256 * 1024
-	MaxSummaryBytes    = 64 * 1024
-	MaxExcerptBytes    = 16 * 1024
-	MaxBlockLines      = 160
-	MaxSummaryFailures = 50
-	MaxSummaryWarnings = 50
+	// MaxProposalSpanBytes bounds the selected evidence of a rule proposal in both
+	// summary and legacy modes. It never limits the size of the source log.
+	MaxProposalSpanBytes = 256 * 1024
+	MaxSummaryBytes      = 64 * 1024
+	MaxExcerptBytes      = 16 * 1024
+	MaxBlockLines        = 160
+	MaxSummaryFailures   = 50
+	MaxSummaryWarnings   = 50
 )
 
 type redactionRule struct {
@@ -121,11 +125,4 @@ func FilterNoise(text string, filters []string) string {
 		}
 	}
 	return strings.Join(kept, "\n")
-}
-
-func EnsureInputWithinLimit(text string) error {
-	if len(text) > MaxRegexInputBytes {
-		return model.NewGaoriError(model.ExitCodeParserError, "regex input bound", fmt.Errorf("input exceeds %d bytes", MaxRegexInputBytes))
-	}
-	return nil
 }

@@ -3,9 +3,7 @@ package cli
 import (
 	"encoding/json"
 	"flag"
-	"fmt"
 	"io"
-	"os"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -192,20 +190,10 @@ func measureRedactionSample(repoRoot, samplePath string, redactor safety.Redacto
 	if !filepath.IsAbs(resolved) {
 		resolved = filepath.Join(repoRoot, samplePath)
 	}
-	// The regular-file check runs before the open because opening a special file
-	// such as a FIFO would block instead of failing closed.
-	info, err := os.Stat(resolved)
-	if err != nil {
-		return nil, model.NewGaoriError(model.ExitCodeConfigError, "read redaction sample", err)
-	}
-	if !info.Mode().IsRegular() {
-		return nil, model.NewGaoriError(model.ExitCodeConfigError, "read redaction sample",
-			fmt.Errorf("path %q is not a regular file", samplePath))
-	}
-	// A partial scan is the worst possible outcome for a leak check: a secret in
-	// the head of an oversized log would be reported as matches=0. Fail closed
-	// instead, matching rules test rather than run and summarize.
-	raw, err := safety.ReadFileLimited(resolved)
+	// The complete sample is measured: a partial scan could report matches=0 for
+	// a secret it never saw, the worst outcome for a leak check. ReadRegularFile
+	// checks the path before opening, so a FIFO cannot block, then the descriptor.
+	raw, err := safety.ReadRegularFile(resolved)
 	if err != nil {
 		return nil, model.NewGaoriError(model.ExitCodeConfigError, "read redaction sample", err)
 	}

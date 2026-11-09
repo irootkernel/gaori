@@ -6,8 +6,8 @@ This file records concise shipped outcomes and the planned next stable release. 
 
 ### Changed
 
-- Analyze complete raw logs in CLI/MCP runs, `summarize` and `parsers detect`, finding failures before the final 256 KiB without size-only degradation while memory grows with log size;
-  authoring input limits remain until their implementing task.
+- Analyze complete raw logs in CLI/MCP runs, `summarize`, `parsers detect`, `rules test` and `config check --sample`, finding failures before the final 256 KiB without size-only degradation while memory grows with log size;
+  legacy `rules propose --raw-log` accepts sources of any size and limits only its selected span to 256 KiB.
 
 ### Fixed
 

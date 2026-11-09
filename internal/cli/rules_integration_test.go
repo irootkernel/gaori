@@ -4,6 +4,10 @@ package cli
 
 import (
 	"bytes"
+	"crypto/sha256"
+	"encoding/hex"
+	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"slices"
@@ -152,6 +156,124 @@ func TestRuleSourceFilesEnforceInputSizeLimit(t *testing.T) {
 	}
 	if _, err := os.Stat(filepath.Join(repo, ".gaori", "tester", "rules", "oversized-v1.yaml")); !os.IsNotExist(err) {
 		t.Fatalf("oversized create wrote a rule: %v", err)
+	}
+}
+
+// runRulesCommand runs one public command and returns exit code, stdout and stderr.
+func runRulesCommand(args ...string) (int, string, string) {
+	var stdout, stderr bytes.Buffer
+	exitCode := Main(args, &stdout, &stderr)
+	return exitCode, stdout.String(), stderr.String()
+}
+
+func TestRulesTestReportsCompleteFixtureResults(t *testing.T) {
+	t.Parallel()
+	repo := t.TempDir()
+	inputPath := filepath.Join(repo, "generic-v1.yaml")
+	if err := os.WriteFile(inputPath, []byte(ruleInputYAML("generic-v1", "complete fixture rule")), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if exitCode, _, stderr := runRulesCommand("--repo", repo, "rules", "create", "--file", inputPath); exitCode != 0 {
+		t.Fatalf("create exit=%d stderr=%s", exitCode, stderr)
+	}
+	// The matching start line is itself a physical line above 1 MiB, placed after
+	// the former 256 KiB boundary; its complete text is the signature.
+	giant := "TypeError: " + strings.Repeat("g", 1<<20)
+	filler := strings.Repeat("x", safety.MaxRegexInputBytes+1)
+	single := filepath.Join(repo, "single.raw.log")
+	if err := os.WriteFile(single, []byte("neutral\n"+filler+"\n"+giant+"\n\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	double := filepath.Join(repo, "double.raw.log")
+	if err := os.WriteFile(double, []byte("TypeError: early\n\n"+filler+"\n"+giant+"\n\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	for _, test := range []struct {
+		name, log, span string
+		exit            int
+		want            model.RuleTestResult
+		human, stderr   string
+	}{
+		{name: "pass", log: single, span: "3:4", exit: 0,
+			want:  model.RuleTestResult{ExpectedStartLine: 3, ExpectedEndLine: 4, ActualStartLine: 3, ActualEndLine: 4, FailureCount: 1, Signature: giant, Passed: true},
+			human: fmt.Sprintf("PASS generic-v1 expected=3:4 actual=3:4 signature=%s\n", giant)},
+		{name: "span mismatch", log: single, span: "1:2", exit: int(model.ExitCodeParserError),
+			want:  model.RuleTestResult{ExpectedStartLine: 1, ExpectedEndLine: 2, ActualStartLine: 3, ActualEndLine: 4, FailureCount: 1, Signature: giant},
+			human: fmt.Sprintf("FAIL generic-v1 expected=1:2 actual=3:4 signature=%s\n", giant), stderr: "expected span 1:2, got 3:4"},
+		{name: "late second span overmatch", log: double, span: "1:2", exit: int(model.ExitCodeParserError),
+			want:  model.RuleTestResult{ExpectedStartLine: 1, ExpectedEndLine: 2, FailureCount: 2},
+			human: "FAIL generic-v1 expected=1:2 actual=0:0 signature=\n", stderr: "overmatched 2 failure spans"},
+	} {
+		test.want.RuleID, test.want.RawLogPath = "generic-v1", test.log
+		exitCode, stdout, stderr := runRulesCommand("--repo", repo, "--json", "rules", "test", "--rule", "generic-v1", "--log", test.log, "--expect-span", test.span)
+		var got model.RuleTestResult
+		if err := json.Unmarshal([]byte(stdout), &got); err != nil {
+			t.Fatalf("%s: JSON result: %v", test.name, err)
+		}
+		if exitCode != test.exit || got != test.want || !strings.Contains(stderr, test.stderr) {
+			t.Fatalf("%s: exit=%d passed=%t count=%d lines=%d:%d signature bytes=%d stderr=%.200s", test.name, exitCode, got.Passed, got.FailureCount, got.ActualStartLine, got.ActualEndLine, len(got.Signature), stderr)
+		}
+		exitCode, stdout, stderr = runRulesCommand("--repo", repo, "rules", "test", "--rule", "generic-v1", "--log", test.log, "--expect-span", test.span)
+		if exitCode != test.exit || stdout != test.human || !strings.Contains(stderr, test.stderr) {
+			t.Fatalf("%s: human exit=%d stdout bytes=%d (want %d) stderr=%.200s", test.name, exitCode, len(stdout), len(test.human), stderr)
+		}
+	}
+
+	rejected := []string{filepath.Join(repo, "missing.raw.log")}
+	if info, err := os.Stat(os.DevNull); err == nil && info.Mode()&os.ModeCharDevice != 0 {
+		rejected = append(rejected, os.DevNull)
+	}
+	for _, log := range rejected {
+		exitCode, stdout, stderr := runRulesCommand("--repo", repo, "--json", "rules", "test", "--rule", "generic-v1", "--log", log, "--expect-span", "1:1")
+		if exitCode != 2 || strings.Contains(stdout, `"passed":true`) || !strings.Contains(stderr, "read raw log") {
+			t.Fatalf("%s: exit=%d stdout=%s stderr=%s", log, exitCode, stdout, stderr)
+		}
+	}
+}
+
+func TestRulesProposeAcceptsLargeLegacySource(t *testing.T) {
+	t.Parallel()
+	head := "TypeError: boom\nsrc/a.ts:1\n"
+	raw := []byte(head + strings.Repeat("x", safety.MaxProposalSpanBytes+1-len(head)-1) + "\n")
+	repo := t.TempDir()
+	rawPath := filepath.Join(repo, "large.raw.log")
+	if err := os.WriteFile(rawPath, raw, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	exitCode, stdout, stderr := runRulesCommand("--repo", repo, "--json", "rules", "propose", "--tag", "unit", "--parser", "generic", "--raw-log", rawPath, "--span", "1:2")
+	var proposal model.RuleProposal
+	if exitCode != 0 || json.Unmarshal([]byte(stdout), &proposal) != nil {
+		t.Fatalf("large source exit=%d stdout=%s stderr=%s", exitCode, stdout, stderr)
+	}
+	sum := sha256.Sum256(raw)
+	if want := "sha256:" + hex.EncodeToString(sum[:]); proposal.Rule.Provenance.SourceLogSHA256 != want {
+		t.Fatalf("source_log_sha256 = %s, want %s", proposal.Rule.Provenance.SourceLogSHA256, want)
+	}
+	if _, err := os.Stat(proposal.Path); err != nil {
+		t.Fatalf("proposal file: %v", err)
+	}
+
+	// Lines 1:2 select 262145 original bytes, one over the selected-span limit.
+	rejectedDir := t.TempDir()
+	oversized := filepath.Join(rejectedDir, "oversized-selection.raw.log")
+	selection := "TypeError: big\n" + strings.Repeat("y", safety.MaxProposalSpanBytes+1-len("TypeError: big\n")) + "\nafter\n"
+	if err := os.WriteFile(oversized, []byte(selection), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	rejected := []string{oversized, filepath.Join(rejectedDir, "missing.raw.log")}
+	if info, err := os.Stat(os.DevNull); err == nil && info.Mode()&os.ModeCharDevice != 0 {
+		rejected = append(rejected, os.DevNull)
+	}
+	for _, source := range rejected {
+		repo := t.TempDir()
+		exitCode, stdout, stderr := runRulesCommand("--repo", repo, "rules", "propose", "--tag", "unit", "--parser", "generic", "--raw-log", source, "--span", "1:2")
+		if exitCode != 2 || stdout != "" {
+			t.Fatalf("%s: exit=%d stdout=%s stderr=%s", source, exitCode, stdout, stderr)
+		}
+		if _, err := os.Stat(filepath.Join(repo, ".gaori", "rule-proposals")); !os.IsNotExist(err) {
+			t.Fatalf("%s: rejected source created proposal directory: %v", source, err)
+		}
 	}
 }
 

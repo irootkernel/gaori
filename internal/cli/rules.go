@@ -419,8 +419,8 @@ func proposeRuleFromSummary(repoRoot, summaryPath, failureID string) (model.Rule
 		return model.RuleProposal{}, model.NewGaoriError(model.ExitCodeConfigError, "propose rule from summary", fmt.Errorf("failure line span must contain at most %d lines", maxLines))
 	}
 	spanBytes := span.EndByte - span.StartByte
-	if span.StartByte < 0 || span.EndByte <= span.StartByte || spanBytes > safety.MaxRegexInputBytes {
-		return model.RuleProposal{}, model.NewGaoriError(model.ExitCodeConfigError, "propose rule from summary", fmt.Errorf("failure byte span is invalid or exceeds %d bytes", safety.MaxRegexInputBytes))
+	if span.StartByte < 0 || span.EndByte <= span.StartByte || spanBytes > safety.MaxProposalSpanBytes {
+		return model.RuleProposal{}, model.NewGaoriError(model.ExitCodeConfigError, "propose rule from summary", fmt.Errorf("failure byte span is invalid or exceeds %d bytes", safety.MaxProposalSpanBytes))
 	}
 
 	rawFile, err := safety.OpenFileWithin(filepath.Dir(resolvedSummary), resolvedRaw, os.O_RDONLY, 0)
@@ -436,7 +436,7 @@ func proposeRuleFromSummary(repoRoot, summaryPath, failureID string) (model.Rule
 		return model.RuleProposal{}, model.NewGaoriError(model.ExitCodeArtifactError, "validate summary raw log", fmt.Errorf("raw log checksum does not match summary"))
 	}
 	if int64(span.EndByte) > rawScan.Size {
-		return model.RuleProposal{}, model.NewGaoriError(model.ExitCodeConfigError, "propose rule from summary", fmt.Errorf("failure byte span is invalid or exceeds %d bytes", safety.MaxRegexInputBytes))
+		return model.RuleProposal{}, model.NewGaoriError(model.ExitCodeConfigError, "propose rule from summary", fmt.Errorf("failure byte span is invalid or exceeds %d bytes", safety.MaxProposalSpanBytes))
 	}
 	if rawScan.PrefixLines+1 != span.StartLine {
 		return model.RuleProposal{}, model.NewGaoriError(model.ExitCodeConfigError, "propose rule from summary", fmt.Errorf("failure start line does not match byte span"))

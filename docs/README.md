@@ -66,7 +66,7 @@ For Gaori maintainers:
 8. Track current unreleased changes in the root [changelog](../CHANGELOG.md) and use the matching document under [release notes](releases/) when publishing a release.
 9. For the completed `LOMEM` epic, read the [RQMEM requirements](specs/README.md#rqmem-bounded-memory-log-processing), [ADR-0021](architecture-decision-records/README.md#adr-0021-bound-log-memory-without-changing-evidence-semantics), [bounded pipeline architecture](architecture/README.md#bounded-memory-log-pipeline), and [resource measurements](implementation-tips/README.md#bounded-memory-resource-campaign).
 
-For complete raw-log analysis (FLOG-009 run/summarize analysis and FLOG-010 parser detection implemented in source; FLOG-011 and FLOG-012 planned), read the [FLOG roadmap](roadmap/README.md#flog-complete-raw-log-analysis), [execution dossier](todo/TODO-FLOG.md), [RQLOG requirements](specs/README.md#rqlog-complete-raw-log-analysis), and [accepted ADR-0023](architecture-decision-records/README.md#adr-0023-complete-log-analysis-with-input-proportional-memory).
+For complete raw-log analysis (FLOG-009 run/summarize analysis, FLOG-010 parser detection and FLOG-011 authoring inputs implemented in source; FLOG-012 planned), read the [FLOG roadmap](roadmap/README.md#flog-complete-raw-log-analysis), [execution dossier](todo/TODO-FLOG.md), [RQLOG requirements](specs/README.md#rqlog-complete-raw-log-analysis), and [accepted ADR-0023](architecture-decision-records/README.md#adr-0023-complete-log-analysis-with-input-proportional-memory).
 
 ## Current delivery state
 
@@ -76,7 +76,7 @@ The standalone v0.1 baseline and session-local STDIO MCP interface are implement
 
 The completed [LOMEM](roadmap/README.md#lomem-bounded-memory-log-processing) epic delivers bounded-memory capture, import, inference, and materialization without changing the existing extraction window or public contracts. The bounded pipeline and separate macOS arm64 [resource campaign](implementation-tips/README.md#bounded-memory-resource-campaign) are verified; Linux scaling remains unmeasured.
 
-[FLOG](roadmap/README.md#flog-complete-raw-log-analysis) is in progress. Under accepted ADR-0023, its design permits input-proportional analysis memory to remove raw-log analysis limits using existing parsers and Go regexp, replacing the unimplemented bounded-memory proposal on the `idiot` branch. FLOG-009 implements complete analysis for configured/ad-hoc CLI runs, both MCP start paths and summarize in the source tree, and FLOG-010 does the same for `parsers detect`; rule fixture testing, legacy `rules propose --raw-log` sources and `config check --sample` keep their existing 256 KiB input limits until FLOG-011.
+[FLOG](roadmap/README.md#flog-complete-raw-log-analysis) is in progress. Under accepted ADR-0023, its design permits input-proportional analysis memory to remove raw-log analysis limits using existing parsers and Go regexp, replacing the unimplemented bounded-memory proposal on the `idiot` branch. FLOG-009 implements complete analysis for configured/ad-hoc CLI runs, both MCP start paths and summarize in the source tree, FLOG-010 does the same for `parsers detect`, and FLOG-011 for rule fixture testing, legacy `rules propose --raw-log` sources and `config check --sample`, where only the legacy proposal's selected span stays limited to 256 KiB.
 
 ## Roadmap identity and dossier lifecycle
 

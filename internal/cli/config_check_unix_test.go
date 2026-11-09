@@ -42,3 +42,27 @@ func TestConfigCheckSampleRejectsSpecialSampleFile(t *testing.T) {
 		t.Fatal("config check blocked on a special sample file")
 	}
 }
+
+// TestConfigCheckSampleRejectsCharacterDevice rejects a device by path type
+// before opening it, so its contents are never read.
+func TestConfigCheckSampleRejectsCharacterDevice(t *testing.T) {
+	t.Parallel()
+	info, err := os.Stat(os.DevNull)
+	if err != nil || info.Mode()&os.ModeCharDevice == 0 {
+		t.Skipf("%s is not a character device: %v", os.DevNull, err)
+	}
+	repo := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(repo, ".gaori"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(repo, ".gaori", "tester.yaml"), []byte(sampleModeConfig), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	var stdout, stderr bytes.Buffer
+	if exitCode := Main([]string{"--repo", repo, "config", "check", "--sample", os.DevNull}, &stdout, &stderr); exitCode != 2 {
+		t.Fatalf("exit = %d, want 2 (stdout=%s stderr=%s)", exitCode, stdout.String(), stderr.String())
+	}
+	if stdout.Len() != 0 {
+		t.Fatalf("stdout = %q, want empty", stdout.String())
+	}
+}

@@ -2,6 +2,7 @@ package e2e
 
 import (
 	"bytes"
+	"crypto/sha256"
 	"fmt"
 	"go/ast"
 	"go/parser"
@@ -92,20 +93,41 @@ func TestBinaryEnforcesRuleAndConfigInputSizeLimits(t *testing.T) {
 		}
 	})
 
-	t.Run("propose raw log does not create proposal", func(t *testing.T) {
+	t.Run("propose accepts large raw log and guards selected bytes", func(t *testing.T) {
 		repo := t.TempDir()
-		rawPath := filepath.Join(repo, "oversized.raw.log")
-		if err := os.WriteFile(rawPath, bytes.Repeat([]byte("x"), safety.MaxConfigRuleInputBytes+1), 0o644); err != nil {
+		head := "TypeError: boom\nsrc/a.ts:1\n"
+		raw := []byte(head + strings.Repeat("x", safety.MaxProposalSpanBytes+1-len(head)-1) + "\n")
+		rawPath := filepath.Join(repo, "large.raw.log")
+		if err := os.WriteFile(rawPath, raw, 0o644); err != nil {
 			t.Fatal(err)
 		}
-		out, err := exec.Command(bin, "--repo", repo, "rules", "propose", "--tag", "unit", "--parser", "generic", "--raw-log", rawPath, "--span", "1:1").CombinedOutput()
+		out, err := exec.Command(bin, "--repo", repo, "rules", "propose", "--tag", "unit", "--parser", "generic", "--raw-log", rawPath, "--span", "1:2").CombinedOutput()
+		if err != nil {
+			t.Fatalf("large raw log with small selection failed: %v\n%s", err, out)
+		}
+		proposals, err := filepath.Glob(filepath.Join(repo, ".gaori", "rule-proposals", "*.yaml"))
+		if err != nil || len(proposals) != 1 {
+			t.Fatalf("proposals=%v err=%v", proposals, err)
+		}
+		proposal, err := os.ReadFile(proposals[0])
+		if err != nil || !strings.Contains(string(proposal), fmt.Sprintf("source_log_sha256: sha256:%x", sha256.Sum256(raw))) {
+			t.Fatalf("proposal does not record the complete raw digest: err=%v\n%s", err, proposal)
+		}
+
+		repo = t.TempDir()
+		selectionPath := filepath.Join(repo, "oversized-selection.raw.log")
+		selection := "TypeError: big\n" + strings.Repeat("y", safety.MaxProposalSpanBytes+1-len("TypeError: big\n")) + "\nafter\n"
+		if err := os.WriteFile(selectionPath, []byte(selection), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		out, err = exec.Command(bin, "--repo", repo, "rules", "propose", "--tag", "unit", "--parser", "generic", "--raw-log", selectionPath, "--span", "1:2").CombinedOutput()
 		requireExitCode(t, err, int(model.ExitCodeConfigError), out)
 		if _, err := os.Stat(filepath.Join(repo, ".gaori", "rule-proposals")); !os.IsNotExist(err) {
-			t.Fatalf("oversized raw log created proposal directory: %v", err)
+			t.Fatalf("oversized selection created proposal directory: %v", err)
 		}
 	})
 
-	t.Run("rule test keeps parser-error contract", func(t *testing.T) {
+	t.Run("rule test analyzes complete fixture", func(t *testing.T) {
 		repo := t.TempDir()
 		rulesDir := filepath.Join(repo, ".gaori", "tester", "rules")
 		if err := os.MkdirAll(rulesDir, 0o755); err != nil {
@@ -114,12 +136,23 @@ func TestBinaryEnforcesRuleAndConfigInputSizeLimits(t *testing.T) {
 		if err := os.WriteFile(filepath.Join(rulesDir, "bounded-v1.yaml"), []byte(auditRuleYAML("bounded-v1", 20, 0, 0)), 0o644); err != nil {
 			t.Fatal(err)
 		}
-		rawPath := filepath.Join(repo, "oversized.raw.log")
-		if err := os.WriteFile(rawPath, bytes.Repeat([]byte("x"), safety.MaxRegexInputBytes+1), 0o644); err != nil {
+		filler := strings.Repeat("x", safety.MaxRegexInputBytes+1)
+		rawPath := filepath.Join(repo, "large.raw.log")
+		if err := os.WriteFile(rawPath, []byte(filler+"\nMARKER\n\n"), 0o644); err != nil {
 			t.Fatal(err)
 		}
-		out, err := exec.Command(bin, "--repo", repo, "rules", "test", "--rule", "bounded-v1", "--log", rawPath, "--expect-span", "1:1").CombinedOutput()
+		out, err := exec.Command(bin, "--repo", repo, "rules", "test", "--rule", "bounded-v1", "--log", rawPath, "--expect-span", "2:3").CombinedOutput()
+		if err != nil || !strings.Contains(string(out), "PASS bounded-v1 expected=2:3 actual=2:3") {
+			t.Fatalf("large fixture did not pass: %v\n%.400s", err, out)
+		}
+		if err := os.WriteFile(rawPath, []byte("MARKER\n\n"+filler+"\nMARKER\n\n"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		out, err = exec.Command(bin, "--repo", repo, "rules", "test", "--rule", "bounded-v1", "--log", rawPath, "--expect-span", "1:2").CombinedOutput()
 		requireExitCode(t, err, int(model.ExitCodeParserError), out)
+		if !strings.Contains(string(out), "overmatched 2 failure spans") {
+			t.Fatalf("late second span was not counted: %.400s", out)
+		}
 	})
 }
 

@@ -233,7 +233,7 @@ To confirm that your redaction patterns actually fire, point the same preflight 
 gaori config check --sample .gaori/runs/standalone/<run>/demo.raw.log
 ```
 
-It reports, per configured pattern in order, how many times it matched and how many bytes it replaced. A pattern reporting `matches=0` is the signal worth acting on; patterns are identified by position rather than name so that no part of a pattern definition is printed. Matched text and its surrounding lines are never printed, patterns are counted in configured order so an earlier pattern can leave a later one at zero, and a sample larger than 256 KiB fails closed rather than reporting a partial count.
+It reports, per configured pattern in order, how many times it matched and how many bytes it replaced. A pattern reporting `matches=0` is the signal worth acting on; patterns are identified by position rather than name so that no part of a pattern definition is printed. Matched text and its surrounding lines are never printed, patterns are counted in configured order so an earlier pattern can leave a later one at zero, and the complete sample is measured at any size, so no count is partial.
 
 ```yaml
 version: 2
@@ -435,8 +435,8 @@ Add `--json` when a script needs compact command output. Global options may appe
 - The executed command's exit code is authoritative.
 - Capture and summarize inference use bounded log-processing state while raw logs remain complete on disk. Extraction and excerpts analyze the complete raw log, so their memory grows with log size; the earlier [resource measurements](docs/implementation-tips/README.md#bounded-memory-resource-campaign) apply to the previous bounded design only. Raw disk use still grows with the log.
 - Summaries and excerpts are bounded; raw logs are preserved unchanged. Summaries retain at most 50 failures and 50 warnings, report truncation explicitly, and remain within their byte budget. Run and summarize logs are extracted completely at any size; raw size alone never degrades extraction or causes an internal error.
-- Config YAML, stored and imported rule YAML, and legacy `rules propose --raw-log` inputs are limited to 256 KiB and fail with config exit code `2` when oversized. Summary-based proposals may verify a larger raw log with one streaming checksum pass that also captures the selected 256 KiB failure span and validates its line boundaries from that same stream.
-- Redaction applies to surfaced summaries, excerpts, status, and console metadata, not to raw logs or literal artifact paths. Verify coverage in advance with `gaori config check --sample <raw-log>`, which reports counts only and fails closed above 256 KiB.
+- Config YAML and stored and imported rule YAML are limited to 256 KiB and fail with config exit code `2` when oversized. `rules test` fixtures and legacy `rules propose --raw-log` sources are read completely at any size; a legacy proposal must select 1 to 256 KiB of original bytes. Summary-based proposals may verify a larger raw log with one streaming checksum pass that also captures the selected 256 KiB failure span and validates its line boundaries from that same stream.
+- Redaction applies to surfaced summaries, excerpts, status, and console metadata, not to raw logs or literal artifact paths. Verify coverage in advance with `gaori config check --sample <raw-log>`, which measures the complete sample and reports counts only.
 - Cleanup has no implicit default: it requires an explicit age or `--all`, supports dry-run, and never treats incomplete or unrecognized entries as safe deletion targets.
 - Do not put secrets in run IDs, command IDs, output directories, or filenames.
 - Ignore `.gaori/` runtime state while re-including portable `.gaori/tester.yaml` and reviewed `.gaori/tester/rules/*.yaml`. Keep toolchain metadata, proposals, run artifacts, secrets, absolute paths, and machine-specific settings out of source control.

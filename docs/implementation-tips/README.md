@@ -301,7 +301,7 @@ The skills hardcode their applicable CLI and MCP surfaces, so treat each present
 - Treat excerpt IDs like `F001` as summary-local. Store excerpt references as summary-directory-relative paths such as `excerpts/F001.log`, and resolve them through the summary path plus failure ID.
 - If any required artifact cannot be written, report an internal error and do not claim success.
 - Cleanup and listing share one definition of a completed standalone run: a valid UTC directory name plus a regular top-level `<command-id>.status.json`. Change `parseStandaloneRunTime` or `isStatusArtifact` only with both callers in mind, or the two commands will disagree about which evidence exists.
-- Every regular-file guard that protects a later `open` is a check-then-use pair, not an atomic one. Rule and proposal discovery, standalone listing, cleanup, `parsers detect`, and `config check --sample` all stat a path and open it separately, so a regular file replaced by a special file between the two calls can still block the open. This race is accepted: closing it needs `O_NONBLOCK` plus an `fstat` on the same descriptor, which is not portable to the non-Unix build and would change a primitive shared with config loading. Do not add a new guard that only stats without recording the same limitation.
+- Every regular-file guard that protects a later `open` is a check-then-use pair, not an atomic one. Rule and proposal discovery, standalone listing, cleanup, `parsers detect`, `rules test`, legacy `rules propose --raw-log`, and `config check --sample` all stat a path and open it separately, so a regular file replaced by a special file between the two calls can still block the open. This race is accepted: closing it needs `O_NONBLOCK` plus an `fstat` on the same descriptor, which is not portable to the non-Unix build and would change a primitive shared with config loading. Do not add a new guard that only stats without recording the same limitation.
 - Listing must not trust a decoded status artifact. Decoding alone accepts an empty object and any `summary_path`, and redaction deliberately leaves artifact references literal, so an escaping locator would be surfaced verbatim. Validate the decoded status against the layout its own file name implies. The command ID inside the artifact is redacted while the file name is not, so compare through the derived summary locator rather than the ID.
 
 ## Extraction guidance
@@ -343,7 +343,7 @@ Extractor status guidance:
 
 Extraction internal errors follow the artifact/CLI matrix in `../architecture/README.md`. When artifact writes remain safe, Gaori preserves raw evidence and materializes empty degraded evidence; bounded, redacted diagnostics go to stderr rather than the JSON schemas.
 
-Execution and summarize extraction covers the complete raw log at any size, including physical lines above 1 MiB, and preserves absolute line and byte offsets into it (FLOG-009). Materialization reuses the capture only when it holds the whole stream; otherwise it rereads the owned raw artifact once and verifies its byte count and SHA-256, failing with artifact exit `3` before publication. Rule-only `rules test` extraction remains fail closed above 256 KiB until FLOG-011.
+Execution and summarize extraction covers the complete raw log at any size, including physical lines above 1 MiB, and preserves absolute line and byte offsets into it (FLOG-009). Materialization reuses the capture only when it holds the whole stream; otherwise it rereads the owned raw artifact once and verifies its byte count and SHA-256, failing with artifact exit `3` before publication. Rule-only `rules test` extraction also covers the complete fixture at any size (FLOG-011).
 
 After redaction and noise filtering, retain deterministic prefixes of at most 50 failures and 50 warnings. Assign excerpt references before measuring the rendered formats, then retain the largest failure prefix that keeps both summary files within 64 KiB, including the final JSON newline, before using the remaining budget for the largest warning prefix. Counts always equal retained array lengths, truncation degrades evidence quality, and excerpt files are written only for retained failures. Keep the writer size checks as fail-closed guards for non-evidence metadata overflow.
 
@@ -423,8 +423,8 @@ Rule proposals are addressed by file name, not rule ID. `Propose` deliberately r
 
 - Use Go `regexp` with RE2 semantics only.
 - Do not support PCRE-only features or backtracking-dependent behavior.
-- Analyze the complete raw log for runtime and summarize extraction (FLOG-009); reject oversized rule-test fixtures until FLOG-011.
-- Read config/rule YAML and legacy `rules propose --raw-log` inputs through a 256 KiB file bound before decoding, splitting, hashing, or writing derived rule files. Summary-based proposals instead bind the regular summary to its adjacent status checksum, then stream the complete matching raw log while capturing only the selected bounded span.
+- Analyze the complete raw log for runtime and summarize extraction (FLOG-009), and read complete rule-test fixtures, legacy proposal sources and redaction samples through `safety.ReadRegularFile` (FLOG-011).
+- Read config/rule YAML through a 256 KiB file bound before decoding or writing derived rule files. A legacy `rules propose --raw-log` proposal bounds its selected original bytes to 1 through 256 KiB before writing. Summary-based proposals instead bind the regular summary to its adjacent status checksum, then stream the complete matching raw log while capturing only the selected bounded span.
 - Bound extracted block lines, excerpt bytes, and summary bytes independently of regex success.
 - Fail closed on invalid or unsupported regex.
 
@@ -459,7 +459,7 @@ Tests should cover:
 - Rule test with expected span.
 - Rule overmatch rejection.
 - Extreme rule context values failing closed before command execution, plus defensive extraction bounds and regex compilation errors that prevent overflow or panic for unvalidated in-memory rules.
-- Exact-limit and oversized config, stored rule, imported rule, and legacy `rules propose --raw-log` inputs, including config exit `2` and absence of command or output side effects.
+- Exact-limit and oversized config, stored rule, and imported rule YAML inputs, plus the legacy `rules propose --raw-log` selected-original-byte guard (1 through 256 KiB), including config exit `2` and absence of command or output side effects.
 - Summary-proposal rejection for missing, stale, symlinked, relocated, or metadata-inconsistent summary/status/raw-log evidence, plus large-log checksum-stream and bounded-span coverage.
 - Artifact path generation for `.gaori/`, caller-selected `--output-dir`, and `.gaori/runs/scoped/<run_id>/...` layouts, plus built-binary rejection of external `.gaori/runs/standalone` and `.gaori/runs/scoped` symlinks before command execution.
 - Sequential, goroutine-concurrent, and cross-process standalone directory allocation within one UTC-second interval, including configured, ad-hoc, and summarize evidence preservation.

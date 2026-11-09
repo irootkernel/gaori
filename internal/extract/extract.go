@@ -31,12 +31,10 @@ func ProcessSnapshot(snapshot rawevidence.Snapshot, run model.RunOutput, rules [
 	return process(snapshot, run, rules, true)
 }
 
-// ProcessRules extracts evidence only from the supplied rules.
+// ProcessRules extracts evidence only from the supplied rules, over the complete
+// raw input; raw size alone never rejects it.
 func ProcessRules(raw []byte, run model.RunOutput, rules []model.Rule) (model.RunOutput, error) {
 	text := string(raw)
-	if err := safety.EnsureInputWithinLimit(text); err != nil {
-		return run, err
-	}
 	return process(rawevidence.Snapshot{Text: text, TotalBytes: int64(len(text))}, run, rules, false)
 }
 

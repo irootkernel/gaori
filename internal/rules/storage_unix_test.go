@@ -76,3 +76,52 @@ func awaitDiscoveryError(t *testing.T, discover func() error) error {
 		return nil
 	}
 }
+
+// specialRawLogs returns a FIFO with no writer and, where it is one, the null
+// character device: rules test and legacy proposal must reject both by type.
+func specialRawLogs(t *testing.T, dir string) []string {
+	t.Helper()
+	fifo := filepath.Join(dir, "blocked.raw.log")
+	if err := syscall.Mkfifo(fifo, 0o600); err != nil {
+		t.Fatalf("create fifo: %v", err)
+	}
+	paths := []string{fifo}
+	if info, err := os.Stat(os.DevNull); err == nil && info.Mode()&os.ModeCharDevice != 0 {
+		paths = append(paths, os.DevNull)
+	}
+	return paths
+}
+
+func TestTestRuleRejectsSpecialRawLog(t *testing.T) {
+	t.Parallel()
+	repo := t.TempDir()
+	if _, err := Create(repo, validRule("generic-v1")); err != nil {
+		t.Fatalf("Create failed: %v", err)
+	}
+	for _, path := range specialRawLogs(t, repo) {
+		err := awaitDiscoveryError(t, func() error {
+			_, err := TestRule(repo, "generic-v1", path, 1, 1)
+			return err
+		})
+		if code := model.ExitCodeFor(err); code != int(model.ExitCodeConfigError) {
+			t.Fatalf("%s: exit code = %d, want %d (%v)", path, code, model.ExitCodeConfigError, err)
+		}
+	}
+}
+
+func TestProposeRejectsSpecialRawLog(t *testing.T) {
+	t.Parallel()
+	repo := t.TempDir()
+	for _, path := range specialRawLogs(t, repo) {
+		err := awaitDiscoveryError(t, func() error {
+			_, err := Propose(repo, []string{"unit"}, "generic", path, 1, 1)
+			return err
+		})
+		if code := model.ExitCodeFor(err); code != int(model.ExitCodeConfigError) {
+			t.Fatalf("%s: exit code = %d, want %d (%v)", path, code, model.ExitCodeConfigError, err)
+		}
+		if _, statErr := os.Stat(ProposedRulesDir(repo)); !os.IsNotExist(statErr) {
+			t.Fatalf("%s: rejected source created output directory: %v", path, statErr)
+		}
+	}
+}

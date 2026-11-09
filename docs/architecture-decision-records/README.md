@@ -136,7 +136,7 @@ Gaori v0.1 is implemented in Go and packaged as a standalone single binary named
 
 ## ADR-0007: Regex safety uses Go RE2 plus explicit size bounds
 
-Status: Accepted; runtime/summarize raw-input clauses partially superseded by [ADR-0023](#adr-0023-complete-log-analysis-with-input-proportional-memory) (FLOG-009)
+Status: Accepted; raw-input clauses partially superseded by [ADR-0023](#adr-0023-complete-log-analysis-with-input-proportional-memory) (FLOG-009 runtime/summarize, FLOG-011 rule fixtures and legacy proposal sources)
 Date: 2026-06-24
 
 ### Context
@@ -152,10 +152,12 @@ Gaori uses Go `regexp` with RE2 semantics only. Unsupported or invalid regex fai
 - Catastrophic-backtracking-style regex behavior is avoided by construction.
 - PCRE-only features are out of scope for project-local rules.
 - Validation and documentation can state a crisp supported-regex surface.
-- Oversized config, rule, and `rules propose` raw-log inputs fail with config exit code `2` before commands or rule/proposal writes.
+- Oversized config and rule inputs, and legacy `rules propose` selections above 256 KiB (FLOG-011), fail with config exit code `2` before commands or rule/proposal writes.
 - Oversized runtime logs remain usable without weakening the input bound or changing authoritative command results.
 
-FLOG-009 update: under ADR-0023, runtime and summarize extraction analyze the complete raw log; the final-256 KiB window, the general regex-input bound for those operations and their size-only degradation no longer apply. Rule fixture testing and legacy `rules propose --raw-log` sources keep their 256 KiB rejection until FLOG-011. RE2-only regex, config/rule YAML bounds and block, excerpt and summary bounds are unchanged.
+FLOG-009 update: under ADR-0023, runtime and summarize extraction analyze the complete raw log; the final-256 KiB window, the general regex-input bound for those operations and their size-only degradation no longer apply. RE2-only regex, config/rule YAML bounds and block, excerpt and summary bounds are unchanged.
+
+FLOG-011 update: rule fixture testing and legacy `rules propose --raw-log` sources are read completely at any size, so the complete-fixture rationale above is met by reading rather than by rejection. The legacy proposal instead limits its selected original bytes to 1 through 256 KiB, the same selected-span limit summary-based proposals keep. Both inputs must be regular files on the path and the opened descriptor.
 
 ## ADR-0008: First runnable slice requires only the generic parser
 
@@ -317,7 +319,7 @@ FLOG-010 update: under ADR-0023, detection reads and scans the complete caller-n
 
 ## ADR-0015: Redaction effectiveness is reported as ordered-pass counts only
 
-Status: Accepted
+Status: Accepted; sample-size clauses partially superseded by [ADR-0023](#adr-0023-complete-log-analysis-with-input-proportional-memory) (FLOG-011)
 Date: 2026-08-17
 
 ### Context
@@ -331,6 +333,8 @@ Any check for this must not itself become the leak. Until now Gaori's disclosure
 Gaori may derive exactly one class of information from raw-log content into a surface that redaction cannot protect: **aggregate match and replaced-byte counts per configured pattern, measured during one ordered redaction pass.** It must never surface matched text, surrounding lines, byte or line offsets, per-match detail, or any part of a pattern definition. No value the report surfaces is passed through the sampled patterns, because any value they match would be reported as their own replacement string. A pattern is therefore identified by its position in configured order rather than by its name, and the sample locator is reported literally like the config path beside it.
 
 The measurement is opt-in on the existing `config check` preflight, stays read-only, creates no artifacts, and fails closed above the 256 KiB input bound rather than reporting a partial count.
+
+FLOG-011 update: under ADR-0023 the sample is measured completely at any size, so a partial count cannot arise and the 256 KiB sample bound and its shared-limit consequence below no longer apply. The sample must be a regular file on the path and the opened descriptor. Ordered positional counts and every non-disclosure rule are unchanged.
 
 ### Consequences
 
@@ -613,7 +617,7 @@ Status: Accepted
 Date: 2026-11-09
 Delivery: [FLOG](../roadmap/README.md#flog-complete-raw-log-analysis)
 Requirements: [RQLOG](../specs/README.md#rqlog-complete-raw-log-analysis)
-Implementation: FLOG-009 delivers the run/summarize runtime adapter and FLOG-010 the parser-detection adapter in source; the FLOG-011 and FLOG-012 adapters remain planned. Acceptance records source implementation status only; it claims no installation, release or runtime activation.
+Implementation: FLOG-009 delivers the run/summarize runtime adapter, FLOG-010 the parser-detection adapter and FLOG-011 the authoring-tool adapter in source; FLOG-012 remains planned. Acceptance records source implementation status only; it claims no installation, release or runtime activation.
 
 ### Context
 

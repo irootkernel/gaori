@@ -9,8 +9,9 @@
 The roadmap alone owns identity, status and dependency order. This dossier owns
 cross-task implementation guidance and acceptance. FLOG-009's run/summarize
 complete analysis is implemented in the source tree. FLOG-010's complete parser
-detection is implemented in the source tree; FLOG-011 and FLOG-012 remain
-planned. This document is not verification evidence.
+detection is implemented in the source tree. FLOG-011's complete authoring-tool
+inputs are implemented in the source tree; FLOG-012 remains planned. This
+document is not verification evidence.
 
 ## Goal and approved tradeoff
 

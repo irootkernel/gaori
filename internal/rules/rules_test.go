@@ -518,39 +518,131 @@ func TestLoadAllEnforcesRuleFileSizeLimit(t *testing.T) {
 	}
 }
 
-func TestProposeEnforcesRawLogInputSizeLimit(t *testing.T) {
+func TestProposeAcceptsCompleteSourceAndGuardsSelectedBytes(t *testing.T) {
 	t.Parallel()
-	for _, test := range []struct {
-		name    string
-		size    int
-		wantErr bool
-	}{
-		{name: "exact limit", size: safety.MaxConfigRuleInputBytes},
-		{name: "one byte over", size: safety.MaxConfigRuleInputBytes + 1, wantErr: true},
-	} {
-		t.Run(test.name, func(t *testing.T) {
-			t.Parallel()
+	for _, size := range []int{safety.MaxProposalSpanBytes + 1, 1<<20 + 1} {
+		head, tail := "TypeError: early\nsrc/a.ts:1\n", "TypeError: late\nsrc/b.ts:2\n"
+		raw := []byte(head + strings.Repeat("x", size-len(head)-len(tail)-1) + "\n" + tail)
+		for _, test := range []struct {
+			start, end int
+			pattern    string
+		}{
+			{start: 1, end: 2, pattern: "^TypeError: early$"},
+			{start: 4, end: 5, pattern: "^TypeError: late$"},
+		} {
 			repo := t.TempDir()
 			rawPath := filepath.Join(repo, "fixture.raw.log")
-			prefix := []byte("TypeError: boom\n")
-			raw := append(prefix, bytes.Repeat([]byte("x"), test.size-len(prefix))...)
 			if err := os.WriteFile(rawPath, raw, 0o644); err != nil {
 				t.Fatal(err)
 			}
-			proposal, err := Propose(repo, []string{"unit"}, "generic", rawPath, 1, 1)
-			if test.wantErr {
-				if model.ExitCodeFor(err) != int(model.ExitCodeConfigError) || !strings.Contains(err.Error(), "input exceeds 262144 bytes") {
-					t.Fatalf("expected proposal input size error, got %v", err)
-				}
-				if _, statErr := os.Stat(ProposedRulesDir(repo)); !os.IsNotExist(statErr) {
-					t.Fatalf("oversized proposal created output directory: %v", statErr)
-				}
-				return
+			proposal, err := Propose(repo, []string{"unit"}, "generic", rawPath, test.start, test.end)
+			if err != nil {
+				t.Fatalf("size %d span %d:%d: Propose failed: %v", size, test.start, test.end, err)
 			}
-			if err != nil || proposal.Path == "" {
-				t.Fatalf("expected exact-limit proposal to succeed, proposal=%+v err=%v", proposal, err)
+			if proposal.Rule.Provenance.SourceLogSHA256 != sha256String(raw) || proposal.Rule.Match.Start.Regex != test.pattern {
+				t.Fatalf("size %d span %d:%d: proposal = %+v", size, test.start, test.end, proposal.Rule)
 			}
-		})
+		}
+	}
+
+	// Lines 1:2 select "TypeError: big\n" plus filler, excluding the terminal LF.
+	selection := func(selected int) []byte {
+		return []byte("TypeError: big\n" + strings.Repeat("y", selected-len("TypeError: big\n")) + "\nafter\n")
+	}
+	repo := t.TempDir()
+	rawPath := filepath.Join(repo, "exact.raw.log")
+	if err := os.WriteFile(rawPath, selection(safety.MaxProposalSpanBytes), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := Propose(repo, []string{"unit"}, "generic", rawPath, 1, 2); err != nil {
+		t.Fatalf("exact selected-byte limit rejected: %v", err)
+	}
+
+	giantLine := []byte("neutral\nTypeError: " + strings.Repeat("g", 1<<20) + "\n")
+	for name, rejected := range map[string]struct {
+		raw        []byte
+		start, end int
+	}{
+		"one byte over":       {raw: selection(safety.MaxProposalSpanBytes + 1), start: 1, end: 2},
+		"giant physical line": {raw: giantLine, start: 2, end: 2},
+	} {
+		repo := t.TempDir()
+		rawPath := filepath.Join(repo, "oversized.raw.log")
+		if err := os.WriteFile(rawPath, rejected.raw, 0o644); err != nil {
+			t.Fatal(err)
+		}
+		_, err := Propose(repo, []string{"unit"}, "generic", rawPath, rejected.start, rejected.end)
+		if model.ExitCodeFor(err) != int(model.ExitCodeConfigError) || !strings.Contains(err.Error(), "selected span must contain 1 to 262144 original bytes") {
+			t.Fatalf("%s: expected selected-span error, got %v", name, err)
+		}
+		if _, statErr := os.Stat(ProposedRulesDir(repo)); !os.IsNotExist(statErr) {
+			t.Fatalf("%s: rejected selection created output directory: %v", name, statErr)
+		}
+	}
+
+	// Legacy selections keep no line cap; the generated rule keeps its clamp
+	// min(158, max(8, endLine-startLine+8)).
+	for _, test := range []struct {
+		lines, want int
+	}{
+		{lines: 3, want: 10},
+		{lines: 200, want: 158},
+	} {
+		repo := t.TempDir()
+		rawPath := filepath.Join(repo, "lines.raw.log")
+		if err := os.WriteFile(rawPath, []byte("TypeError: boom\n"+strings.Repeat("detail\n", test.lines-1)), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		proposal, err := Propose(repo, []string{"unit"}, "generic", rawPath, 1, test.lines)
+		if err != nil || proposal.Rule.Match.End.MaxBlockLines != test.want {
+			t.Fatalf("%d-line selection: max_block_lines=%d err=%v, want %d", test.lines, proposal.Rule.Match.End.MaxBlockLines, err, test.want)
+		}
+	}
+}
+
+func TestProposeSelectedByteGuardLineEndings(t *testing.T) {
+	t.Parallel()
+	for _, test := range []struct {
+		name       string
+		raw        string
+		start, end int
+		want       int
+	}{
+		{name: "LF", raw: "TypeError: a\nb\n", start: 1, end: 2, want: 14},
+		{name: "middle lines", raw: "a\nbb\nccc\n", start: 2, end: 3, want: 6},
+		{name: "internal and final CRLF", raw: "ab\r\ncd\r\n", start: 1, end: 2, want: 7},
+		{name: "final CRLF keeps CR", raw: "ab\r\n", start: 1, end: 1, want: 3},
+		{name: "lone CR mid-line", raw: "a\rb\n", start: 1, end: 1, want: 3},
+		{name: "lone CR at EOF", raw: "a\nb\r", start: 2, end: 2, want: 2},
+		{name: "CR CR LF", raw: "x\r\r\ny\n", start: 1, end: 1, want: 3},
+		{name: "final line without LF", raw: "a\nbc", start: 2, end: 2, want: 2},
+		{name: "final empty line after trailing LF", raw: "a\n", start: 2, end: 2, want: 0},
+	} {
+		if got := selectedOriginalBytes([]byte(test.raw), test.start, test.end); got != test.want {
+			t.Fatalf("%s: selectedOriginalBytes = %d, want %d", test.name, got, test.want)
+		}
+	}
+
+	repo := t.TempDir()
+	rawPath := filepath.Join(repo, "crlf.raw.log")
+	if err := os.WriteFile(rawPath, []byte("TypeError: crlf\r\nsrc/a.ts:1\r\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if proposal, err := Propose(repo, []string{"unit"}, "generic", rawPath, 1, 2); err != nil || proposal.Rule.Match.Start.Regex != "^TypeError: crlf$" {
+		t.Fatalf("CRLF selection: proposal=%+v err=%v", proposal.Rule, err)
+	}
+	for name, span := range map[string][2]int{"final empty line": {2, 2}, "end beyond last line": {1, 3}} {
+		emptyRepo := t.TempDir()
+		emptyPath := filepath.Join(emptyRepo, "short.raw.log")
+		if err := os.WriteFile(emptyPath, []byte("TypeError: a\n"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := Propose(emptyRepo, []string{"unit"}, "generic", emptyPath, span[0], span[1]); model.ExitCodeFor(err) != int(model.ExitCodeConfigError) {
+			t.Fatalf("%s: expected config error, got %v", name, err)
+		}
+		if _, statErr := os.Stat(ProposedRulesDir(emptyRepo)); !os.IsNotExist(statErr) {
+			t.Fatalf("%s: rejected selection created output directory: %v", name, statErr)
+		}
 	}
 }
 
@@ -574,25 +666,32 @@ func TestTestRuleMatchesExpectedSpan(t *testing.T) {
 	}
 }
 
-func TestTestRuleBoundsFixtureBeforeExtraction(t *testing.T) {
+func TestTestRuleAnalyzesCompleteFixture(t *testing.T) {
 	t.Parallel()
 	repo := t.TempDir()
 	if _, err := Create(repo, validRule("generic-v1")); err != nil {
 		t.Fatalf("Create failed: %v", err)
 	}
 	rawPath := filepath.Join(repo, "fixture.raw.log")
-	prefix := []byte("TypeError: boom\n\n")
-	if err := os.WriteFile(rawPath, append(prefix, bytes.Repeat([]byte("x"), safety.MaxConfigRuleInputBytes-len(prefix))...), 0o644); err != nil {
+	sized := func(size int, head, tail string) []byte {
+		return []byte(head + strings.Repeat("x", size-len(head)-len(tail)-1) + "\n" + tail)
+	}
+	for _, size := range []int{safety.MaxRegexInputBytes - 1, safety.MaxRegexInputBytes, safety.MaxRegexInputBytes + 1, 1<<20 + 1} {
+		if err := os.WriteFile(rawPath, sized(size, "neutral\n", "TypeError: late\n\n"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		result, err := TestRule(repo, "generic-v1", rawPath, 3, 4)
+		if err != nil || !result.Passed || result.FailureCount != 1 || result.Signature != "TypeError: late" || result.ActualStartLine != 3 || result.ActualEndLine != 4 {
+			t.Fatalf("size %d: result=%+v err=%v", size, result, err)
+		}
+	}
+
+	if err := os.WriteFile(rawPath, sized(1<<20+1, "TypeError: early\n\n", "TypeError: late\n\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if result, err := TestRule(repo, "generic-v1", rawPath, 1, 2); err != nil || !result.Passed {
-		t.Fatalf("exact-limit fixture failed: result=%+v err=%v", result, err)
-	}
-	if err := os.WriteFile(rawPath, bytes.Repeat([]byte("x"), safety.MaxConfigRuleInputBytes+1), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := TestRule(repo, "generic-v1", rawPath, 1, 1); model.ExitCodeFor(err) != int(model.ExitCodeParserError) || !safety.IsInputTooLarge(err) {
-		t.Fatalf("oversized fixture error=%v exit=%d", err, model.ExitCodeFor(err))
+	result, err := TestRule(repo, "generic-v1", rawPath, 1, 2)
+	if model.ExitCodeFor(err) != int(model.ExitCodeParserError) || result.FailureCount != 2 || !strings.Contains(err.Error(), "overmatched 2 failure spans") {
+		t.Fatalf("late second span: result=%+v err=%v", result, err)
 	}
 	if _, err := TestRule(repo, "generic-v1", filepath.Join(repo, "missing.raw.log"), 1, 1); model.ExitCodeFor(err) != int(model.ExitCodeConfigError) {
 		t.Fatalf("missing fixture error=%v exit=%d", err, model.ExitCodeFor(err))

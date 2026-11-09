@@ -257,14 +257,56 @@ func assertAbsoluteStartLine(t *testing.T, raw []byte, span model.RawSpan) {
 	}
 }
 
-func TestProcessRulesRejectsOversizedInput(t *testing.T) {
+func TestProcessRulesAnalyzesCompleteInput(t *testing.T) {
 	t.Parallel()
-	raw := bytes.Repeat([]byte("x"), safety.MaxRegexInputBytes+1)
-	rule := model.Rule{Match: model.RuleMatch{Start: model.RuleRegex{Regex: `^x+$`}}}
+	rule := model.Rule{Match: model.RuleMatch{
+		Start: model.RuleRegex{Regex: `^TypeError:`},
+		End:   model.RuleEnd{AnyOf: []model.RuleRegex{{Regex: `^$`}}, MaxBlockLines: 20},
+	}}
+	// sizedRulesInput places head before and tail after one neutral filler line so
+	// the whole input is exactly size bytes. In the largest size the filler is one
+	// nonmatching physical line above 1 MiB, so the late match follows it.
+	sizedRulesInput := func(size int, head, tail string) []byte {
+		filler := size - len(head) - len(tail) - 1
+		return []byte(head + strings.Repeat("x", filler) + "\n" + tail)
+	}
+	const early, late = "TypeError: early\n\n", "TypeError: late\n\n"
+	for _, size := range []int{safety.MaxRegexInputBytes - 1, safety.MaxRegexInputBytes, safety.MaxRegexInputBytes + 1, 1<<20 + 1 + len(early) + len(late) + 1} {
+		for _, test := range []struct {
+			name       string
+			head, tail string
+			signatures []string
+		}{
+			{name: "early", head: early, tail: "neutral\n", signatures: []string{"TypeError: early"}},
+			{name: "late", head: "neutral\n", tail: late, signatures: []string{"TypeError: late"}},
+			{name: "early and late second span", head: early, tail: late, signatures: []string{"TypeError: early", "TypeError: late"}},
+		} {
+			raw := sizedRulesInput(size, test.head, test.tail)
+			if len(raw) != size {
+				t.Fatalf("fixture size = %d, want %d", len(raw), size)
+			}
+			processed, err := ProcessRules(raw, model.RunOutput{Status: model.RunStatusFailed}, []model.Rule{rule})
+			if err != nil {
+				t.Fatalf("size %d %s: ProcessRules failed: %v", size, test.name, err)
+			}
+			if len(processed.Failures) != len(test.signatures) {
+				t.Fatalf("size %d %s: failures = %d, want %d", size, test.name, len(processed.Failures), len(test.signatures))
+			}
+			for i, want := range test.signatures {
+				failure := processed.Failures[i]
+				start := bytes.Index(raw, []byte(want))
+				if failure.Signature != want || failure.RawSpan.StartByte != start || failure.RawSpan.StartLine != bytes.Count(raw[:start], []byte{'\n'})+1 {
+					t.Fatalf("size %d %s: failure %d = %+v, want %q at byte %d", size, test.name, i, failure, want, start)
+				}
+			}
+		}
+	}
 
-	_, err := ProcessRules(raw, model.RunOutput{Status: model.RunStatusFailed}, []model.Rule{rule})
-	if err == nil || !strings.Contains(err.Error(), "regex input bound") {
-		t.Fatalf("expected regex input bound error, got %v", err)
+	giant := "TypeError: " + strings.Repeat("g", 1<<20)
+	raw := []byte("neutral\n" + giant + "\n\n")
+	processed, err := ProcessRules(raw, model.RunOutput{Status: model.RunStatusFailed}, []model.Rule{rule})
+	if err != nil || len(processed.Failures) != 1 || processed.Failures[0].Signature != giant || processed.Failures[0].RawSpan.StartLine != 2 {
+		t.Fatalf("giant signature: failures=%d err=%v", len(processed.Failures), err)
 	}
 }
 

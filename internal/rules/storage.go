@@ -1,6 +1,7 @@
 package rules
 
 import (
+	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
@@ -236,13 +237,9 @@ func TestRule(repoRoot, id, rawLogPath string, expectStart, expectEnd int) (mode
 	if !filepath.IsAbs(resolved) {
 		resolved = filepath.Join(repoRoot, rawLogPath)
 	}
-	raw, err := safety.ReadFileLimited(resolved)
+	raw, err := safety.ReadRegularFile(resolved)
 	if err != nil {
-		code := model.ExitCodeConfigError
-		if safety.IsInputTooLarge(err) {
-			code = model.ExitCodeParserError
-		}
-		return model.RuleTestResult{}, model.NewGaoriError(code, "read raw log", err)
+		return model.RuleTestResult{}, model.NewGaoriError(model.ExitCodeConfigError, "read raw log", err)
 	}
 	run := model.RunOutput{Status: model.RunStatusFailed}
 	processed, err := extract.ProcessRules(raw, run, []model.Rule{rule})
@@ -280,7 +277,7 @@ func proposeAt(repoRoot string, tags []string, parser, rawLogPath string, startL
 	if !filepath.IsAbs(resolved) {
 		resolved = filepath.Join(repoRoot, rawLogPath)
 	}
-	raw, err := safety.ReadFileLimited(resolved)
+	raw, err := safety.ReadRegularFile(resolved)
 	if err != nil {
 		return model.RuleProposal{}, model.NewGaoriError(model.ExitCodeConfigError, "read raw log", err)
 	}
@@ -288,8 +285,36 @@ func proposeAt(repoRoot string, tags []string, parser, rawLogPath string, startL
 	if endLine > len(lines) {
 		return model.RuleProposal{}, model.NewGaoriError(model.ExitCodeConfigError, "propose rule", fmt.Errorf("span end line %d exceeds %d", endLine, len(lines)))
 	}
+	if selected := selectedOriginalBytes(raw, startLine, endLine); selected < 1 || selected > safety.MaxProposalSpanBytes {
+		return model.RuleProposal{}, model.NewGaoriError(model.ExitCodeConfigError, "propose rule", fmt.Errorf("selected span must contain 1 to %d original bytes, got %d", safety.MaxProposalSpanBytes, selected))
+	}
 	segment := lines[startLine-1 : endLine]
 	return writeProposalAt(repoRoot, canonical, parser, resolved, sha256String(raw), inferSourceRun(resolved), inferSourceCommand(resolved), model.RawSpan{StartLine: startLine, EndLine: endLine}, segment, now)
+}
+
+// selectedOriginalBytes counts the original bytes of lines startLine through
+// endLine before CRLF normalization: from the first selected line's start through
+// the last selected line, excluding its terminating LF but keeping a CR before
+// it, as raw spans do. Every CRLF holds exactly one LF, so these line boundaries
+// match the normalized split. Callers have already checked endLine against them.
+func selectedOriginalBytes(raw []byte, startLine, endLine int) int {
+	start, line := 0, 1
+	for line < startLine {
+		start += bytes.IndexByte(raw[start:], '\n') + 1
+		line++
+	}
+	end := start
+	for {
+		next := bytes.IndexByte(raw[end:], '\n')
+		if next < 0 {
+			return len(raw) - start
+		}
+		if line == endLine {
+			return end + next - start
+		}
+		end += next + 1
+		line++
+	}
 }
 
 func ProposeFromEvidence(repoRoot string, tags []string, parser, rawLogPath, rawLogSHA, sourceRun, sourceCommand string, sourceSpan model.RawSpan, segment []byte) (model.RuleProposal, error) {
@@ -300,8 +325,8 @@ func ProposeFromEvidence(repoRoot string, tags []string, parser, rawLogPath, raw
 	if sourceSpan.EndLine-sourceSpan.StartLine+1 > safety.MaxBlockLines-2 {
 		return model.RuleProposal{}, model.NewGaoriError(model.ExitCodeConfigError, "propose rule", fmt.Errorf("selected failure span must contain at most %d lines", safety.MaxBlockLines-2))
 	}
-	if len(segment) == 0 || len(segment) > safety.MaxRegexInputBytes {
-		return model.RuleProposal{}, model.NewGaoriError(model.ExitCodeConfigError, "propose rule", fmt.Errorf("selected failure span must contain 1 to %d bytes", safety.MaxRegexInputBytes))
+	if len(segment) == 0 || len(segment) > safety.MaxProposalSpanBytes {
+		return model.RuleProposal{}, model.NewGaoriError(model.ExitCodeConfigError, "propose rule", fmt.Errorf("selected failure span must contain 1 to %d bytes", safety.MaxProposalSpanBytes))
 	}
 	if sourceSpan.StartByte < 0 || sourceSpan.EndByte <= sourceSpan.StartByte || sourceSpan.EndByte-sourceSpan.StartByte != len(segment) {
 		return model.RuleProposal{}, model.NewGaoriError(model.ExitCodeConfigError, "propose rule", fmt.Errorf("failure byte span does not match selected evidence"))
