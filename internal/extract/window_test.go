@@ -14,15 +14,19 @@ import (
 
 func TestProcessWindowOrigins(t *testing.T) {
 	t.Parallel()
-	// The oversized first line is discarded completely, leaving exactly the
-	// fixture. Only published raw coordinates and degradation may change.
+	// The prefix carries no candidates and ends before three blank lines that
+	// both inputs share, so parser context lookback stays inside them. Complete
+	// analysis then equals the separated fixture's own result with shifted raw
+	// coordinates; raw size alone never degrades extraction.
 	prefix := "discarded\n" + strings.Repeat("x", safety.MaxRegexInputBytes+1) + "\n"
+	const separator = "\n\n\n"
 	for _, parser := range SupportedParsers() {
 		raw, err := os.ReadFile(filepath.Join("testdata", parser+".raw.log"))
 		if err != nil {
 			t.Fatal(err)
 		}
-		for _, text := range []string{string(raw), strings.ReplaceAll(string(raw), "\n", "\r\n"), strings.TrimSuffix(string(raw), "\n") + "\nwarning: 한글 \x1b[31mretained\x1b[0m"} {
+		for _, fixture := range []string{string(raw), strings.ReplaceAll(string(raw), "\n", "\r\n"), strings.TrimSuffix(string(raw), "\n") + "\nwarning: 한글 \x1b[31mretained\x1b[0m"} {
+			text := separator + fixture
 			run := model.RunOutput{Status: model.RunStatusFailed, Metadata: model.RunMetadata{Parser: parser}}
 			want, err := Process([]byte(text), run, nil)
 			if err != nil {
@@ -45,7 +49,6 @@ func TestProcessWindowOrigins(t *testing.T) {
 				span.StartLine += 2
 				span.EndLine += 2
 			}
-			want.ExtractorStatus = model.ExtractorStatusDegraded
 			got, err := Process([]byte(prefix+text), run, nil)
 			if err != nil || !reflect.DeepEqual(got, want) {
 				t.Fatalf("%s origin conversion: got %+v, %v; want %+v", parser, got, err, want)
@@ -80,22 +83,27 @@ func TestProcessSnapshotWithoutWholeLog(t *testing.T) {
 	if failure.RawSpan != want || failure.File != "file_test.go" || failure.Line != 42 {
 		t.Fatalf("raw origin must not shift source-file metadata: %+v, want span %+v", failure, want)
 	}
-	if got.Warnings[0].RawSpan.StartLine != 7003 || got.ExtractorStatus != model.ExtractorStatusDegraded {
-		t.Fatalf("warning/degradation lost: %+v", got)
+	// Origins still translate spans; an Oversized flag no longer degrades extraction.
+	if got.Warnings[0].RawSpan.StartLine != 7003 || got.ExtractorStatus != model.ExtractorStatusPrecise {
+		t.Fatalf("warning lost or size degraded extraction: %+v", got)
 	}
 }
 
-func TestProcessSnapshotRejectsUnboundedOrUnrepresentableInput(t *testing.T) {
+func TestProcessSnapshotRejectsUnrepresentableInput(t *testing.T) {
 	t.Parallel()
+	large := rawevidence.Snapshot{Text: strings.Repeat("x", safety.MaxRegexInputBytes+1)}
+	large.TotalBytes = int64(len(large.Text))
+	if got, err := ProcessSnapshot(large, model.RunOutput{Status: model.RunStatusPassed}, nil); err != nil || got.ExtractorStatus != model.ExtractorStatusNoMatch {
+		t.Fatalf("complete input above the former bound must be analyzed: %+v, %v", got, err)
+	}
 	for _, snapshot := range []rawevidence.Snapshot{
-		{Text: strings.Repeat("x", safety.MaxRegexInputBytes+1)},
 		{Text: "Error: invalid", ByteOrigin: -1},
 		{Text: "Error: invalid", LineOffset: -1},
 		{Text: "Error: invalid", ByteOrigin: int64(^uint(0) >> 1)},
 		{Text: "Error: invalid", LineOffset: int64(^uint(0) >> 1)},
 	} {
 		if _, err := ProcessSnapshot(snapshot, model.RunOutput{}, nil); err == nil {
-			t.Fatalf("accepted invalid snapshot origin/size: %+v", snapshot)
+			t.Fatalf("accepted unrepresentable snapshot origin: %+v", snapshot)
 		}
 	}
 }

@@ -2,13 +2,14 @@
 
 - Roadmap epic: [FLOG](../roadmap/README.md#flog-complete-raw-log-analysis)
 - Owner: Gaori team
-- Requirements: [planned RQLOG-009 through RQLOG-014](../specs/README.md#rqlog-complete-raw-log-analysis-planned)
-- Decision: [proposed ADR-0023](../architecture-decision-records/README.md#adr-0023-complete-log-analysis-with-input-proportional-memory)
+- Requirements: [RQLOG-009 through RQLOG-014](../specs/README.md#rqlog-complete-raw-log-analysis)
+- Decision: [accepted ADR-0023](../architecture-decision-records/README.md#adr-0023-complete-log-analysis-with-input-proportional-memory)
 - Verification authority: [TESTING.md](../../TESTING.md)
 
 The roadmap alone owns identity, status and dependency order. This dossier owns
-cross-task implementation guidance and acceptance. All work below is planned;
-this document is not evidence that the binary analyzes complete logs.
+cross-task implementation guidance and acceptance. FLOG-009's run/summarize
+complete analysis is implemented in the source tree; FLOG-010 through FLOG-012
+remain planned. This document is not verification evidence.
 
 ## Goal and approved tradeoff
 

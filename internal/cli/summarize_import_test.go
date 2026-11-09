@@ -4,6 +4,7 @@ package cli
 
 import (
 	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -11,7 +12,9 @@ import (
 	"testing"
 
 	"github.com/irootkernel/gaori/internal/artifacts"
+	"github.com/irootkernel/gaori/internal/extract"
 	"github.com/irootkernel/gaori/internal/model"
+	"github.com/irootkernel/gaori/internal/rawevidence"
 	"github.com/irootkernel/gaori/internal/safety"
 )
 
@@ -194,7 +197,21 @@ func assertImportedArtifacts(t *testing.T, repo string, result runResult, raw st
 	if err != nil || status.SummarySHA256 != fmt.Sprintf("sha256:%x", sha256.Sum256(summaryBytes)) || status.StatusHash != artifacts.ComputeStatusHash(status) {
 		t.Fatalf("artifact integrity mismatch: %v", err)
 	}
-	if len(raw) > safety.MaxRegexInputBytes && summary.ExtractorStatus != model.ExtractorStatusDegraded {
-		t.Fatalf("oversized import is not degraded: %+v", summary)
+	// Extraction covers the complete imported raw at every size; raw size alone
+	// never degrades it.
+	digest := sha256.Sum256([]byte(raw))
+	complete := rawevidence.Snapshot{Text: raw, SHA256: hex.EncodeToString(digest[:]), TotalBytes: int64(len(raw))}
+	want, err := extract.ProcessSnapshot(complete, model.RunOutput{Status: wantStatus, Metadata: model.RunMetadata{Parser: summary.Parser}}, nil)
+	truncated := summary.FailuresTruncated || summary.WarningsTruncated
+	wantExtractor, wantCount := want.ExtractorStatus, len(want.Failures)
+	if truncated {
+		// Output bounds, not raw size, may still degrade and shorten the summary.
+		wantExtractor, wantCount = model.ExtractorStatusDegraded, min(summary.FailureCount, wantCount)
+	}
+	if err != nil || summary.ExtractorStatus != wantExtractor || summary.FailureCount != wantCount {
+		t.Fatalf("imported extraction differs from complete analysis: summary=%s/%d want=%s/%d, %v", summary.ExtractorStatus, summary.FailureCount, wantExtractor, wantCount, err)
+	}
+	if len(want.Failures) > 0 && summary.Failures[0].RawSpan != want.Failures[0].RawSpan {
+		t.Fatalf("first imported span %+v, want %+v", summary.Failures[0].RawSpan, want.Failures[0].RawSpan)
 	}
 }

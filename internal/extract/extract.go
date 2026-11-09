@@ -24,8 +24,9 @@ type lineIndex struct {
 	line  int
 }
 
-// ProcessSnapshot extracts from one captured window. Parser and rule indexes
-// remain local until the final conversion to original raw-log coordinates.
+// ProcessSnapshot extracts from one analysis snapshot. Callers supply the
+// complete raw text; raw-log size alone never degrades extraction. Parser and
+// rule indexes remain local until the final conversion to raw coordinates.
 func ProcessSnapshot(snapshot rawevidence.Snapshot, run model.RunOutput, rules []model.Rule) (model.RunOutput, error) {
 	return process(snapshot, run, rules, true)
 }
@@ -41,9 +42,6 @@ func ProcessRules(raw []byte, run model.RunOutput, rules []model.Rule) (model.Ru
 
 func process(snapshot rawevidence.Snapshot, run model.RunOutput, rules []model.Rule, parserFallback bool) (model.RunOutput, error) {
 	text := snapshot.Text
-	if err := safety.EnsureInputWithinLimit(text); err != nil {
-		return run, err
-	}
 	maxInt := int(^uint(0) >> 1)
 	if snapshot.ByteOrigin < 0 || snapshot.ByteOrigin > int64(maxInt-len(text)) ||
 		snapshot.LineOffset < 0 || snapshot.LineOffset > int64(maxInt-strings.Count(text, "\n")-1) {
@@ -72,7 +70,7 @@ func process(snapshot rawevidence.Snapshot, run model.RunOutput, rules []model.R
 	}
 	run.Failures = failures
 	run.Warnings = warnings
-	run.ExtractorStatus = extractorStatus(run.Status, failures, snapshot.Oversized)
+	run.ExtractorStatus = extractorStatus(run.Status, failures)
 	return run, nil
 }
 
@@ -242,10 +240,7 @@ func genericWarnings(lines []lineIndex) []model.Warning {
 	return warnings
 }
 
-func extractorStatus(status model.RunStatus, failures []model.Failure, truncated bool) model.ExtractorStatus {
-	if truncated {
-		return model.ExtractorStatusDegraded
-	}
+func extractorStatus(status model.RunStatus, failures []model.Failure) model.ExtractorStatus {
 	if len(failures) == 0 {
 		if status == model.RunStatusFailed || status == model.RunStatusTimedOut || status == model.RunStatusKilled {
 			return model.ExtractorStatusDegraded

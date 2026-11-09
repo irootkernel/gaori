@@ -2,7 +2,10 @@ package cli
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -63,7 +66,13 @@ type executionPhase string
 type executionObserver struct {
 	phase    func(executionPhase)
 	redactor func(safety.Redactor)
+	// openOwned replaces the rooted raw-artifact open for fault tests; nil uses
+	// the production rooted helper.
+	openOwned ownedOpener
 }
+
+// ownedOpener opens an artifact owned by the current invocation within root.
+type ownedOpener func(root, path string, flags int, mode os.FileMode) (importFile, error)
 
 const (
 	executionPhaseExecuting     executionPhase = "executing"
@@ -482,7 +491,11 @@ func executeRunContext(ctx context.Context, req model.RunRequest, execute comman
 	rawSHA := "sha256:" + runOutput.Evidence.SHA256
 	relRaw := artifacts.Rel(req.RepoRoot, paths.RawLogPath)
 
-	result, err := materializeArtifacts(req, cfg, paths, rawSHA, relRaw, runOutput, applicableRules, materializationExecutedCommand)
+	openOwned := observe.openOwned
+	if openOwned == nil {
+		openOwned = fileImportIO().openOwned
+	}
+	result, err := materializeArtifactsWithExtractor(req, cfg, paths, rawSHA, relRaw, runOutput, applicableRules, materializationExecutedCommand, extract.ProcessSnapshot, openOwned)
 	if err != nil {
 		return runResult{}, 0, err
 	}
@@ -557,7 +570,7 @@ func executeSummarizeWithIO(req model.RunRequest, rawLogArg string, files import
 		Status:   status,
 		Evidence: snapshot,
 	}
-	result, err = materializeArtifacts(req, cfg, paths, rawSHA, relRaw, runOutput, applicableRules, materializationSummarizedRaw)
+	result, err = materializeArtifactsWithExtractor(req, cfg, paths, rawSHA, relRaw, runOutput, applicableRules, materializationSummarizedRaw, extract.ProcessSnapshot, files.openOwned)
 	if err != nil {
 		return runResult{}, 0, err
 	}
@@ -568,11 +581,16 @@ func executeSummarizeWithIO(req model.RunRequest, rawLogArg string, files import
 }
 
 func materializeArtifacts(req model.RunRequest, cfg model.Config, paths model.ArtifactPaths, rawSHA, relRaw string, runOutput model.RunOutput, applicableRules []model.Rule, source materializationSource) (runResult, error) {
-	return materializeArtifactsWithExtractor(req, cfg, paths, rawSHA, relRaw, runOutput, applicableRules, source, extract.ProcessSnapshot)
+	return materializeArtifactsWithExtractor(req, cfg, paths, rawSHA, relRaw, runOutput, applicableRules, source, extract.ProcessSnapshot, fileImportIO().openOwned)
 }
 
-func materializeArtifactsWithExtractor(req model.RunRequest, cfg model.Config, paths model.ArtifactPaths, rawSHA, relRaw string, runOutput model.RunOutput, applicableRules []model.Rule, source materializationSource, extractor extractionProcessor) (runResult, error) {
-	snapshot := runOutput.Evidence
+func materializeArtifactsWithExtractor(req model.RunRequest, cfg model.Config, paths model.ArtifactPaths, rawSHA, relRaw string, runOutput model.RunOutput, applicableRules []model.Rule, source materializationSource, extractor extractionProcessor, openOwned ownedOpener) (runResult, error) {
+	// A reload failure is an artifact error raised before any derived artifact
+	// is written; it never becomes a parser miss or degraded extraction.
+	snapshot, err := analysisSnapshot(paths, runOutput.Evidence, openOwned)
+	if err != nil {
+		return runResult{}, err
+	}
 	runOutput, extractionErr := extractor(snapshot, runOutput, applicableRules)
 	if extractionErr != nil {
 		runOutput.Failures = nil
@@ -664,6 +682,50 @@ func materializeArtifactsWithExtractor(req model.RunRequest, cfg model.Config, p
 		result.diagnostic = safety.BoundBytes(redactor.Apply(extractionErr.Error()), safety.MaxExcerptBytes)
 	}
 	return result, nil
+}
+
+// analysisSnapshot returns the complete raw text used for extraction and
+// excerpts. A captured snapshot is reused only when it already holds the whole
+// stream; otherwise the owned raw artifact is reread through the rooted open and
+// verified against the captured byte count and SHA-256. The text stays local to
+// one materialization.
+func analysisSnapshot(paths model.ArtifactPaths, captured rawevidence.Snapshot, openOwned ownedOpener) (rawevidence.Snapshot, error) {
+	if captured.ByteOrigin == 0 && captured.LineOffset == 0 && int64(len(captured.Text)) == captured.TotalBytes {
+		captured.Oversized = false
+		return captured, nil
+	}
+	fail := func(err error) (rawevidence.Snapshot, error) {
+		return rawevidence.Snapshot{}, model.NewGaoriError(model.ExitCodeArtifactError, "reload raw log", err)
+	}
+	maxInt := int64(^uint(0) >> 1)
+	if captured.TotalBytes < 0 || captured.TotalBytes >= maxInt {
+		return fail(fmt.Errorf("captured raw size %d is not representable", captured.TotalBytes))
+	}
+	file, err := openOwned(paths.BoundaryDir, paths.RawLogPath, os.O_RDONLY, 0)
+	if err != nil {
+		return fail(err)
+	}
+	info, err := file.Stat()
+	if err == nil && !info.Mode().IsRegular() {
+		err = fmt.Errorf("raw log is not a regular file")
+	}
+	if err != nil {
+		return fail(errors.Join(err, file.Close()))
+	}
+	var text strings.Builder
+	text.Grow(int(captured.TotalBytes))
+	digest := sha256.New()
+	read, copyErr := io.Copy(io.MultiWriter(&text, digest), io.LimitReader(file, captured.TotalBytes+1))
+	if err := errors.Join(copyErr, file.Close()); err != nil {
+		return fail(err)
+	}
+	if read != captured.TotalBytes {
+		return fail(fmt.Errorf("raw log size changed: read %d bytes, captured %d", read, captured.TotalBytes))
+	}
+	if hex.EncodeToString(digest.Sum(nil)) != captured.SHA256 {
+		return fail(fmt.Errorf("raw log digest changed after capture"))
+	}
+	return rawevidence.Snapshot{Text: text.String(), SHA256: captured.SHA256, TotalBytes: read}, nil
 }
 
 func assignExcerptReferences(summary *model.Summary) {

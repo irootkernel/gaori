@@ -154,6 +154,8 @@ type mcpManager struct {
 	repoRoot    string
 	configPath  string
 	outputDir   string
+	// openOwned injects raw-reload faults in tests; nil uses production.
+	openOwned ownedOpener
 }
 
 func newMCPManager(opts globalOptions) *mcpManager {
@@ -196,6 +198,7 @@ func (m *mcpManager) start(req model.RunRequest) mcpSnapshot {
 			redactor: func(redactor safety.Redactor) {
 				runRedactor = &redactor
 			},
+			openOwned: m.openOwned,
 		})
 		if err != nil {
 			inv.finish(nil, err, runRedactor, m.repoRoot)

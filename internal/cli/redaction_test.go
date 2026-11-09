@@ -156,6 +156,7 @@ func TestMaterializeArtifactsBoundsFilteredAndExpandedWarnings(t *testing.T) {
 				func(_ rawevidence.Snapshot, output model.RunOutput, _ []model.Rule) (model.RunOutput, error) {
 					return output, nil
 				},
+				fileImportIO().openOwned,
 			)
 			if err != nil {
 				t.Fatal(err)

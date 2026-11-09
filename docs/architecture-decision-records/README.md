@@ -1,6 +1,6 @@
 # Gaori Architecture Decision Records
 
-Status: Accepted decisions through `ADR-0021`; `ADR-0021` is implemented through `LOMEM`; `ADR-0023` is Proposed; `ADR-0022` is reserved for the abandoned branch proposal
+Status: Accepted decisions through `ADR-0023`; `ADR-0021` is implemented through `LOMEM`; `ADR-0023` is accepted with its run/summarize adapter delivered in source by `FLOG-009` and its remaining adapters planned; `ADR-0022` is reserved for the abandoned branch proposal
 Scope: Accepted Gaori decisions, including run-status insights and bounded-memory log processing
 
 ## ADR status legend
@@ -136,7 +136,7 @@ Gaori v0.1 is implemented in Go and packaged as a standalone single binary named
 
 ## ADR-0007: Regex safety uses Go RE2 plus explicit size bounds
 
-Status: Accepted
+Status: Accepted; runtime/summarize raw-input clauses partially superseded by [ADR-0023](#adr-0023-complete-log-analysis-with-input-proportional-memory) (FLOG-009)
 Date: 2026-06-24
 
 ### Context
@@ -154,6 +154,8 @@ Gaori uses Go `regexp` with RE2 semantics only. Unsupported or invalid regex fai
 - Validation and documentation can state a crisp supported-regex surface.
 - Oversized config, rule, and `rules propose` raw-log inputs fail with config exit code `2` before commands or rule/proposal writes.
 - Oversized runtime logs remain usable without weakening the input bound or changing authoritative command results.
+
+FLOG-009 update: under ADR-0023, runtime and summarize extraction analyze the complete raw log; the final-256 KiB window, the general regex-input bound for those operations and their size-only degradation no longer apply. Rule fixture testing and legacy `rules propose --raw-log` sources keep their 256 KiB rejection until FLOG-011. RE2-only regex, config/rule YAML bounds and block, excerpt and summary bounds are unchanged.
 
 ## ADR-0008: First runnable slice requires only the generic parser
 
@@ -541,7 +543,7 @@ lifecycle, cancellation, recovery, and detailed evidence inspection remain with
 
 ## ADR-0021: Bound log memory without changing evidence semantics
 
-Status: Accepted
+Status: Accepted; constant analysis-memory, tail-only materialization and no-post-exit-scan clauses superseded by [ADR-0023](#adr-0023-complete-log-analysis-with-input-proportional-memory) (FLOG-009)
 Date: 2026-09-26
 Implementation: Completed through [LOMEM](../roadmap/README.md#lomem-bounded-memory-log-processing). The bounded pipeline and macOS arm64 resource campaign are verified; Linux scaling remains unmeasured.
 
@@ -601,12 +603,15 @@ telemetry, and MCP discovery requires separate adoption.
 - Normal execution can finalize from captured digest/window metadata without an additional full-log scan, preserving the existing MCP shutdown-drain boundary.
 - Compatibility is covered by the named component and built-binary tests; the separate resource campaign passed on macOS arm64. The [measurement record](../implementation-tips/README.md#bounded-memory-resource-campaign) bounds that claim to the measured candidate and host; it does not establish Linux scaling, release or runtime activation.
 
+FLOG-009 update: under ADR-0023, materialization reuses the captured window only when it already holds the complete stream; otherwise it rereads and verifies the complete raw artifact, so analysis memory grows with input size and the no-additional-scan consequence above no longer holds. Streaming capture, accepted-prefix hashing, safe summarize import and its full-input inference remain as decided here. The LOMEM measurements stay valid for their historical candidate only.
+
 ## ADR-0023: Complete-log analysis with input-proportional memory
 
-Status: Proposed
+Status: Accepted
 Date: 2026-11-09
 Delivery: [FLOG](../roadmap/README.md#flog-complete-raw-log-analysis)
-Requirements: [planned RQLOG](../specs/README.md#rqlog-complete-raw-log-analysis-planned)
+Requirements: [RQLOG](../specs/README.md#rqlog-complete-raw-log-analysis)
+Implementation: FLOG-009 delivers the run/summarize runtime adapter in source; the FLOG-010 to FLOG-012 adapters remain planned. Acceptance records source implementation status only; it claims no installation, release or runtime activation.
 
 ### Context
 
@@ -623,7 +628,7 @@ reusing its number for a different decision.
 Master explicitly permits input-proportional analysis memory. This removes the
 need to reproduce Go regexp execution over disk-backed inputs.
 
-### Proposed decision
+### Decision
 
 Keep streaming raw capture, accepted-prefix hashing and safe summarize import.
 At shared artifact materialization, reuse captured text only when ByteOrigin and
@@ -669,8 +674,8 @@ new cancellation authority.
 
 ### Contract transition
 
-This decision remains Proposed during documentation-only planning. FLOG-009
-records acceptance of this approved design when activating its runtime adapter;
+This decision was Proposed during documentation-only planning. FLOG-009
+recorded acceptance of this approved design when activating its runtime adapter;
 it does not require another prototype/feasibility project or a new engine review.
 Annotate the affected accepted ADR clauses at that transition, and update each
 later adapter's requirements and current documentation with its implementation.

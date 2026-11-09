@@ -144,7 +144,7 @@ Versioned selection uses local metadata such as:
 ```yaml
 schema_version: "gaori.toolchain.v1"
 gaori:
-  cli_version: "0.1.18"
+  cli_version: "0.1.19"
 ```
 
 An absolute override may be recorded with an optional version assertion:
@@ -152,7 +152,7 @@ An absolute override may be recorded with an optional version assertion:
 ```yaml
 schema_version: "gaori.toolchain.v1"
 gaori:
-  cli_version: "0.1.18"
+  cli_version: "0.1.19"
   binary_path: "/absolute/path/to/gaori"
 ```
 
@@ -401,7 +401,7 @@ skill is installed or activated by the binary or a Make target.
 - `failures` counts candidate failure records inside the bounded scan window, and `indicates` is the label's own summary heuristic over that same window. `indicates` is `false` for a label that has no heuristic, which is the case for `generic`. A label may still report `indicates: true` with `failures: 0`, because a heuristic and an extractor can disagree about the same window.
 - Results are ordered by positive verdict, then descending `failures`, then label. **This is display order only.** Several labels can legitimately report a candidate or a positive verdict for one log — `--- FAIL:` appears in both Go test and Godog output, and Vitest's failure heuristic matches Go's `FAIL\t<package>` lines — so `detect` never names a recommended label. The operator or agent still selects `--parser <label>` explicitly. Because `generic` has no heuristic, it can never outrank a label that recognized the log.
 - `detect` does not apply project rules. At run time applicable rules are evaluated before the selected parser, so a rule may produce evidence that a candidate count does not predict.
-- A log larger than 256 KiB is read and scanned from the first complete line of the final 256 KiB and reports `truncated: true`, the same window and degradation that `extractor_status: degraded` reports for a run over the same log. `total_bytes` is the file size and `scanned_bytes` is the window, so the two differ exactly when `truncated` is true.
+- A log larger than 256 KiB is read and scanned from the first complete line of the final 256 KiB and reports `truncated: true`. Since FLOG-009, runs and summarize analyze the complete log, so detection over a large log can differ from a run's extraction until FLOG-010 removes this window. `total_bytes` is the file size and `scanned_bytes` is the window, so the two differ exactly when `truncated` is true.
 - `detect` exits `0` even when every label reports zero candidates, and says so explicitly. It reports observations, not a result.
 - `--json` emits `parsers`, `recognized`, `scanned_bytes`, `total_bytes`, and `truncated`; each entry carries `parser`, `failures`, and `indicates`.
 - A run that reported `extractor_status: no_match` means the selected label produced no candidate span. Running `parsers detect` on that run's `<command-id>.raw.log` shows which other labels would have produced candidates. It does not re-run the command, re-summarize, or change the completed run's artifacts.
@@ -412,8 +412,8 @@ skill is installed or activated by the binary or a Make target.
 - `summarize <raw-log>` uses the `generic` parser plus any matching project rules.
 - When tags are omitted, Gaori infers `command_id` from the raw-log basename and uses that command ID as a single tag. For example, `unit.raw.log` produces `command_id: unit` and `tags: [unit]`. Repeat `--tag` to provide an explicit selector set instead.
 - Because original execution metadata is unavailable, summarize infers `status` and `exit_code` from raw-log evidence. Use `run` when authoritative execution metadata is required.
-- Summarize streams the source and preserves full-input status inference using bounded replay of the owned raw artifact. Source/destination aliases use private disk staging before replacement; detected import failures publish no new completed summary/status set. This bounds log-processing memory, not disk use.
-- For inputs larger than 256 KiB, summarize preserves the complete copied raw log but extracts only from the final 256 KiB beginning at a complete line. The artifacts retain inferred status and exit code, report `extractor_status: degraded`, and the command exits `0` unless another error occurs.
+- Summarize streams the source and preserves full-input status inference using bounded replay of the owned raw artifact. Source/destination aliases use private disk staging before replacement; detected import failures publish no new completed summary/status set. Import and inference use bounded memory; extraction then analyzes the complete copied raw log, so its memory grows with input size, and disk use grows with the copy.
+- Summarize extracts from the complete copied raw log at any size, including failures before the final 256 KiB. Raw size alone never reports `extractor_status: degraded`; the artifacts retain inferred status and exit code, and the command exits `0` unless another error occurs. If the copied raw log cannot be reread or no longer matches its captured size and SHA-256, summarize fails with artifact exit code `3` and publishes no new summary or status.
 - Summary artifacts retain at most 50 failures and 50 warnings after redaction and noise filtering. The count fields equal retained array lengths; `failures_truncated` or `warnings_truncated` reports omitted evidence and makes `extractor_status` degraded without changing the command result.
 - If extraction fails internally, summarize still preserves the copied raw log and writes degraded `internal_error` summary/status artifacts with exit code `4`; the diagnostic is emitted on stderr.
 - Without `--run-id` or `--output-dir`, summarize copies the input raw log into a newly allocated `.gaori/runs/standalone/<UTC-timestamp>[-NNN]/` directory and writes derived artifacts there. `--output-dir` uses the same collision-free allocation under `<output-dir>/runs/`; `--run-id` retains the fixed run-scoped layout. The original input remains unchanged.
@@ -431,8 +431,8 @@ skill is installed or activated by the binary or a Make target.
 | Test command interrupted by SIGINT/SIGTERM on Unix | `130` / `143`, with `status: killed` |
 | Gaori config error | documented internal code, recommended `2` |
 | Gaori artifact write error | documented internal code, recommended `3` |
-| Bounded-tail extraction after a passing test command | CLI `0`; artifacts use `passed` / `0` with `extractor_status: degraded` |
-| Bounded-tail extraction after a failing test command | underlying command exit code and status with `extractor_status: degraded` |
+| Raw log of any size without a failure span after a passing test command | CLI `0`; artifacts use `passed` / `0` with `extractor_status: no_match` (size never degrades extraction) |
+| Raw-log reread or integrity failure during materialization | `3`; no new summary or status is published |
 | Evidence truncation after a passing test command | CLI `0`; artifacts use `passed` / `0` with `extractor_status: degraded` |
 | Evidence truncation after a failing test command | underlying command exit code and status with `extractor_status: degraded` |
 | Extraction internal error after a passing test command | CLI `4`; artifacts retain command exit `0` with `status: internal_error` |

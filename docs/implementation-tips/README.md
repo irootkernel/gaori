@@ -67,8 +67,11 @@ own behavior and design. The [roadmap](../roadmap/README.md#lomem-bounded-memory
 records completed delivery and links its canonical outcomes. No transitional
 full-log adapter remains.
 
-Keep the 256 KiB complete-line tail, absolute raw origins, command-exit authority,
-redaction-before-noise ordering and derived output limits. Summarize evaluates
+FLOG-009 update: run and summarize extraction now analyze the complete raw log
+([ADR-0023](../architecture-decision-records/README.md#adr-0023-complete-log-analysis-with-input-proportional-memory));
+the 256 KiB capture window is only a reuse fast path, and larger captures are
+reread and verified at materialization. Keep absolute raw origins, command-exit
+authority, redaction-before-noise ordering and derived output limits. Summarize evaluates
 its original full-input predicates through bounded replay; its status does not
 depend on the retained failure count. Same-file imports consume the original
 before truncating the destination, using contained private staging when needed.
@@ -83,6 +86,10 @@ match alone. Keep synthetic raw logs, temporary directories and runtime evidence
 local; the bounded results below are the durable observations.
 
 ## Bounded-memory resource campaign
+
+Applicability: these measurements qualify the historical LOMEM candidate only.
+FLOG-009's complete-log analysis is not flat-memory, so this campaign does not
+qualify or gate it; its replacement finite resource smoke belongs to FLOG-012.
 
 The first complete campaign on 2026-09-27 passed: `make test-memory` exited `0`
 in 163.126 seconds through the selected Gaori wrapper (`passed`, `no_match`, zero
@@ -331,12 +338,12 @@ Extractor status guidance:
 
 - `precise`: every accepted failure span has a file or test name.
 - `partial`: at least one accepted failure span has neither a file nor a test name.
-- `degraded`: a failed, timed-out, or killed command has no accepted failure span, extraction failed internally, extraction inspected only a bounded tail of an oversized raw log, or surfaced failure/warning records were truncated.
+- `degraded`: a failed, timed-out, or killed command has no accepted failure span, extraction failed internally, or surfaced failure/warning records were truncated. Raw-log size alone never degrades run or summarize extraction.
 - `no_match`: a passing command has no accepted failure span and extraction completed without an internal error; warnings may still be present.
 
 Extraction internal errors follow the artifact/CLI matrix in `../architecture/README.md`. When artifact writes remain safe, Gaori preserves raw evidence and materializes empty degraded evidence; bounded, redacted diagnostics go to stderr rather than the JSON schemas.
 
-For execution and summarize logs larger than 256 KiB, extraction uses the final 256 KiB beginning at the first complete line. It preserves absolute line and byte offsets into the full raw log and always reports `degraded`, including when the retained tail contains a precise match. An oversized unbroken line has no complete tail line to inspect. Rule-only `rules test` extraction remains fail closed above 256 KiB so overmatch validation is never based on a partial fixture.
+Execution and summarize extraction covers the complete raw log at any size, including physical lines above 1 MiB, and preserves absolute line and byte offsets into it (FLOG-009). Materialization reuses the capture only when it holds the whole stream; otherwise it rereads the owned raw artifact once and verifies its byte count and SHA-256, failing with artifact exit `3` before publication. Rule-only `rules test` extraction remains fail closed above 256 KiB until FLOG-011.
 
 After redaction and noise filtering, retain deterministic prefixes of at most 50 failures and 50 warnings. Assign excerpt references before measuring the rendered formats, then retain the largest failure prefix that keeps both summary files within 64 KiB, including the final JSON newline, before using the remaining budget for the largest warning prefix. Counts always equal retained array lengths, truncation degrades evidence quality, and excerpt files are written only for retained failures. Keep the writer size checks as fail-closed guards for non-evidence metadata overflow.
 
@@ -416,7 +423,7 @@ Rule proposals are addressed by file name, not rule ID. `Propose` deliberately r
 
 - Use Go `regexp` with RE2 semantics only.
 - Do not support PCRE-only features or backtracking-dependent behavior.
-- Bound regex input size before matching; use the bounded complete-line tail for runtime and summarize extraction, and reject oversized rule-test fixtures.
+- Analyze the complete raw log for runtime and summarize extraction (FLOG-009); reject oversized rule-test fixtures until FLOG-011.
 - Read config/rule YAML and legacy `rules propose --raw-log` inputs through a 256 KiB file bound before decoding, splitting, hashing, or writing derived rule files. Summary-based proposals instead bind the regular summary to its adjacent status checksum, then stream the complete matching raw log while capturing only the selected bounded span.
 - Bound extracted block lines, excerpt bytes, and summary bytes independently of regex success.
 - Fail closed on invalid or unsupported regex.
@@ -466,7 +473,7 @@ Tests should cover:
 - Child-side `--parser` and `--` arguments remaining unchanged across the Gaori option boundary.
 - Specialized parser misses with generic-looking markers, covering `no_match` for pass and `degraded` for failed, timed-out, and killed states without generic fallback, including a built-binary E2E probe.
 - Extraction internal errors after pass, failure, timeout, kill, and standalone summarize at the artifact-materialization boundary.
-- Oversized passing, failing, and summarize logs using bounded-tail extraction, including built-binary probes for preserved raw evidence, summary/status hashes, Markdown output, absolute spans, and CLI exit behavior.
+- Large passing, failing, and summarize logs analyzed completely (FLOG-009), including built-binary probes for preserved raw evidence, summary/status hashes, Markdown output, absolute spans, and CLI exit behavior.
 - Noisy passing, failing, and summarize logs that exceed failure/warning record caps, including authoritative or inferred exits, truncation fields, rendered size bounds, terminal status artifacts, retained signature hashes, and excerpt counts; also cover noise filtering and redaction expansion before bounding.
 - Exact generated Markdown shape for a fixed summary, plus a built-binary fresh-fixture workflow covering version, configured/ad-hoc run, summarize, excerpt, JSON output, and the complete rule lifecycle.
 - Unsupported historical `--verbose` and `--no-color` placeholders failing closed with config exit code `2`.
@@ -513,8 +520,10 @@ Before the next release tag, verify all of the following:
 
 The LOMEM-005 call-site audit removes `RunOutput.RawLogBytes` and the production
 whole-buffer extraction/raw-writer adapters. The runner and summarize importer
-are the only raw producers; materialization consumes their bounded snapshots.
-`Process` and legacy summarize inference exist only in capped test fixtures.
+are the only raw producers. Since FLOG-009, materialization reuses a capture
+snapshot only when it holds the whole stream and otherwise rereads and verifies
+the complete raw artifact. `Process` and legacy summarize inference exist only in
+test fixtures.
 
 Remaining whole-value operations do not load execution/import logs: parser
 detection reads at most the 256 KiB tail, rule fixtures/proposal inputs and

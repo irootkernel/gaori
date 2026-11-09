@@ -57,22 +57,28 @@ Global options are position-independent within the Gaori-owned argument prefix. 
 ## Large-log resource boundary
 
 Captured CLI/MCP execution streams raw bytes to disk while computing the full-log
-digest and retaining at most the final 256 KiB of complete lines for extraction
-and materialization. Summarize copies with a fixed buffer and evaluates its
-full-input heuristic over the owned raw artifact with bounded reader state.
-The finite [resource campaign](implementation-tips/README.md#bounded-memory-resource-campaign)
-passed on macOS arm64. Its process-local high-water measurements establish the
-per-workload scaling tolerance, not a universal maximum RSS guarantee; Linux
-resource scaling is unmeasured.
+digest and retaining a 256 KiB capture window. Summarize copies with a fixed
+buffer and evaluates its full-input heuristic over the owned raw artifact with
+bounded reader state. Since FLOG-009 ([ADR-0023](architecture-decision-records/README.md#adr-0023-complete-log-analysis-with-input-proportional-memory)),
+extraction and excerpt materialization analyze the complete raw log: a capture
+larger than the window is reread once and verified against its byte count and
+digest. Analysis memory therefore grows with input bytes, lines and candidates,
+and concurrent analyses add their memory; host memory remains a practical limit.
+A reload failure is artifact exit `3` with no new derived artifacts. The earlier
+[resource campaign](implementation-tips/README.md#bounded-memory-resource-campaign)
+qualified the historical LOMEM candidate only; its replacement finite smoke
+belongs to FLOG-012. Linux resource scaling is unmeasured.
 
 The implemented [LOMEM](roadmap/README.md#lomem-bounded-memory-log-processing)
 pipeline covers capture, import, inference and materialization. Its
 [RQMEM contract](specs/README.md#rqmem-bounded-memory-log-processing)
-preserves commands, config, MCP, artifact schemas, watcher hashes, original raw
-bytes, and the existing tail-selection semantics. No integration migration or
-consumer change is part of that work. Raw disk use remains proportional to log
-size, and the retained tail may still omit early failure spans. Summarize's
-existing full-input failure inference must remain separate from tail extraction.
+preserves commands, config, MCP, artifact schemas, watcher hashes and original
+raw bytes. FLOG-009 keeps those contracts and replaces only the tail-selection
+semantics for runs and summarize: early failures beyond the former window are now
+extracted, so large-log summaries and watcher hashes can change. No integration
+migration or consumer change is required. Raw disk use remains proportional to
+log size. Summarize's full-input failure inference stays separate from
+extraction. `parsers detect` keeps its tail scan until FLOG-010.
 
 ## Not provided by Gaori v0.1
 
@@ -116,7 +122,7 @@ Gaori does not create this ignore policy, distribute config, or stage files. The
 For ordinary local use, install and verify the pinned release:
 
 ```bash
-go install github.com/irootkernel/gaori@v0.1.18
+go install github.com/irootkernel/gaori@v0.1.19
 gaori --version
 ```
 
@@ -131,7 +137,7 @@ Example portable version selection:
 ```yaml
 schema_version: "gaori.toolchain.v1"
 gaori:
-  cli_version: "0.1.18"
+  cli_version: "0.1.19"
 ```
 
 Validate selection before invoking Gaori:
@@ -267,7 +273,7 @@ Important cases:
 
 - A failed, timed-out, or killed command stays non-pass even if extraction is `degraded`.
 - A specialized-parser miss after a passing command is `passed` plus `no_match`.
-- A raw log larger than 256 KiB is extracted from a bounded complete-line tail and reports `degraded`; a passing command still remains `passed` with exit code `0`.
+- A run or summarize raw log of any size is extracted completely; raw size alone never reports `degraded`, and a passing command remains `passed` with exit code `0`.
 - Summary JSON retains at most 50 failures and 50 warnings. `failure_count` and `warning_count` equal the retained array lengths; a true truncation field means additional records were omitted by the record or byte budget and the evidence quality is `degraded`.
 - An extraction internal error after a passing command leaves artifact `exit_code: 0`, sets artifact `status: internal_error`, and makes Gaori exit `4`.
 - `summarize` has no authoritative process result; inferred status is evidence interpretation only.

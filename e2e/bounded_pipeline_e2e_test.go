@@ -20,10 +20,11 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
-// Capped fixtures exceed the extraction window; process memory is measured by
-// the separately invoked resource campaign, not by these compatibility tests.
+// Fixtures exceed the former 256 KiB window, so materialization reloads the
+// complete raw log. Three blank lines keep the generic context lookback out of
+// the long neutral line. Process memory is outside these compatibility tests.
 func boundedPipelineFixture(label string) []byte {
-	return []byte("raw-only-marker\n" + strings.Repeat("x", safety.MaxRegexInputBytes+1) + "\nTypeError: " + label + " token=secret\nsrc/tail.go:42\n")
+	return []byte("raw-only-marker\n" + strings.Repeat("x", safety.MaxRegexInputBytes+1) + "\n\n\n\nTypeError: " + label + " token=secret\nsrc/tail.go:42\n")
 }
 
 func writeBoundedPipelineConfig(t *testing.T, repo, command string) {
@@ -61,7 +62,7 @@ func assertBoundedPipelineArtifacts(t *testing.T, repo string, result binaryRunR
 	if exit == 0 {
 		wantStatus = model.RunStatusPassed
 	}
-	assertBinaryExtractionContract(t, result, summary, status, wantStatus, exit, model.ExtractorStatusDegraded, 1)
+	assertBinaryExtractionContract(t, result, summary, status, wantStatus, exit, model.ExtractorStatusPrecise, 1)
 	if !bytes.Equal(raw, expected) {
 		t.Fatal("raw bytes changed")
 	}
@@ -69,9 +70,10 @@ func assertBoundedPipelineArtifacts(t *testing.T, repo string, result binaryRunR
 		t.Fatal("independent raw checksum mismatch")
 	}
 	failure := summary.Failures[0]
-	start := bytes.Index(raw, []byte("TypeError:"))
+	// The generic span starts three lines before its marker, at the first blank line.
+	start := bytes.Index(raw, []byte("TypeError:")) - 3
 	if failure.RawSpan.StartByte != start || failure.RawSpan.StartLine != 3 || failure.File != "src/tail.go" || failure.Line != 42 {
-		t.Fatalf("absolute tail coordinates changed: %+v", failure)
+		t.Fatalf("absolute coordinates changed: %+v", failure)
 	}
 	excerptPath := filepath.Join(repo, filepath.Dir(result.SummaryJSON), failure.Excerpt)
 	excerpt, err := os.ReadFile(excerptPath)
@@ -151,7 +153,7 @@ func TestBinaryBoundedPipelineLayoutsAndConsumers(t *testing.T) {
 			if layout == "standalone" {
 				assertDistinctBinaryRunDirectories(t, repo, results)
 				stats := boundedPipelineJSON[insights.CommandStats](t, bin, repo, "runs", "stats", "unit")
-				if stats.ObservedTerminalCount != 1 || stats.Outcomes["failed"].Count != 1 || stats.DegradedFailureEvidenceRuns != 1 {
+				if stats.ObservedTerminalCount != 1 || stats.Outcomes["failed"].Count != 1 || stats.DegradedFailureEvidenceRuns != 0 {
 					t.Fatalf("historical stats changed: %+v", stats)
 				}
 				// Cleanup deliberately retains runs stamped in its current second.

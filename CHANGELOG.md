@@ -4,6 +4,15 @@ This file records concise shipped outcomes and the planned next stable release. 
 
 ## v0.1.20 - Unreleased
 
+### Changed
+
+- Analyze complete raw logs in CLI/MCP runs and `summarize`, finding failures before the final 256 KiB without size-only degradation while memory grows with log size;
+  parser detection and authoring input limits remain until their implementing tasks.
+
+### Fixed
+
+- The user interface and integration guides now show the current release 0.1.19 in their install command and toolchain-metadata `cli_version` examples.
+
 ## v0.1.19 - 2026-11-08
 
 ### Removed

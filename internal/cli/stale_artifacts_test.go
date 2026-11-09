@@ -109,6 +109,16 @@ func TestRawStageFailurePreservesPriorDerivedArtifacts(t *testing.T) {
 			}
 		})
 	}
+	// Complete-analysis reload faults on a >256 KiB attempt behave like raw-stage
+	// failures: artifact exit 3 and unchanged prior fixed-path derived artifacts.
+	for _, source := range []string{"execution", "summarize"} {
+		for _, fault := range reloadFaults {
+			t.Run("reload-"+fault+"/"+source, func(t *testing.T) {
+				t.Parallel()
+				assertReloadFaultPreservesPrior(t, fault, source)
+			})
+		}
+	}
 }
 
 func readDerivedFiles(t *testing.T, base, rawPath string) map[string][]byte {

@@ -82,7 +82,7 @@ CLI
 4. Command registry resolves `unit` to command argv / canonical tags / parser / timeout.
 5. Artifact writer opens the contained raw log before command execution.
 6. Runner executes the command in the selected working directory and streams stdout/stderr into the raw log.
-7. CLI closes and validates the contained raw log, then the extraction engine processes the bounded captured window with the selected parser plus project rules, using the streaming full-log digest.
+7. CLI closes and validates the contained raw log, then the extraction engine processes the complete raw text with the selected parser plus project rules: the captured snapshot when it already holds the whole stream, otherwise a rooted reread of the raw artifact verified against the streaming byte count and digest.
 8. Redactor and noise filters shape surfaced artifacts; the artifact layer retains bounded deterministic failure/warning prefixes that fit both summary formats.
 9. Artifact writer writes excerpts only for retained failures, then summary JSON, summary Markdown, and status JSON.
 10. CLI exits with the underlying test command status or a documented Gaori internal error code.
@@ -122,23 +122,33 @@ When `--parser` is omitted, step 2 selects `generic`. A specialized parser does 
 
 ## Current materialization boundary
 
-Extraction and excerpt creation share one immutable `rawevidence.Snapshot`.
-`extract.ProcessSnapshot` bounds its input and checks that the raw origins fit
-the existing span representation. Every parser and rule slices window-local
-text; `absoluteSpan` converts only published raw byte/line spans. Source-file
-line numbers and test metadata are unchanged. An empty discarded tail remains
-empty evidence, and oversized input remains degraded even when its tail matches.
+Extraction and excerpt creation share one immutable analysis
+`rawevidence.Snapshot` that holds the complete raw text (FLOG-009,
+[ADR-0023](../architecture-decision-records/README.md#adr-0023-complete-log-analysis-with-input-proportional-memory)).
+`internal/cli` `analysisSnapshot` reuses the captured snapshot only when its byte
+and line origins are zero and its text length equals the total byte count.
+Otherwise it opens the owned raw artifact through the rooted containment helper,
+requires a regular descriptor, reads it completely and verifies the byte count
+and SHA-256 against capture metadata. Any reload open, read, close, size or digest
+failure is artifact exit `3`, raised before excerpts, summaries or status are
+written and never converted into a parser miss or degraded extraction.
+`extract.ProcessSnapshot` checks that raw origins fit the span representation;
+`absoluteSpan` still converts published raw byte/line spans. Source-file line
+numbers and test metadata are unchanged, and raw size alone never degrades
+extraction.
 
-Excerpt materialization translates those absolute byte spans against the same
-snapshot and rejects spans outside it. It then applies the existing redaction,
-noise filtering, byte limit and integrity rules after summary prefix selection.
-No excerpt requires loading the raw artifact.
+Excerpt materialization slices those absolute byte spans from the same
+analysis text and rejects spans outside it. It then applies the existing
+redaction, noise filtering, byte limit and integrity rules after summary prefix
+selection. No excerpt rereads the raw artifact, and the analysis text is not
+retained after materialization.
 
-The runner now returns `RunOutput.Evidence`, containing only the immutable
+The runner returns `RunOutput.Evidence`, containing only the immutable capture
 window, origins, full byte count and accepted-prefix SHA-256. Configured/ad-hoc
 CLI runs and both MCP start tools share this path. CLI uses that digest only
-after raw close and containment validation; there is no post-exit whole-log
-hash or excerpt rescan. Capture state becomes unreachable after finalization;
+after raw close and containment validation. For a raw log larger than the
+256 KiB window, materialization performs one verified complete reread; there is
+no separate post-exit hash pass or per-excerpt rescan. Capture state becomes unreachable after finalization;
 finished MCP invocations retain the existing compact result and references.
 
 The summarize importer opens its source once and copies with a 32 KiB buffer
@@ -191,7 +201,8 @@ materialization is not a rollback transaction.
 
 `TestExecuteReturnsBoundedEvidenceAndFullDigest` checks retained runner state
 and full raw integrity. `TestExecutedWindowArtifactsAcrossRunModes` covers
-pass/fail and early-only/tail signals in both execution modes.
+pass/fail with early and late signals above 256 KiB in both execution modes,
+both found by complete analysis.
 `TestConcurrentMCPStartsIsolateCapturedEvidence` holds both real children at a
 shared barrier and verifies distinct terminal artifacts and repeat awaits.
 `TestExecutionRawCloseFailurePrecedesRunError` pins close-error precedence and
@@ -232,7 +243,7 @@ The bounded evidence value carries only:
 - Full accepted byte count and streaming SHA-256.
 - Retained original bytes, limited to the 256 KiB window, with sufficient bounded boundary state to discard a partial leading line.
 - The absolute starting byte and preceding newline count for that window.
-- Whether the original input exceeded the extraction bound and any capture error needed by the existing error path.
+- Whether the original input exceeded the capture window (since FLOG-009 no longer an extraction bound) and any capture error needed by the existing error path.
 
 A producer updates hash, counters, and tail for the same successfully written
 prefix while preserving the runner's serialization of stdout/stderr writes.
@@ -250,15 +261,17 @@ snapshots own immutable strings of at most 256 KiB and retain no caller buffer.
 Snapshot construction uses at most two additional window-sized copies plus one
 boundary byte. Byte and newline counters and SHA-256 state remain fixed-size.
 The first write error remains attached to subsequent snapshots. The producer
-still owns closing and validating its raw artifact before publication.
+still owns closing and validating its raw artifact before publication. Since
+FLOG-009 the window is only a fast path for analysis: a larger capture is reread
+and verified at materialization, so analysis memory grows with input size.
 
 ### Execution path
 
 1. Keep config/rule validation, artifact-path preparation, and raw-log open before child execution.
 2. Stream child output into the raw artifact and the bounded evidence accumulator; retain the existing process, timeout, signal, and start-gate ownership.
-3. On successful raw close and containment validation, pass the immutable digest/window metadata into materialization. Do not scan the whole file again after process exit.
-4. Parse only the retained complete-line window. Parser slicing must use window-local coordinates; translate selected spans to absolute raw coordinates at one defined boundary.
-5. Apply the existing redaction, noise filtering, retained-prefix selection, and output bounds. Resolve each retained excerpt against the same bounded bytes with checked origin conversion.
+3. On successful raw close and containment validation, pass the immutable digest/window metadata into materialization. If the window does not hold the whole stream, reread the complete raw artifact once and verify its byte count and digest (FLOG-009).
+4. Parse the complete raw text with zero origins; translate selected spans to absolute raw coordinates at one defined boundary.
+5. Apply the existing redaction, noise filtering, retained-prefix selection, and output bounds. Resolve each retained excerpt against the same analysis text with checked origin conversion.
 6. Publish the existing excerpts, summaries, and status in their existing order. The terminal MCP snapshot retains the usual compact result, not a raw capture buffer.
 
 ### Existing-log path
@@ -598,10 +611,9 @@ Command execution status is authoritative. Parser quality only affects evidence 
 - A failed command retains its non-zero exit code even if no parser matched a span.
 - Timed-out and killed commands retain their original status and process-compatible exit code.
 - Any authoritative non-pass result with no useful span retains its status and exit code with `extractor_status: degraded`.
-- Execution and summarize logs larger than 256 KiB are extracted from at most the final 256 KiB, beginning at the first complete line in that window. Spans retain absolute line and byte offsets into the full raw log.
-- A bounded-tail scan always reports `extractor_status: degraded`, even when it finds useful evidence, because earlier evidence may have been omitted.
+- Execution and summarize logs are extracted from the complete raw log at any size (FLOG-009). Spans retain absolute line and byte offsets into the full raw log, and raw size alone never reports `extractor_status: degraded`.
 - Failure or warning record truncation always reports `extractor_status: degraded`; command status and exit code remain authoritative.
-- Rule fixture testing still rejects inputs larger than 256 KiB because an incomplete scan cannot prove that a rule did not miss or overmatch evidence.
+- Rule fixture testing still rejects inputs larger than 256 KiB until FLOG-011.
 - Config YAML, project rule YAML, `rules create/update --file` YAML, and legacy `rules propose --raw-log` inputs are read through a 256 KiB preflight bound. Oversized inputs fail with config exit code `2` before YAML decoding, command execution, or rule/proposal writes.
 - Summary-based rule proposal requires matching adjacent regular `.summary.json`, `.status.json`, and `.raw.log` artifacts. The status hash, summary checksum, locators, surfaced metadata, and signature hashes must match before the raw log is streamed. It rejects symlinks, cross-directory locators, stale or replaced artifacts, duplicate failure IDs, and inconsistent line/byte spans before writing. The selected failure span and its line-boundary bytes are captured from the same stream that computes the full raw-log checksum, with the regex-input and rule-line budgets enforced.
 - Parser or rule matches and misses never convert an authoritative non-pass result into pass.
@@ -612,9 +624,6 @@ Command execution status is authoritative. Parser quality only affects evidence 
 |---|---|---|---:|
 | Specialized parser miss after command pass | `passed` / `0` | `no_match` | `0` |
 | Specialized parser miss after command failure, timeout, or kill | original status / original exit code | `degraded` | original exit code |
-| Bounded-tail extraction after command pass | `passed` / `0` | `degraded` | `0` |
-| Bounded-tail extraction after command failure, timeout, or kill | original status / original exit code | `degraded` | original exit code |
-| Bounded-tail extraction during standalone summarize | inferred status / inferred exit code | `degraded` | `0` |
 | Evidence truncation after command pass | `passed` / `0` | `degraded` | `0` |
 | Evidence truncation after command failure, timeout, or kill | original status / original exit code | `degraded` | original exit code |
 | Extraction internal error after command pass | `internal_error` / `0` | `degraded` | `4` |

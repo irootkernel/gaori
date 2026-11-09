@@ -378,6 +378,13 @@ func godogFailures(lines []lineIndex, text string) []model.Failure {
 
 func cargoTestFailures(lines []lineIndex, text string) []model.Failure {
 	failures := make([]model.Failure, 0)
+	// names holds every appended TestName, including empty compile-error names,
+	// in append order, so panic de-duplication matches a linear scan.
+	names := map[string]struct{}{}
+	appendFailure := func(failure model.Failure) {
+		failures = append(failures, failure)
+		names[failure.TestName] = struct{}{}
+	}
 	for idx, line := range lines {
 		if match := cargoBlockRE.FindStringSubmatch(line.text); len(match) > 0 {
 			end := spanUntilNext(lines, idx, 32, cargoBlockRE)
@@ -385,16 +392,16 @@ func cargoTestFailures(lines []lineIndex, text string) []model.Failure {
 			segment := visibleText(sliceText(text, span))
 			failure := model.Failure{Signature: firstMeaningfulLine(segment, line.text), TestName: strings.TrimSpace(match[1]), RawSpan: span, StackTop: stackTop(segment)}
 			captureFileLine(fileLineRE, segment, &failure)
-			failures = append(failures, failure)
+			appendFailure(failure)
 			continue
 		}
 		if match := cargoPanicRE.FindStringSubmatch(strings.TrimSpace(line.text)); len(match) > 0 {
-			if hasFailureTestName(failures, match[1]) {
+			if _, ok := names[match[1]]; ok {
 				continue
 			}
 			span := spanFor(lines, idx, min(len(lines)-1, idx+10))
 			lineNo, _ := strconv.Atoi(match[3])
-			failures = append(failures, model.Failure{Signature: strings.TrimSpace(line.text), File: match[2], Line: lineNo, TestName: match[1], RawSpan: span, StackTop: stackTop(visibleText(sliceText(text, span)))})
+			appendFailure(model.Failure{Signature: strings.TrimSpace(line.text), File: match[2], Line: lineNo, TestName: match[1], RawSpan: span, StackTop: stackTop(visibleText(sliceText(text, span)))})
 			continue
 		}
 		if match := cargoCompileRE.FindStringSubmatch(line.text); len(match) > 0 {
@@ -405,7 +412,7 @@ func cargoTestFailures(lines []lineIndex, text string) []model.Failure {
 				failure.File = location[1]
 				failure.Line, _ = strconv.Atoi(location[2])
 			}
-			failures = append(failures, failure)
+			appendFailure(failure)
 		}
 	}
 	return dedupeFailures(failures)
@@ -617,26 +624,21 @@ func dedupeFailures(failures []model.Failure) []model.Failure {
 	return result
 }
 
-func hasFailureTestName(failures []model.Failure, name string) bool {
-	for _, failure := range failures {
-		if failure.TestName == name {
-			return true
-		}
-	}
-	return false
-}
-
+// removeGoParentFailures drops any failure whose TestName is a slash-delimited
+// ancestor of another failure's TestName, anywhere in the list.
 func removeGoParentFailures(failures []model.Failure) []model.Failure {
-	result := make([]model.Failure, 0, len(failures))
+	ancestors := map[string]struct{}{}
 	for _, failure := range failures {
-		parent := false
-		for _, other := range failures {
-			if other.TestName != failure.TestName && strings.HasPrefix(other.TestName, failure.TestName+"/") {
-				parent = true
-				break
+		name := failure.TestName
+		for i := 0; i < len(name); i++ {
+			if name[i] == '/' {
+				ancestors[name[:i]] = struct{}{}
 			}
 		}
-		if !parent {
+	}
+	result := make([]model.Failure, 0, len(failures))
+	for _, failure := range failures {
+		if _, parent := ancestors[failure.TestName]; !parent {
 			result = append(result, failure)
 		}
 	}

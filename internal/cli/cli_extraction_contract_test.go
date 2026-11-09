@@ -72,6 +72,7 @@ func TestMaterializeArtifactsExtractionErrorContract(t *testing.T) {
 				func(_ rawevidence.Snapshot, output model.RunOutput, _ []model.Rule) (model.RunOutput, error) {
 					return output, errors.New("forced extraction failure")
 				},
+				fileImportIO().openOwned,
 			)
 			if err != nil {
 				t.Fatalf("materializeArtifacts failed: %v", err)
@@ -90,7 +91,7 @@ func TestMaterializeArtifactsExtractionErrorContract(t *testing.T) {
 	}
 }
 
-func TestOversizedPassingRunUsesBoundedExtraction(t *testing.T) {
+func TestLargePassingRunAnalyzesCompleteLog(t *testing.T) {
 	t.Parallel()
 	repo := t.TempDir()
 	if err := os.MkdirAll(filepath.Join(repo, ".gaori"), 0o755); err != nil {
@@ -126,8 +127,8 @@ func TestOversizedPassingRunUsesBoundedExtraction(t *testing.T) {
 	if err := json.Unmarshal(stdout.Bytes(), &result); err != nil {
 		t.Fatalf("decode run result %q: %v", stdout.String(), err)
 	}
-	if result.Status != model.RunStatusPassed || result.ExitCode != 0 || result.Extractor != string(model.ExtractorStatusDegraded) {
-		t.Fatalf("expected passed/degraded result with command exit 0, got %+v", result)
+	if result.Status != model.RunStatusPassed || result.ExitCode != 0 || result.Extractor != string(model.ExtractorStatusNoMatch) {
+		t.Fatalf("expected passed/no_match result with command exit 0, got %+v", result)
 	}
 	var fields map[string]json.RawMessage
 	if err := json.Unmarshal(stdout.Bytes(), &fields); err != nil {
@@ -143,7 +144,7 @@ func TestOversizedPassingRunUsesBoundedExtraction(t *testing.T) {
 	}
 
 	baseDir := filepath.Join(repo, ".gaori", "runs", "scoped", "oversized-pass", "artifacts", "test")
-	copiedRaw := assertDegradedArtifacts(t, baseDir, "huge-pass", model.RunStatusPassed, 0)
+	copiedRaw := assertArtifactContract(t, baseDir, "huge-pass", model.RunStatusPassed, 0, model.ExtractorStatusNoMatch, 0)
 	if !bytes.Equal(copiedRaw, raw) {
 		t.Fatal("expected run to preserve the original raw bytes")
 	}
@@ -287,25 +288,30 @@ func TestNoisyRunsWriteBoundedTerminalArtifacts(t *testing.T) {
 	}
 }
 
-func TestOversizedSummarizeUsesBoundedExtraction(t *testing.T) {
+func TestLargeSummarizeAnalyzesCompleteLog(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
 		name             string
 		raw              []byte
 		inferredStatus   model.RunStatus
 		inferredExitCode int
+		extractor        model.ExtractorStatus
+		failures         int
 	}{
 		{
 			name:             "inferred-pass",
 			raw:              bytes.Repeat([]byte("x"), safety.MaxRegexInputBytes+1),
 			inferredStatus:   model.RunStatusPassed,
 			inferredExitCode: 0,
+			extractor:        model.ExtractorStatusNoMatch,
 		},
 		{
 			name:             "inferred-failure",
 			raw:              append([]byte("Error: inferred failure\n"), bytes.Repeat([]byte("x"), safety.MaxRegexInputBytes+1)...),
 			inferredStatus:   model.RunStatusFailed,
 			inferredExitCode: 1,
+			extractor:        model.ExtractorStatusPartial,
+			failures:         1,
 		},
 	}
 	for _, tt := range tests {
@@ -327,17 +333,25 @@ func TestOversizedSummarizeUsesBoundedExtraction(t *testing.T) {
 			if exitCode != 0 {
 				t.Fatalf("expected summarize exit 0, got %d stderr=%s", exitCode, stderr.String())
 			}
-			if !strings.Contains(stdout.String(), "Status: "+string(tt.inferredStatus)) || !strings.Contains(stdout.String(), fmt.Sprintf("Exit code: %d", tt.inferredExitCode)) || !strings.Contains(stdout.String(), "Extractor: degraded") {
-				t.Fatalf("expected bounded summarize result, got %q", stdout.String())
+			if !strings.Contains(stdout.String(), "Status: "+string(tt.inferredStatus)) || !strings.Contains(stdout.String(), fmt.Sprintf("Exit code: %d", tt.inferredExitCode)) || !strings.Contains(stdout.String(), "Extractor: "+string(tt.extractor)) {
+				t.Fatalf("expected complete-analysis summarize result, got %q", stdout.String())
 			}
 			if stderr.Len() != 0 {
 				t.Fatalf("expected no extraction diagnostic, got %q", stderr.String())
 			}
 
 			baseDir := filepath.Join(repo, ".gaori", "runs", "scoped", "oversized-summarize-"+tt.name, "artifacts", "test")
-			copiedRaw := assertDegradedArtifacts(t, baseDir, "unit", tt.inferredStatus, tt.inferredExitCode)
+			copiedRaw := assertArtifactContract(t, baseDir, "unit", tt.inferredStatus, tt.inferredExitCode, tt.extractor, tt.failures)
 			if !bytes.Equal(copiedRaw, tt.raw) {
 				t.Fatal("expected summarize to preserve the original raw bytes")
+			}
+			var summary model.Summary
+			readJSONArtifact(t, filepath.Join(baseDir, "unit.summary.json"), &summary)
+			if len(summary.CommandArgv) != 0 || summary.GitRevision != "" || summary.GitDirty != nil || summary.DurationMS != 0 {
+				t.Fatalf("summarize gained execution provenance: %+v", summary)
+			}
+			if tt.failures > 0 && summary.Failures[0].RawSpan.StartByte != 0 {
+				t.Fatalf("early failure not found at its absolute start: %+v", summary.Failures[0].RawSpan)
 			}
 		})
 	}

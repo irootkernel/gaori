@@ -12,9 +12,9 @@ gaori --json --repo <target-root> summarize --parser go-test --tag go --tag unit
 
 `summarize` defaults to `generic`. It copies the raw log and creates derived artifacts, so it is a local mutation requiring authority for that effect. It has no authoritative child-process result; its status is inferred from the log. Preserve the distinction from an executed command's exit code and follow [result reporting](../SKILL.md#read-and-report-the-result). A fixed run ID and command ID can replace prior artifacts; read [lifecycle](lifecycle.md#run-start-and-replacement) before using them.
 
-Status inference evaluates the selected parser's failure predicates over the complete input, while failure extraction uses the bounded tail described in result reporting. A failure signal before that tail can therefore produce inferred `status: failed` with zero extracted failures. A successful `summarize` operation still exits `0`; do not infer its status from the retained failure count or treat that exit as the original command's result.
+Status inference evaluates the selected parser's failure predicates over the complete input, and failure extraction also covers the complete copied log. Inference and extraction remain separate: a failure signal the parser cannot turn into a span can still produce inferred `status: failed` with zero extracted failures. A successful `summarize` operation still exits `0`; do not infer its status from the retained failure count or treat that exit as the original command's result.
 
-Capture and summarization use bounded log-processing memory, but preserve the complete raw log on disk. Summarization creates an owned copy, and source/destination aliases can require temporary disk staging. Allow disk space proportional to the log size; bounded processing does not cap disk use or the executed child process's memory.
+Capture and summarize inference use bounded memory, while extraction analyzes the complete copied log, so its memory grows with log size. The complete raw log is preserved on disk. Summarization creates an owned copy, and source/destination aliases can require temporary disk staging. Allow disk space proportional to the log size; bounded processing does not cap disk use or the executed child process's memory.
 
 ## Diagnose a parser mismatch
 

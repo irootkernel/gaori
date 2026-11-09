@@ -69,6 +69,13 @@ The tracked mapping is `.gaori/tester.yaml`. Parser availability is checked inde
 
 ## Separate memory campaign
 
+Applicability: the campaign below qualified the historical LOMEM bounded-memory
+candidate. Since FLOG-009 ([ADR-0023](docs/architecture-decision-records/README.md#adr-0023-complete-log-analysis-with-input-proportional-memory)),
+run and summarize analysis grow with input size, so this campaign's flat-memory
+thresholds do not apply to the current candidate and it is not a gate between
+FLOG-009 and FLOG-012. FLOG-012 replaces it behind the same `make test-memory`
+target; until then the target still runs the historical harness.
+
 `make test-memory` runs `TestBinaryMemoryCampaign` in `e2e/memory`, using the
 same standard-library E2E framework and a production binary built by `make build`.
 It is deliberately outside the four ordinary stages and does not change their

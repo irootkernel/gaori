@@ -1,6 +1,8 @@
 package cli
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"io"
 	"os"
@@ -16,6 +18,13 @@ import (
 
 func assertDegradedArtifacts(t *testing.T, baseDir, commandID string, wantStatus model.RunStatus, wantExitCode int) []byte {
 	t.Helper()
+	return assertArtifactContract(t, baseDir, commandID, wantStatus, wantExitCode, model.ExtractorStatusDegraded, 0)
+}
+
+// assertArtifactContract checks the complete artifact set, its hashes, the
+// command result and the expected extractor status and retained failure count.
+func assertArtifactContract(t *testing.T, baseDir, commandID string, wantStatus model.RunStatus, wantExitCode int, wantExtractor model.ExtractorStatus, wantFailures int) []byte {
+	t.Helper()
 	summaryPath := filepath.Join(baseDir, commandID+".summary.json")
 	statusPath := filepath.Join(baseDir, commandID+".status.json")
 	rawPath := filepath.Join(baseDir, commandID+".raw.log")
@@ -27,16 +36,16 @@ func assertDegradedArtifacts(t *testing.T, baseDir, commandID string, wantStatus
 
 	var summary model.Summary
 	readJSONArtifact(t, summaryPath, &summary)
-	if summary.Status != wantStatus || summary.ExitCode != wantExitCode || summary.ExtractorStatus != model.ExtractorStatusDegraded {
+	if summary.Status != wantStatus || summary.ExitCode != wantExitCode || summary.ExtractorStatus != wantExtractor {
 		t.Fatalf("unexpected summary contract: status=%s exit=%d extractor=%s", summary.Status, summary.ExitCode, summary.ExtractorStatus)
 	}
-	if summary.FailureCount != 0 || summary.WarningCount != 0 || len(summary.Failures) != 0 || len(summary.Warnings) != 0 {
-		t.Fatalf("expected empty degraded evidence, got %+v", summary)
+	if summary.FailureCount != wantFailures || summary.WarningCount != 0 || len(summary.Failures) != wantFailures || len(summary.Warnings) != 0 {
+		t.Fatalf("expected %d failures and no warnings, got %+v", wantFailures, summary)
 	}
 
 	var status model.Status
 	readJSONArtifact(t, statusPath, &status)
-	if status.Status != wantStatus || status.ExitCode != wantExitCode || status.ExtractorStatus != model.ExtractorStatusDegraded {
+	if status.Status != wantStatus || status.ExitCode != wantExitCode || status.ExtractorStatus != wantExtractor {
 		t.Fatalf("unexpected status contract: status=%s exit=%d extractor=%s", status.Status, status.ExitCode, status.ExtractorStatus)
 	}
 	if status.StatusHash != artifacts.ComputeStatusHash(status) {
@@ -82,6 +91,12 @@ func capturedTestEvidence(t *testing.T, raw []byte) rawevidence.Snapshot {
 		t.Fatal(err)
 	}
 	return snapshot
+}
+
+// completeTestEvidence is the complete analysis snapshot materialization uses.
+func completeTestEvidence(raw []byte) rawevidence.Snapshot {
+	digest := sha256.Sum256(raw)
+	return rawevidence.Snapshot{Text: string(raw), SHA256: hex.EncodeToString(digest[:]), TotalBytes: int64(len(raw))}
 }
 
 // Legacy whole-input oracle, restricted to capped test fixtures.

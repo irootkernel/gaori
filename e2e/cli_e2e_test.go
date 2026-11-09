@@ -350,7 +350,7 @@ exit 1
 		assertBinaryExtractionContract(t, result, summary, status, model.RunStatusFailed, 7, model.ExtractorStatusDegraded, 0)
 	})
 
-	t.Run("oversized passing command uses bounded extraction", func(t *testing.T) {
+	t.Run("large passing command analyzes complete log", func(t *testing.T) {
 		repo := t.TempDir()
 		writeE2EConfig(t, repo, "#!/bin/sh\ncat huge.raw.log\nexit 0\n")
 		raw := bytes.Repeat([]byte("x"), safety.MaxRegexInputBytes+1)
@@ -366,11 +366,11 @@ exit 1
 		if !bytes.Equal(copiedRaw, raw) {
 			t.Fatal("oversized passing command did not preserve raw evidence")
 		}
-		assertBinaryExtractionContract(t, result, summary, status, model.RunStatusPassed, 0, model.ExtractorStatusDegraded, 0)
-		assertBinaryMarkdownContract(t, repo, result, "passed", "0", "degraded")
+		assertBinaryExtractionContract(t, result, summary, status, model.RunStatusPassed, 0, model.ExtractorStatusNoMatch, 0)
+		assertBinaryMarkdownContract(t, repo, result, "passed", "0", "no_match")
 	})
 
-	t.Run("oversized failing command retains command result", func(t *testing.T) {
+	t.Run("large failing command retains command result", func(t *testing.T) {
 		repo := t.TempDir()
 		writeE2EConfig(t, repo, "#!/bin/sh\ncat huge.raw.log\nexit 7\n")
 		prefix := bytes.Repeat([]byte("noise line\n"), safety.MaxRegexInputBytes/10)
@@ -387,7 +387,7 @@ exit 1
 		if !bytes.Equal(copiedRaw, raw) {
 			t.Fatal("oversized failing command did not preserve raw evidence")
 		}
-		assertBinaryExtractionContract(t, result, summary, status, model.RunStatusFailed, 7, model.ExtractorStatusDegraded, 1)
+		assertBinaryExtractionContract(t, result, summary, status, model.RunStatusFailed, 7, model.ExtractorStatusPrecise, 1)
 		failure := summary.Failures[0]
 		if want := bytes.Count(raw[:failure.RawSpan.StartByte], []byte{'\n'}) + 1; failure.RawSpan.StartLine != want {
 			t.Fatalf("failure start line = %d, want absolute line %d", failure.RawSpan.StartLine, want)
@@ -398,9 +398,9 @@ exit 1
 			t.Fatal(err)
 		}
 		if !bytes.Contains(excerpt, []byte("TypeError: boom")) {
-			t.Fatalf("expected tail failure excerpt, got %q", excerpt)
+			t.Fatalf("expected late failure excerpt, got %q", excerpt)
 		}
-		assertBinaryMarkdownContract(t, repo, result, "failed", "7", "degraded")
+		assertBinaryMarkdownContract(t, repo, result, "failed", "7", "precise")
 	})
 
 	t.Run("noisy passing command writes truncated warning artifacts", func(t *testing.T) {
@@ -543,7 +543,7 @@ exit 1
 		}
 	})
 
-	t.Run("oversized summarize uses bounded extraction", func(t *testing.T) {
+	t.Run("large summarize analyzes complete log", func(t *testing.T) {
 		repo := t.TempDir()
 		raw := bytes.Repeat([]byte("y"), safety.MaxRegexInputBytes+1)
 		rawPath := filepath.Join(repo, "unit.raw.log")
@@ -559,8 +559,8 @@ exit 1
 		if !bytes.Equal(copiedRaw, raw) {
 			t.Fatal("oversized summarize did not preserve copied raw evidence")
 		}
-		assertBinaryExtractionContract(t, result, summary, status, model.RunStatusPassed, 0, model.ExtractorStatusDegraded, 0)
-		assertBinaryMarkdownContract(t, repo, result, "passed", "0", "degraded")
+		assertBinaryExtractionContract(t, result, summary, status, model.RunStatusPassed, 0, model.ExtractorStatusNoMatch, 0)
+		assertBinaryMarkdownContract(t, repo, result, "passed", "0", "no_match")
 	})
 }
 

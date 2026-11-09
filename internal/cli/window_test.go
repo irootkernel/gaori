@@ -43,7 +43,10 @@ func TestExcerptCapturedWindowBounds(t *testing.T) {
 
 func TestMaterializeCapturedWindowIntegrity(t *testing.T) {
 	t.Parallel()
-	prefix := []byte("discarded\n" + strings.Repeat("x", safety.MaxRegexInputBytes+1) + "\n")
+	// The large neutral prefix forces the materialization reload. Three blank
+	// lines keep parser context lookback out of it, so every fixture failure is
+	// found after the prefix with absolute coordinates.
+	prefix := []byte("discarded\n" + strings.Repeat("x", safety.MaxRegexInputBytes+1) + "\n\n\n\n")
 	for _, parser := range extract.SupportedParsers() {
 		t.Run(parser, func(t *testing.T) {
 			fixture, err := os.ReadFile(filepath.Join("..", "extract", "testdata", parser+".raw.log"))
@@ -71,13 +74,17 @@ func TestMaterializeCapturedWindowIntegrity(t *testing.T) {
 			var status model.Status
 			readJSONArtifact(t, paths.SummaryJSON, &summary)
 			readJSONArtifact(t, paths.StatusJSON, &status)
-			if len(summary.Failures) == 0 || summary.ExtractorStatus != model.ExtractorStatusDegraded {
-				t.Fatalf("expected retained fixture failures: %+v", summary)
+			small, err := extract.ProcessSnapshot(completeTestEvidence(fixture), model.RunOutput{Status: model.RunStatusFailed, Metadata: model.RunMetadata{Parser: parser}}, nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(summary.Failures) == 0 || summary.ExtractorStatus != small.ExtractorStatus {
+				t.Fatalf("expected the fixture's own extraction quality without size degradation: %+v want %s", summary, small.ExtractorStatus)
 			}
 			for _, failure := range summary.Failures {
 				span := failure.RawSpan
-				if span.StartByte < len(prefix) || span.EndByte > len(raw) {
-					t.Fatalf("span escaped captured window: %+v", span)
+				if span.StartByte < len(prefix)-3 || span.EndByte > len(raw) {
+					t.Fatalf("span reached into the neutral prefix: %+v", span)
 				}
 				if span.StartLine != bytes.Count(raw[:span.StartByte], []byte{'\n'})+1 {
 					t.Fatalf("incorrect original line: %+v", span)
@@ -110,8 +117,10 @@ func TestMaterializeCapturedWindowIntegrity(t *testing.T) {
 
 func TestCapturedWindowExcerptRedactionBeforeNoise(t *testing.T) {
 	t.Parallel()
+	// Three blank lines keep the generic context lookback out of the large
+	// prefix; the reloaded complete text still has to be redacted before noise.
 	prefix := "discarded\n" + strings.Repeat("x", safety.MaxRegexInputBytes+1) + "\n"
-	raw := []byte(prefix + "Error: token=secret\nnoise token=secret\nkept 한글\n")
+	raw := []byte(prefix + "\n\n\nError: token=secret\nnoise token=secret\nkept 한글\n")
 	repo := t.TempDir()
 	paths, err := artifacts.PreparePaths(repo, "", "window", "redaction")
 	if err != nil {
@@ -138,14 +147,14 @@ func TestCapturedWindowExcerptRedactionBeforeNoise(t *testing.T) {
 	var summary model.Summary
 	readJSONArtifact(t, paths.SummaryJSON, &summary)
 	if len(summary.Failures) != 1 || summary.Failures[0].RawSpan.StartByte != len(prefix) {
-		t.Fatalf("expected one failure at the captured origin: %+v", summary.Failures)
+		t.Fatalf("expected one failure after the large prefix: %+v", summary.Failures)
 	}
 	failure := summary.Failures[0]
 	content, err := os.ReadFile(filepath.Join(paths.BaseDir, failure.Excerpt))
 	if err != nil {
 		t.Fatal(err)
 	}
-	if string(content) != "Error: token=<redacted>\nkept 한글\n" {
+	if string(content) != "\n\n\nError: token=<redacted>\nkept 한글\n" {
 		t.Fatalf("windowed redaction/noise order changed: %q", content)
 	}
 	if result.excerpts[failure.ID].SHA256 != fmt.Sprintf("sha256:%x", sha256.Sum256(content)) {

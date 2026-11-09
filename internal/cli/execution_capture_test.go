@@ -73,13 +73,13 @@ func TestExecutionRawCloseFailurePrecedesRunError(t *testing.T) {
 func TestExecutedWindowArtifactsAcrossRunModes(t *testing.T) {
 	t.Parallel()
 	for _, mode := range []model.RunMode{model.RunModeConfigured, model.RunModeAdHoc} {
-		for _, tailSignal := range []bool{false, true} {
+		for _, lateSignal := range []bool{false, true} {
 			for _, exit := range []int{0, 7} {
-				t.Run(fmt.Sprintf("%s/tail=%t/exit=%d", mode, tailSignal, exit), func(t *testing.T) {
+				t.Run(fmt.Sprintf("%s/late=%t/exit=%d", mode, lateSignal, exit), func(t *testing.T) {
 					t.Parallel()
 					repo := t.TempDir()
 					raw := "Error: early\n" + strings.Repeat("x", safety.MaxRegexInputBytes+1)
-					if tailSignal {
+					if lateSignal {
 						raw = strings.Repeat("x", safety.MaxRegexInputBytes+1) + "\nError: tail 한글\r\n"
 					}
 					if err := os.WriteFile(filepath.Join(repo, "input.log"), []byte(raw), 0600); err != nil {
@@ -98,7 +98,11 @@ func TestExecutedWindowArtifactsAcrossRunModes(t *testing.T) {
 					if err != nil || code != exit {
 						t.Fatalf("execute: %+v code=%d err=%v", result, code, err)
 					}
-					assertExecutedCaptureArtifacts(t, repo, result, []byte(raw), exit, tailSignal)
+					signature := "Error: early"
+					if lateSignal {
+						signature = "Error: tail 한글"
+					}
+					assertExecutedCaptureArtifacts(t, repo, result, []byte(raw), exit, signature)
 				})
 			}
 		}
@@ -116,7 +120,10 @@ func writeCapturedCommandConfig(t *testing.T, repo, command string) {
 	}
 }
 
-func assertExecutedCaptureArtifacts(t *testing.T, repo string, result runResult, raw []byte, exit int, tailSignal bool) {
+// assertExecutedCaptureArtifacts checks that a >256 KiB capture is analyzed
+// completely: one generic failure with the given signature whose context span
+// starts at line 1, and no size-only degradation.
+func assertExecutedCaptureArtifacts(t *testing.T, repo string, result runResult, raw []byte, exit int, signature string) {
 	t.Helper()
 	var summary model.Summary
 	var status model.Status
@@ -126,7 +133,7 @@ func assertExecutedCaptureArtifacts(t *testing.T, repo string, result runResult,
 	if exit != 0 {
 		wantStatus = model.RunStatusFailed
 	}
-	if result.Status != wantStatus || summary.Status != wantStatus || status.Status != wantStatus || summary.ExitCode != exit || status.ExitCode != exit || summary.ExtractorStatus != model.ExtractorStatusDegraded {
+	if result.Status != wantStatus || summary.Status != wantStatus || status.Status != wantStatus || summary.ExitCode != exit || status.ExitCode != exit || summary.ExtractorStatus != model.ExtractorStatusPartial {
 		t.Fatalf("capture outcome changed: %+v %+v", summary, status)
 	}
 	digest := fmt.Sprintf("sha256:%x", sha256.Sum256(raw))
@@ -137,13 +144,12 @@ func assertExecutedCaptureArtifacts(t *testing.T, repo string, result runResult,
 	if err != nil || !bytes.Equal(preserved, raw) {
 		t.Fatalf("raw preservation: %v", err)
 	}
-	if (len(summary.Failures) > 0) != tailSignal {
-		t.Fatalf("tail evidence: %+v", summary.Failures)
+	if len(summary.Failures) != 1 || summary.Failures[0].Signature != signature {
+		t.Fatalf("complete-log evidence: %+v", summary.Failures)
 	}
-	for _, failure := range summary.Failures {
-		if failure.RawSpan.StartByte <= safety.MaxRegexInputBytes || failure.RawSpan.StartLine != 2 {
-			t.Fatalf("nonabsolute tail span: %+v", failure.RawSpan)
-		}
+	span := summary.Failures[0].RawSpan
+	if span.StartByte != 0 || span.StartLine != 1 || span.EndByte > len(raw) {
+		t.Fatalf("nonabsolute span: %+v", span)
 	}
 }
 
@@ -204,7 +210,7 @@ func TestConcurrentMCPStartsIsolateCapturedEvidence(t *testing.T) {
 		if i == 0 {
 			exit = 7
 		}
-		assertExecutedCaptureArtifacts(t, repo, *finals[i].Result, []byte(raws[i]), exit, true)
+		assertExecutedCaptureArtifacts(t, repo, *finals[i].Result, []byte(raws[i]), exit, []string{"Error: configured", "Error: adhoc"}[i])
 		again := call("await_run", map[string]any{"invocation_id": start.InvocationID})
 		if again.Revision != finals[i].Revision || again.Result.RawLog != finals[i].Result.RawLog {
 			t.Fatal("finished await changed result")

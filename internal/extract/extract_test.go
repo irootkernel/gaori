@@ -2,8 +2,9 @@ package extract
 
 import (
 	"bytes"
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
-	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -108,73 +109,89 @@ func TestProcessExtractorStatusContract(t *testing.T) {
 	}
 }
 
-func TestProcessOversizedLogUsesBoundedTail(t *testing.T) {
+func TestProcessLargeLogAnalyzesCompleteInput(t *testing.T) {
 	t.Parallel()
+	mib := 1 << 20
 
-	t.Run("passing log degrades without error", func(t *testing.T) {
+	t.Run("passing log without signal is no_match", func(t *testing.T) {
 		t.Parallel()
 		raw := bytes.Repeat([]byte("x"), safety.MaxRegexInputBytes+1)
 		run := model.RunOutput{Status: model.RunStatusPassed, Metadata: model.RunMetadata{Parser: "generic"}}
-
 		processed, err := Process(raw, run, nil)
 		if err != nil {
 			t.Fatalf("Process failed: %v", err)
 		}
-		if processed.Status != model.RunStatusPassed || processed.ExtractorStatus != model.ExtractorStatusDegraded {
-			t.Fatalf("expected passed/degraded result, got %s/%s", processed.Status, processed.ExtractorStatus)
+		if processed.Status != model.RunStatusPassed || processed.ExtractorStatus != model.ExtractorStatusNoMatch {
+			t.Fatalf("expected passed/no_match without size degradation, got %s/%s", processed.Status, processed.ExtractorStatus)
 		}
 		if len(processed.Failures) != 0 || len(processed.Warnings) != 0 {
-			t.Fatalf("expected empty evidence for an unbroken oversized line, got failures=%d warnings=%d", len(processed.Failures), len(processed.Warnings))
+			t.Fatalf("unexpected evidence: failures=%d warnings=%d", len(processed.Failures), len(processed.Warnings))
 		}
 	})
 
-	t.Run("tail match keeps absolute span", func(t *testing.T) {
+	t.Run("early middle and late signals keep absolute spans", func(t *testing.T) {
 		t.Parallel()
-		raw := oversizedLog("TypeError: boom\nsrc/foo.test.ts:42:13\n- renders empty state\n")
+		noise := strings.Repeat("noise line\n", mib/10)
+		raw := []byte("TypeError: early\nsrc/early.ts:1:2\n\n" + noise + "TypeError: middle\nsrc/middle.ts:2:3\n\n" + noise + "TypeError: late\nsrc/late.ts:3:4\n")
 		run := model.RunOutput{Status: model.RunStatusFailed, Metadata: model.RunMetadata{Parser: "generic"}}
-
 		processed, err := Process(raw, run, nil)
 		if err != nil {
 			t.Fatalf("Process failed: %v", err)
 		}
-		if processed.Status != model.RunStatusFailed || processed.ExtractorStatus != model.ExtractorStatusDegraded {
-			t.Fatalf("expected failed/degraded result, got %s/%s", processed.Status, processed.ExtractorStatus)
+		if processed.ExtractorStatus != model.ExtractorStatusPrecise || len(processed.Failures) != 3 {
+			t.Fatalf("expected three precise failures, got %s with %+v", processed.ExtractorStatus, processed.Failures)
 		}
-		if len(processed.Failures) != 1 {
-			t.Fatalf("expected one tail failure, got %d", len(processed.Failures))
+		for i, want := range []string{"early", "middle", "late"} {
+			failure := processed.Failures[i]
+			if failure.File != "src/"+want+".ts" {
+				t.Fatalf("failure %d file = %q, want %s", i, failure.File, want)
+			}
+			assertAbsoluteStartLine(t, raw, failure.RawSpan)
+			if excerpt := string(raw[failure.RawSpan.StartByte:failure.RawSpan.EndByte]); !strings.Contains(excerpt, "TypeError: "+want) {
+				t.Fatalf("span does not resolve to %s failure: %q", want, excerpt)
+			}
+		}
+		if processed.Failures[0].RawSpan.StartByte != 0 || processed.Failures[2].RawSpan.StartByte < len(raw)-safety.MaxRegexInputBytes {
+			t.Fatalf("early or late span misplaced: %+v", processed.Failures)
+		}
+	})
+
+	t.Run("first line is analyzed", func(t *testing.T) {
+		t.Parallel()
+		marker := []byte("Error: first line marker\n")
+		raw := append([]byte("continued-"), append(marker, bytes.Repeat([]byte("x"), safety.MaxRegexInputBytes-len(marker))...)...)
+		run := model.RunOutput{Status: model.RunStatusPassed, Metadata: model.RunMetadata{Parser: "generic"}}
+		processed, err := Process(raw, run, nil)
+		if err != nil {
+			t.Fatalf("Process failed: %v", err)
+		}
+		if len(processed.Failures) != 1 || processed.Failures[0].RawSpan.StartByte != 0 || processed.ExtractorStatus != model.ExtractorStatusPartial {
+			t.Fatalf("expected the first line to be analyzed, got %s with %+v", processed.ExtractorStatus, processed.Failures)
+		}
+	})
+
+	t.Run("physical line above 1 MiB", func(t *testing.T) {
+		t.Parallel()
+		long := strings.Repeat("y", mib+1)
+		raw := []byte(long + "\nError: after long line\nsrc/after.go:7\n")
+		run := model.RunOutput{Status: model.RunStatusFailed, Metadata: model.RunMetadata{Parser: "generic"}}
+		processed, err := Process(raw, run, nil)
+		if err != nil {
+			t.Fatalf("Process failed: %v", err)
+		}
+		if len(processed.Failures) != 1 || processed.ExtractorStatus != model.ExtractorStatusPrecise {
+			t.Fatalf("expected one precise failure after the long line, got %s with %+v", processed.ExtractorStatus, processed.Failures)
 		}
 		span := processed.Failures[0].RawSpan
-		if span.StartByte < len(raw)-safety.MaxRegexInputBytes || span.EndByte > len(raw) {
-			t.Fatalf("span is outside retained tail: %+v for %d bytes", span, len(raw))
-		}
-		assertAbsoluteStartLine(t, raw, span)
-		if excerpt := string(raw[span.StartByte:span.EndByte]); !strings.Contains(excerpt, "TypeError: boom") {
-			t.Fatalf("absolute span does not resolve to failure: %q", excerpt)
+		// The generic block starts up to three lines before the marker, so it includes the long line.
+		if span.StartByte != 0 || span.StartLine != 1 || processed.Failures[0].File != "src/after.go" {
+			t.Fatalf("unexpected span or file: %+v", processed.Failures[0])
 		}
 	})
 
-	t.Run("partial first line is discarded", func(t *testing.T) {
+	t.Run("runtime rule matches early evidence", func(t *testing.T) {
 		t.Parallel()
-		marker := []byte("Error: truncated marker\n")
-		tail := append(marker, bytes.Repeat([]byte("x"), safety.MaxRegexInputBytes-len(marker))...)
-		raw := append([]byte("continued-"), tail...)
-		run := model.RunOutput{Status: model.RunStatusPassed, Metadata: model.RunMetadata{Parser: "generic"}}
-
-		processed, err := Process(raw, run, nil)
-		if err != nil {
-			t.Fatalf("Process failed: %v", err)
-		}
-		if processed.ExtractorStatus != model.ExtractorStatusDegraded {
-			t.Fatalf("expected degraded extraction, got %s", processed.ExtractorStatus)
-		}
-		if len(processed.Failures) != 0 {
-			t.Fatalf("partial first line produced false failure matches: %+v", processed.Failures)
-		}
-	})
-
-	t.Run("runtime rule matches retained tail", func(t *testing.T) {
-		t.Parallel()
-		raw := oversizedLog("RULE FAILURE\nsrc/rule.test.ts:73:1\n\n")
+		raw := []byte("RULE FAILURE\nsrc/rule.test.ts:73:1\n\n" + strings.Repeat("noise line\n", mib/10))
 		rule := model.Rule{
 			Match: model.RuleMatch{
 				Start: model.RuleRegex{Regex: `^RULE FAILURE$`},
@@ -185,32 +202,29 @@ func TestProcessOversizedLogUsesBoundedTail(t *testing.T) {
 			},
 		}
 		run := model.RunOutput{Status: model.RunStatusFailed, Metadata: model.RunMetadata{Parser: "generic"}}
-
 		processed, err := Process(raw, run, []model.Rule{rule})
 		if err != nil {
 			t.Fatalf("Process failed: %v", err)
 		}
-		if processed.ExtractorStatus != model.ExtractorStatusDegraded || len(processed.Failures) != 1 {
-			t.Fatalf("expected one degraded rule match, got status=%s failures=%d", processed.ExtractorStatus, len(processed.Failures))
+		if processed.ExtractorStatus != model.ExtractorStatusPrecise || len(processed.Failures) != 1 {
+			t.Fatalf("expected one precise rule match, got status=%s failures=%d", processed.ExtractorStatus, len(processed.Failures))
 		}
 		failure := processed.Failures[0]
-		if failure.File != "src/rule.test.ts" || failure.Line != 73 {
+		if failure.File != "src/rule.test.ts" || failure.Line != 73 || failure.RawSpan.StartByte != 0 {
 			t.Fatalf("unexpected rule capture: %+v", failure)
 		}
-		assertAbsoluteStartLine(t, raw, failure.RawSpan)
 	})
 
-	t.Run("specialized parser matches retained tail", func(t *testing.T) {
+	t.Run("specialized parser matches late evidence", func(t *testing.T) {
 		t.Parallel()
 		raw := oversizedLog("--- FAIL: TestOversized (0.00s)\n    foo_test.go:42: boom\n\n")
 		run := model.RunOutput{Status: model.RunStatusFailed, Metadata: model.RunMetadata{Parser: "go-test"}}
-
 		processed, err := Process(raw, run, nil)
 		if err != nil {
 			t.Fatalf("Process failed: %v", err)
 		}
-		if processed.ExtractorStatus != model.ExtractorStatusDegraded || len(processed.Failures) != 1 {
-			t.Fatalf("expected one degraded go-test match, got status=%s failures=%d", processed.ExtractorStatus, len(processed.Failures))
+		if processed.ExtractorStatus != model.ExtractorStatusPrecise || len(processed.Failures) != 1 {
+			t.Fatalf("expected one precise go-test match, got status=%s failures=%d", processed.ExtractorStatus, len(processed.Failures))
 		}
 		failure := processed.Failures[0]
 		if failure.File != "foo_test.go" || failure.Line != 42 || failure.TestName != "TestOversized" {
@@ -219,17 +233,15 @@ func TestProcessOversizedLogUsesBoundedTail(t *testing.T) {
 		assertAbsoluteStartLine(t, raw, failure.RawSpan)
 	})
 
-	t.Run("exact limit is not truncated", func(t *testing.T) {
+	t.Run("exact former limit is no_match", func(t *testing.T) {
 		t.Parallel()
-		raw := bytes.Repeat([]byte("x"), safety.MaxRegexInputBytes)
-		run := model.RunOutput{Status: model.RunStatusPassed, Metadata: model.RunMetadata{Parser: "generic"}}
-
-		processed, err := Process(raw, run, nil)
-		if err != nil {
-			t.Fatalf("Process failed: %v", err)
-		}
-		if processed.ExtractorStatus != model.ExtractorStatusNoMatch {
-			t.Fatalf("expected no_match at exact limit, got %s", processed.ExtractorStatus)
+		for _, size := range []int{safety.MaxRegexInputBytes - 1, safety.MaxRegexInputBytes, safety.MaxRegexInputBytes + 1} {
+			raw := bytes.Repeat([]byte("x"), size)
+			run := model.RunOutput{Status: model.RunStatusPassed, Metadata: model.RunMetadata{Parser: "generic"}}
+			processed, err := Process(raw, run, nil)
+			if err != nil || processed.ExtractorStatus != model.ExtractorStatusNoMatch {
+				t.Fatalf("size %d: expected no_match, got %s, %v", size, processed.ExtractorStatus, err)
+			}
 		}
 	})
 }
@@ -583,15 +595,10 @@ func readFixture(t *testing.T, name string) []byte {
 	return data
 }
 
-// Process adapts size-capped test fixtures to the production snapshot boundary.
+// Process supplies the complete analysis snapshot that materialization passes
+// to production extraction: zero origins and the whole accepted stream.
 func Process(raw []byte, run model.RunOutput, rules []model.Rule) (model.RunOutput, error) {
-	capture := rawevidence.New(io.Discard)
-	if _, err := capture.Write(raw); err != nil {
-		return run, err
-	}
-	snapshot, err := capture.Snapshot()
-	if err != nil {
-		return run, err
-	}
+	digest := sha256.Sum256(raw)
+	snapshot := rawevidence.Snapshot{Text: string(raw), SHA256: hex.EncodeToString(digest[:]), TotalBytes: int64(len(raw))}
 	return ProcessSnapshot(snapshot, run, rules)
 }
