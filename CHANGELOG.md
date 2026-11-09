@@ -12,7 +12,6 @@ This file records concise shipped outcomes and the planned next stable release. 
 ### Fixed
 
 - Status signature hashes now match the published summary when a failure or warning signature contains invalid UTF-8, so summary-based proposals and run insights no longer reject those runs for a hash mismatch.
-- The user interface and integration guides now show the current release 0.1.19 in their install command and toolchain-metadata `cli_version` examples.
 
 ## v0.1.19 - 2026-11-08
 

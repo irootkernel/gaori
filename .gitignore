@@ -19,3 +19,5 @@ bin/
 .external-review-sidecar/
 
 .DS_Store
+
+.ouroboros/
