@@ -1,7 +1,7 @@
 # Gaori Roadmap
 
-Status: Completed through `RSTAT`, `AQDEV-001`, `SKMOD`, and `LOMEM`; `FLOG` in progress; `AQADP`, `AWAIT-005`, and `AWAIT-007` deferred
-Scope: Implementation tracking for the Gaori v0.1 standalone baseline, hardening, tag and parser selection, release readiness, identity migration, operator-directed standalone evidence cleanup, portable project config, CLI usability improvements, session-local MCP execution, token-efficient terminal waiting and host-wait guidance, the parser catalog plus Dart/Patrol extraction epic, run-status and timing insights, Aquarium development-channel integration, deferred Aquarium qualification and downstream adoption tracking, adopted bounded-memory log processing, and in-progress complete raw-log analysis
+Status: Completed through `RSTAT`, `AQDEV-001`, `SKMOD`, `LOMEM`, and `FLOG`; `AQADP`, `AWAIT-005`, and `AWAIT-007` deferred
+Scope: Implementation tracking for the Gaori v0.1 standalone baseline, hardening, tag and parser selection, release readiness, identity migration, operator-directed standalone evidence cleanup, portable project config, CLI usability improvements, session-local MCP execution, token-efficient terminal waiting and host-wait guidance, the parser catalog plus Dart/Patrol extraction epic, run-status and timing insights, Aquarium development-channel integration, deferred Aquarium qualification and downstream adoption tracking, adopted bounded-memory log processing, and complete raw-log analysis
 
 This roadmap is a delivery record, not an operator guide or a promise that out-of-scope capabilities will be added. See the [integration guide](../integration-guide.md) for the current supported/unsupported capability boundary and the [todo index](../todo/README.md) for future candidates and active epic dossiers.
 
@@ -17,9 +17,9 @@ Current implementation snapshot:
 
 ## FLOG: Complete raw-log analysis
 
-Status: In Progress
+Status: Done
 
-Detailed SOT: [Execution dossier](../todo/TODO-FLOG.md)
+Canonical Outcomes: [RQLOG specifications](../specs/README.md#rqlog-complete-raw-log-analysis), [ADR-0023](../architecture-decision-records/README.md#adr-0023-complete-log-analysis-with-input-proportional-memory), [log pipeline architecture](../architecture/README.md#bounded-memory-log-pipeline), [resource smoke contract](../../TESTING.md#separate-memory-campaign), [resource smoke record](../implementation-tips/README.md#complete-log-resource-smoke), [executable traceability](../requirements-test-matrix.md)
 
 Owner: Gaori team. Adopted on 2026-11-09 after Master approved complete-input
 analysis with input-proportional analysis memory. Requirements:
@@ -31,20 +31,20 @@ This replaces the unimplemented bounded-memory FLOG design on branch
 `FLOG-001` through `FLOG-008` identifiers without scheduling them or claiming
 completion. The new sequence is
 `FLOG-009 -> FLOG-010 -> FLOG-011 -> FLOG-012`; each task depends on the previous
-task, and FLOG-009 has no incomplete predecessor. LOMEM remains a historical
-completed delivery. FLOG-009 delivers the run/summarize runtime adapter in the
-source tree. FLOG-010 implements complete parser detection in the source tree.
-FLOG-011 implements complete authoring-tool inputs in the source tree;
-FLOG-012 delivers integrated verification and the replacement resource smoke in the
-source tree. Final whole-epic integration, closeout and Master overall acceptance
-remain pending.
+task, and FLOG-009 had no incomplete predecessor. LOMEM remains a historical
+completed delivery. FLOG-009 delivered the run/summarize runtime adapter,
+FLOG-010 complete parser detection, FLOG-011 complete authoring-tool inputs and
+FLOG-012 integrated verification with the replacement resource smoke, all in the
+source tree and verified as one integrated epic. Completion records the source-tree
+implementation and integrated verification only; it does not record a release,
+installation, runtime activation or Master's overall acceptance.
 
 | Task ID | Status | Goal | Verification | Reference |
 |---|---|---|---|---|
-| FLOG-009 | Done | Analyze complete raw logs in CLI/MCP execution and summarize using existing parsers and Go regexp; preserve streaming capture/import and bounded surfaced evidence; replace only the quadratic Go/Cargo post-processing helpers with semantics-preserving indexes. | Early/middle/late failures above 1 MiB, every execution entrypoint, complete raw/hash/span/excerpt integrity, small-input parity, I/O faults and lifecycle regressions. | RQLOG-009, RQLOG-014; dossier FLOG-009 |
-| FLOG-010 | Done | Evaluate parser detection over the complete input without selecting a parser or applying rules. | Exact all-label counts and heuristic verdicts, complete scan metadata, deterministic ordering, regular-file validation and no side effects. | RQLOG-010, RQLOG-014; dossier FLOG-010 |
-| FLOG-011 | Done | Remove total raw-log size rejection from rule fixtures, legacy proposal sources and redaction samples while preserving policy-file and selected-span limits. | Late matches/overmatches, full rule-test signatures, proposal checksum/span validation without a new legacy line cap, FIFO/device rejection, ordered private sample counts, unchanged YAML bounds and error classes. | RQLOG-011 to RQLOG-014; dossier FLOG-011 |
-| FLOG-012 | Done | Complete integrated verification, replace the obsolete constant-memory campaign, reconcile contracts and close documentation. | Focused regressions, the dossier's finite resource smoke, one applicable full make test, executable traceability, documentation/skill readback and git diff --check. | RQLOG-009 through RQLOG-014; dossier FLOG-012 |
+| FLOG-009 | Done | Analyze complete raw logs in CLI/MCP execution and summarize using existing parsers and Go regexp; preserve streaming capture/import and bounded surfaced evidence; replace only the quadratic Go/Cargo post-processing helpers with semantics-preserving indexes. | Early/middle/late failures above 1 MiB, every execution entrypoint, complete raw/hash/span/excerpt integrity, small-input parity, I/O faults and lifecycle regressions. | RQLOG-009, RQLOG-014; ADR-0023 |
+| FLOG-010 | Done | Evaluate parser detection over the complete input without selecting a parser or applying rules. | Exact all-label counts and heuristic verdicts, complete scan metadata, deterministic ordering, regular-file validation and no side effects. | RQLOG-010, RQLOG-014; ADR-0023 |
+| FLOG-011 | Done | Remove total raw-log size rejection from rule fixtures, legacy proposal sources and redaction samples while preserving policy-file and selected-span limits. | Late matches/overmatches, full rule-test signatures, proposal checksum/span validation without a new legacy line cap, FIFO/device rejection, ordered private sample counts, unchanged YAML bounds and error classes. | RQLOG-011 to RQLOG-014; ADR-0023 |
+| FLOG-012 | Done | Complete integrated verification, replace the obsolete constant-memory campaign, reconcile contracts and close documentation. | Focused regressions, the finite resource smoke in TESTING.md, one applicable full make test, executable traceability, documentation/skill readback and git diff --check. | RQLOG-009 through RQLOG-014; ADR-0023; [resource smoke record](../implementation-tips/README.md#complete-log-resource-smoke) |
 
 ## LOMEM: Bounded-memory log processing
 

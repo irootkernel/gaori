@@ -1,6 +1,6 @@
 # Gaori Architecture
 
-Status: Complete through `RSTAT` and `LOMEM`; `FLOG` complete-log analysis implemented in source by FLOG-009 through FLOG-012, with epic closeout pending
+Status: Complete through `RSTAT`, `LOMEM` and `FLOG` (complete-log analysis delivered in source by FLOG-009 through FLOG-012)
 LOMEM (historical): its candidate used bounded state for captured execution, summarize import/inference and window materialization; its resource campaign passed on macOS arm64.
 FLOG: capture, hashing and summarize import/inference stay bounded, while analysis and excerpt materialization hold the complete raw text, so their memory grows with input size (ADR-0023). Linux is unmeasured.
 Scope: Standalone Gaori v0.1 architecture, including session-local STDIO MCP execution, terminal awaiting, artifact-derived run insights, the bounded capture/import pipeline and complete-log analysis
